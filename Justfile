@@ -1,3 +1,5 @@
+workers := 4
+
 _default:
 	@just --list
 
@@ -9,16 +11,16 @@ _rosdep_install:
 
 # Builds the workspace
 build:
-	colcon build --symlink-install
+	colcon build --symlink-install --parallel-workers {{ workers }}
 
 # Builds the workspace
 debug:
-	colcon build --mixin debug --symlink-install
+	colcon build --mixin debug --symlink-install --parallel-workers {{ workers }}
 
 
 # Builds the workspace for the purpose of generating intellisense
 completions:
-	colcon build --symlink-install --continue-on-error --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+	colcon build --symlink-install --continue-on-error --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON --parallel-workers {{ workers }}
 
 # Cleans the build folders
 clean:
