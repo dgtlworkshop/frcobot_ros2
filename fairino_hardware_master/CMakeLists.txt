@@ -22,12 +22,12 @@ file(GLOB SRC_DIR ./src/command_server.cpp ./src/command_server_node.cpp ./src/C
 file(GLOB EXP_SRC_DIR ./examples/src/*.cpp)
 
 #compile
-# file(CREATE_LINK 
+# file(CREATE_LINK
 # "${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2.3.0"
 # "${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2"
 # SYMBOLIC)
 
-# file(CREATE_LINK 
+# file(CREATE_LINK
 # "${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2"
 # "${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so"
 # SYMBOLIC)
@@ -40,8 +40,8 @@ add_executable(srv_test_client ${EXP_SRC_DIR})
 
 
 #add headfile source
-target_include_directories(ros2_cmd_server PUBLIC 
-${CMAKE_CURRENT_SOURCE_DIR}/include/ 
+target_include_directories(ros2_cmd_server PUBLIC
+${CMAKE_CURRENT_SOURCE_DIR}/include/
 ${CMAKE_CURRENT_SOURCE_DIR}/)
 
 target_include_directories(srv_test_client PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/examples/include)

@@ -1,0 +1,48 @@
+{
+	"load_direnv": "direct",
+	"languages": {
+		"C": {
+			"enable_language_server": true,
+			"format_on_save": "on",
+			"tab_size": 2,
+			"semantic_tokens": "combined",
+			"document_symbols": "on"
+		},
+		"C++": {
+			"enable_language_server": true,
+			"format_on_save": "on",
+			"tab_size": 2,
+			"semantic_tokens": "combined",
+			"document_symbols": "on"
+		},
+		"Python": {
+			"tab_size": 4,
+			"hard_tabs": false
+		}
+		// "Python": {
+		// 	"language_servers": ["ty", "!basedpyright", "ruff"],
+		// 	"format_on_save": "on",
+		// 	"code_actions_on_format": {
+		// 		"source.organizeImports.ruff": true
+		// 	},
+		// 	"formatter": [
+		// 		{
+		// 			"language_server": { "name": "ruff" }
+		// 		}
+		// 	]
+		// }
+	},
+	"lsp": {
+		"clangd": {
+			"binary": {
+				"ignore_system_version": true, // https://github.com/zed-industries/zed/discussions/34551
+				"arguments": [
+					"--background-index",
+					"--compile-commands-dir=build",
+					"--query-driver=/usr/bin/c++,/usr/bin/g++",
+					"--header-insertion=never"
+				]
+			}
+		}
+	}
+}

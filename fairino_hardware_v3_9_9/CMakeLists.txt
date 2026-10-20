@@ -22,15 +22,20 @@ find_package(libfairino REQUIRED)
 
 #set variable
 set(SRC_DIR EXP_SRC_DIR)
-file(GLOB SRC_DIR ./src/command_server.cpp ./src/command_server_node.cpp ./src/CNDE_thread.cpp ./src/global_val_def.cpp)
-file(GLOB EXP_SRC_DIR ./examples/src/*.cpp)
+file(GLOB SRC_DIR
+	./src/command_server.cpp
+	./src/command_server_node.cpp
+	./src/CNDE_thread.cpp
+	./src/global_val_def.cpp
+)
+file(GLOB EXP_SRC_DIR
+	./examples/src/*.cpp
+)
 
 #compile
 add_executable(ros2_cmd_server ${SRC_DIR})
 add_executable(srv_test_client ${EXP_SRC_DIR})
-add_library(
-  fairino_hardware 
-  SHARED 
+add_library(fairino_hardware SHARED
   ./src/fairino_hardware_interface.cpp
 )
 
@@ -40,25 +45,34 @@ add_library(
 
 #add headfile source
 target_include_directories(ros2_cmd_server PUBLIC
-${CMAKE_CURRENT_SOURCE_DIR}/include/)
-
-target_include_directories(srv_test_client PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/examples/include)
-target_include_directories(fairino_hardware PUBLIC 
-$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-$<INSTALL_INTERFACE:include/fairino_hardware>
+	${CMAKE_CURRENT_SOURCE_DIR}/include/
 )
-target_link_libraries(ros2_cmd_server libfairino::fairino)
-target_link_libraries(fairino_hardware libfairino::fairino)
+
+target_include_directories(srv_test_client PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/examples/include
+)
+target_include_directories(fairino_hardware PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	$<INSTALL_INTERFACE:include/fairino_hardware>
+)
 
 #add dependencies
-ament_target_dependencies(ros2_cmd_server rclcpp fairino_msgs)
-ament_target_dependencies(srv_test_client rclcpp fairino_msgs)
-ament_target_dependencies(fairino_hardware 
-  hardware_interface
-  pluginlib
-  rclcpp
-  fairino_msgs
-  rclcpp_lifecycle 
+target_link_libraries(ros2_cmd_server PRIVATE
+	libfairino::fairino
+	rclcpp::rclcpp
+	${fairino_msgs_TARGETS}
+)
+target_link_libraries(srv_test_client PRIVATE
+  rclcpp::rclcpp
+  ${fairino_msgs_TARGETS}
+)
+target_link_libraries(fairino_hardware PUBLIC
+	libfairino::fairino
+  hardware_interface::hardware_interface
+  pluginlib::pluginlib
+  rclcpp::rclcpp
+  ${fairino_msgs_TARGETS}
+  rclcpp_lifecycle::rclcpp_lifecycle
 )
 
 
@@ -85,7 +99,6 @@ install(TARGETS fairino_hardware
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  find_package(ament_cmake_gmock REQUIRED)
   find_package(hardware_interface REQUIRED)
   # the following line skips the linter which checks for copyrights
   # comment the line when a copyright and license is added to all source files
@@ -99,6 +112,13 @@ endif()
 
 #export
 ament_export_targets(fairino_hardware HAS_LIBRARY_TARGET)
-ament_export_dependencies(ament_cmake rclcpp hardware_interface pluginlib rclcpp_lifecycle libfairino)
+ament_export_dependencies(
+	ament_cmake
+	rclcpp
+	hardware_interface
+	pluginlib
+	rclcpp_lifecycle
+	libfairino
+)
 
 ament_package()
