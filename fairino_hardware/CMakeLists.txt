@@ -12,12 +12,12 @@ find_package(rclcpp REQUIRED)
 add_executable(ros2_cmd_server
   src/fairino_version_node.cpp
   src/fairino_version.cpp
-  
+
 )
 
-ament_target_dependencies(ros2_cmd_server
-  rclcpp
-  ament_index_cpp
+target_link_libraries(ros2_cmd_server PRIVATE
+  rclcpp::rclcpp
+  ament_index_cpp::ament_index_cpp
 )
 
 target_include_directories(ros2_cmd_server PUBLIC

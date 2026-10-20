@@ -25,12 +25,12 @@ file(GLOB SRC_DIR ./src/command_server.cpp ./src/command_server_node.cpp ./src/C
 file(GLOB EXP_SRC_DIR ./examples/src/*.cpp)
 
 #compile
-# file(CREATE_LINK 
+# file(CREATE_LINK
 # "${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2.3.0"
 # "${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2"
 # SYMBOLIC)
 
-# file(CREATE_LINK 
+# file(CREATE_LINK
 # "${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2"
 # "${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so"
 # SYMBOLIC)
@@ -38,8 +38,8 @@ file(GLOB EXP_SRC_DIR ./examples/src/*.cpp)
 add_executable(ros2_cmd_server ${SRC_DIR})
 add_executable(srv_test_client ${EXP_SRC_DIR})
 add_library(
-  fairino_hardware 
-  SHARED 
+  fairino_hardware
+  SHARED
   ./src/fairino_hardware_interface.cpp
 )
 
@@ -48,12 +48,12 @@ add_library(
 
 
 #add headfile source
-target_include_directories(ros2_cmd_server PUBLIC 
-${CMAKE_CURRENT_SOURCE_DIR}/include/ 
+target_include_directories(ros2_cmd_server PUBLIC
+${CMAKE_CURRENT_SOURCE_DIR}/include/
 ${CMAKE_CURRENT_SOURCE_DIR}/)
 
 target_include_directories(srv_test_client PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/examples/include)
-target_include_directories(fairino_hardware PUBLIC 
+target_include_directories(fairino_hardware PUBLIC
 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
 $<INSTALL_INTERFACE:include/fairino_hardware>
@@ -64,18 +64,24 @@ $<INSTALL_INTERFACE:include/fairino_hardware>
 # target_link_libraries(fairino_hardware ${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2.3.0)
 
 # 链接库时添加rpath参数
-target_link_libraries(ros2_cmd_server "-Wl,-rpath,$ORIGIN" ${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2.3.9)
-target_link_libraries(fairino_hardware "-Wl,-rpath,$ORIGIN" ${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2.3.9)
+target_link_libraries(ros2_cmd_server PRIVATE "-Wl,-rpath,$ORIGIN" ${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2.3.9)
+target_link_libraries(fairino_hardware PUBLIC "-Wl,-rpath,$ORIGIN" ${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so.2.3.9)
 
 #add dependencies
-ament_target_dependencies(ros2_cmd_server rclcpp fairino_msgs)
-ament_target_dependencies(srv_test_client rclcpp fairino_msgs)
-ament_target_dependencies(fairino_hardware 
-  hardware_interface
-  pluginlib
-  rclcpp
-  fairino_msgs
-  rclcpp_lifecycle 
+target_link_libraries(ros2_cmd_server PRIVATE
+  rclcpp::rclcpp
+  ${fairino_msgs_TARGETS}
+)
+target_link_libraries(srv_test_client PRIVATE
+  rclcpp::rclcpp
+  ${fairino_msgs_TARGETS}
+)
+target_link_libraries(fairino_hardware PUBLIC
+  hardware_interface::hardware_interface
+  pluginlib::pluginlib
+  rclcpp::rclcpp
+  ${fairino_msgs_TARGETS}
+  rclcpp_lifecycle::rclcpp_lifecycle
 )
 
 
@@ -101,28 +107,27 @@ install(TARGETS fairino_hardware
 )
 
 #copy fairino SDK lib file to specfic path
-file(MAKE_DIRECTORY 
+file(MAKE_DIRECTORY
 "${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_NAME}"
 )
 
-file(COPY_FILE "libfairino/lib/libfairino.so.2.3.9" 
-"${CMAKE_INSTALL_PREFIX}/lib/libfairino.so.2.3.9" 
+file(COPY_FILE "libfairino/lib/libfairino.so.2.3.9"
+"${CMAKE_INSTALL_PREFIX}/lib/libfairino.so.2.3.9"
 )
 
-file(CREATE_LINK 
-"${CMAKE_INSTALL_PREFIX}/lib/libfairino.so.2.3.9" 
-"${CMAKE_INSTALL_PREFIX}/lib/libfairino.so.2" 
+file(CREATE_LINK
+"${CMAKE_INSTALL_PREFIX}/lib/libfairino.so.2.3.9"
+"${CMAKE_INSTALL_PREFIX}/lib/libfairino.so.2"
 SYMBOLIC)
 
-file(CREATE_LINK 
-"${CMAKE_INSTALL_PREFIX}/lib/libfairino.so.2" 
-"${CMAKE_INSTALL_PREFIX}/lib/libfairino.so" 
+file(CREATE_LINK
+"${CMAKE_INSTALL_PREFIX}/lib/libfairino.so.2"
+"${CMAKE_INSTALL_PREFIX}/lib/libfairino.so"
 SYMBOLIC)
 
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  find_package(ament_cmake_gmock REQUIRED)
   find_package(hardware_interface REQUIRED)
   # the following line skips the linter which checks for copyrights
   # comment the line when a copyright and license is added to all source files
