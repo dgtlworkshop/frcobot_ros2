@@ -18,7 +18,7 @@
 #include <regex>
 #include "data_type_def.h"
 #include <queue>
-#include "libfairino/include/robot.h"
+#include <robot.h>
 #include <atomic>
 #include "semaphore.h"
 
