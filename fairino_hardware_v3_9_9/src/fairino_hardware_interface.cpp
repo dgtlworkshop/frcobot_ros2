@@ -7,7 +7,7 @@ hardware_interface::CallbackReturn FairinoHardwareInterface::on_init(const hardw
         return hardware_interface::CallbackReturn::ERROR;
     }
     info_ = sysinfo;//info_是父类中定义的变量
-    
+
     for (const hardware_interface::ComponentInfo& joint : info_.joints) {
 
         //指令部分
@@ -137,7 +137,7 @@ hardware_interface::CallbackReturn FairinoHardwareInterface::on_activate(const r
             _jnt_position_command[j] = jntpos.jPos[j]/180.0*M_PI;
         }
         RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"),"初始指令位置: %f,%f,%f,%f,%f,%f",_jnt_position_command[0],\
-        _jnt_position_command[1],_jnt_position_command[2],_jnt_position_command[3],_jnt_position_command[4],_jnt_position_command[5]);    
+        _jnt_position_command[1],_jnt_position_command[2],_jnt_position_command[3],_jnt_position_command[4],_jnt_position_command[5]);
         RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "机械臂硬件启动成功!");
         return hardware_interface::CallbackReturn::SUCCESS;
     }else{
@@ -151,11 +151,23 @@ hardware_interface::CallbackReturn FairinoHardwareInterface::on_activate(const r
 hardware_interface::CallbackReturn FairinoHardwareInterface::on_deactivate(const rclcpp_lifecycle::State& previous_state)
 {
     RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "Stopping ...please wait...");
-    _ptr_robot->StopMotion();//停止机器人
-    _ptr_robot->CloseRPC();//销毁实例，连接断开
+    const auto motion_returncode = _ptr_robot->StopMotion(); // 停止机器人
+    if (motion_returncode != 0) {
+				RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"), "Failed to stop robot motion. Error code: %d", motion_returncode);
+    }
+    const auto rpc_returncode = _ptr_robot->CloseRPC();//销毁实例，连接断开
+    if (rpc_returncode != 0) {
+				RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"), "Failed to stop robot RPC. Error code: %d", motion_returncode);
+    }
     _ptr_robot.release();
-    RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "System successfully stopped!");
-    return hardware_interface::CallbackReturn::SUCCESS;
+
+    if (motion_returncode != 0 && rpc_returncode != 0) {
+	    RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "System successfully stopped!");
+	    return hardware_interface::CallbackReturn::SUCCESS;
+    } else {
+	    RCLCPP_WARN(rclcpp::get_logger("FairinoHardwareInterface"), "System may not have successfully stopped.");
+	    return hardware_interface::CallbackReturn::FAILURE;
+    }
 }
 
 
@@ -170,7 +182,7 @@ hardware_interface::return_type FairinoHardwareInterface::read(const rclcpp::Tim
             //_jnt_torque_state[i] = state_data.jt_cur_tor[i];//注意单位转换
         }
     }else{
-        hardware_interface::return_type::ERROR;
+        return hardware_interface::return_type::ERROR;
     }
     //RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "System successfully read: %f,%f,%f,%f,%f,%f",_jnt_position_state[0],\
     _jnt_position_state[1],_jnt_position_state[2],_jnt_position_state[3],_jnt_position_state[4],_jnt_position_state[5]);
@@ -193,9 +205,10 @@ hardware_interface::return_type FairinoHardwareInterface::write(const rclcpp::Ti
         }
         //RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "ServoJ下发位置:%f,%f,%f,%f,%f,%f",\
             cmd.jPos[0],cmd.jPos[1],cmd.jPos[2],cmd.jPos[3],cmd.jPos[4],cmd.jPos[5]);
-        int returncode = _ptr_robot->ServoJ(&cmd,&extcmd,0,0,0.008,0,0);
+        const auto returncode = _ptr_robot->ServoJ(&cmd,&extcmd,0,0,0.008,0,0);
         if(returncode != 0){
             RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "ServoJ指令下发错误,错误码:%d",returncode);
+            return hardware_interface::return_type::ERROR;
         }
     }else if(_control_mode == 1){//扭矩控制模式
         if (std::any_of(&_jnt_torque_command[0], &_jnt_torque_command[5],\
@@ -207,7 +220,7 @@ hardware_interface::return_type FairinoHardwareInterface::write(const rclcpp::Ti
         RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "指令发送错误:未识别当前所处控制模式");
         return hardware_interface::return_type::ERROR;
     }
- 
+
     return hardware_interface::return_type::OK;
 }
 
