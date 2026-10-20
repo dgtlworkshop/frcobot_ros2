@@ -1,0 +1,5 @@
+[submodule "fairino-cpp-sdk"]
+	path = libfairino/fairino-cpp-sdk
+	url = https://github.com/FAIR-INNOVATION/fairino-cpp-sdk
+	branch = 3.9.9
+	shallow = true
