@@ -11,7 +11,6 @@
 #define VERSION_ROBOT_MINOR 9
 #define VERSION_ROBOT_MINOR2 9
 
-
 //用于记录fairino_msgs版本号
 /*
 V3.0.3 将error_code拆分成main_error_code和sub_error_code并实现反馈
