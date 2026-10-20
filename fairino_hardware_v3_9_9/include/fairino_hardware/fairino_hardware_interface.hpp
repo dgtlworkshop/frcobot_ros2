@@ -9,7 +9,7 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "visibility_control.h"
 #include <vector>
-#include "libfairino/include/robot.h"
+#include <robot.h>
 
 
 #define CONTROLLER_IP_ADDRESS "192.168.58.2"
