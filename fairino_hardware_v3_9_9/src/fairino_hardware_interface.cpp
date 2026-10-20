@@ -7,12 +7,24 @@ hardware_interface::CallbackReturn FairinoHardwareInterface::on_init(
   const hardware_interface::HardwareInfo & sysinfo)
 {
   if (
-    hardware_interface::SystemInterface::on_init(sysinfo) !=
+    this->hardware_interface::SystemInterface::on_init(sysinfo) !=
     hardware_interface::CallbackReturn::SUCCESS) {
     return hardware_interface::CallbackReturn::ERROR;
   }
   this->info_ = sysinfo;  //info_是父类中定义的变量
 
+  auto it = this->info_.hardware_parameters.find("robot_ip");
+  if (it != this->info_.hardware_parameters.end()) {
+    this->_controller_ip = it->second;
+    RCLCPP_INFO(
+      rclcpp::get_logger("FairinoHardwareInterface"), "Found controller IP in URDF: %s",
+      this->_controller_ip.c_str());
+  } else {
+    RCLCPP_WARN(
+      rclcpp::get_logger("FairinoHardwareInterface"),
+      "No 'robot_ip' parameter. Falling back to default: %s", CONTROLLER_IP_ADDRESS);
+    this->_controller_ip = CONTROLLER_IP_ADDRESS;
+  }
 
   for (const hardware_interface::ComponentInfo & joint : this->info_.joints) {
     //指令部分
@@ -246,6 +258,7 @@ hardware_interface::return_type FairinoHardwareInterface::write(
 
   return hardware_interface::return_type::OK;
 }
+rclcpp::Logger FairinoHardwareInterface::get_logger() { return rclcpp::get_logger("FairinoHardwareInterface"); }
 
 }  // namespace fairino_hardware
 

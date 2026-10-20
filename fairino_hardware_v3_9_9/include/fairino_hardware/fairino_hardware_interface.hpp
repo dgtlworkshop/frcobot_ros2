@@ -60,6 +60,7 @@ public:
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
 private:
+  static inline rclcpp::Logger get_logger();
   double _jnt_position_command[6];
   double _jnt_velocity_command[6];
   double _jnt_torque_command[6];
