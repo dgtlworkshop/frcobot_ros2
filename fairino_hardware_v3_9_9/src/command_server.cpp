@@ -1,6 +1,8 @@
 #include "fairino_hardware/command_server.hpp"
-#include <sys/types.h>
+
 #include <sys/socket.h>
+#include <sys/types.h>
+
 #include "fairino_hardware/version_control.h"
 #include "sys/mman.h"
 
@@ -11,435 +13,435 @@ std::atomic<int> suberrcode;
 #define LOGGER_NAME "fairino_ros2_command_server"
 
 #ifdef CHN_VERSION
-char* msgout[] = {
-    "ROS2指令服务器创建成功,准备连接机械臂",
-    "fairino_hardware版本号:",
-    "适配机械臂软件版本号:",
-    "构建时间:",
-    "连接机械臂失败，准备重连...",
-    "连接机械臂失败，程序即将退出！",
-    "连接机械臂成功！",
-    "收到ROS指令,名称&参数:",
-    "指令错误: 找不到该指令对应的函数",
-    "出现无效参数，请检查参数数据类型",
-    "参数出现超范围数据",
-    "取参数过程发生异常，请检查参数个数是否正确",
-    "指令错误:函数参数输入不合法,参数列表由字母,数字和逗号组成,不能有空格出现",
-    "指令错误:函数输入形式错误,函数输入必须是 [函数名]() 这种输入形式,请重新输入",
-    "指令错误:关节位置参数为6个,参数输入个数请确认",
-    "指令错误:关节/笛卡尔容器序号超限",
-    "指令错误：关节点位输入参数规则为第一个为存储序号,后续为关节位置信息,以逗号隔开,不能出现空格",
-    "指令错误:笛卡尔位置参数为6个,参数输入个数请确认",
-    "指令错误：笛卡尔点位输入参数规则为第一个为存储序号,后续为笛卡尔位置信息,以逗号隔开,不能出现空格",
-    "指令错误: 无效的GET指令参数",
-    "指令错误: GET指令参数非法,参数形式为[JNT|CART],[序号]",
-    "指令错误:指令调用正向运动学发生错误",
-    "指令错误:指令调用逆向运动学发生错误",
-    "指令错误:点位参数输入非法,没有找到点位信息",
-    "开始创建状态反馈TCP socket",
-    "错误: 创建socket失败!",
-    "创建状态反馈socket成功,开始连接控制器...",
-    "错误:无法连接控制器反馈数据端口,程序即将退出!",
-    "控制器状态端口连接成功",
-    "开启tcp心跳检测失败",
-    "守护线程:创建套接字失败, 3s后再次尝试",
-    "守护线程:发起重新连接失败, 3s后再次尝试",
-    "守护线程:重新连接成功",
-    "守护线程:重连线程退出",
-    "网络断开，请检查网络",
-    "反馈状态数据帧长度小于预期,请对齐fairino_hardware功能包与机械臂软件版本。",
-    "反馈状态数据帧长度大于预期,请对齐fairino_hardware功能包与机械臂软件版本。",
-    "帧数据拼接失败，帧尾数据校验失败，重新寻找帧头"
-};
+char * msgout[] = {
+  "ROS2指令服务器创建成功,准备连接机械臂",
+  "fairino_hardware版本号:",
+  "适配机械臂软件版本号:",
+  "构建时间:",
+  "连接机械臂失败，准备重连...",
+  "连接机械臂失败，程序即将退出！",
+  "连接机械臂成功！",
+  "收到ROS指令,名称&参数:",
+  "指令错误: 找不到该指令对应的函数",
+  "出现无效参数，请检查参数数据类型",
+  "参数出现超范围数据",
+  "取参数过程发生异常，请检查参数个数是否正确",
+  "指令错误:函数参数输入不合法,参数列表由字母,数字和逗号组成,不能有空格出现",
+  "指令错误:函数输入形式错误,函数输入必须是 [函数名]() 这种输入形式,请重新输入",
+  "指令错误:关节位置参数为6个,参数输入个数请确认",
+  "指令错误:关节/笛卡尔容器序号超限",
+  "指令错误：关节点位输入参数规则为第一个为存储序号,后续为关节位置信息,以逗号隔开,不能出现空格",
+  "指令错误:笛卡尔位置参数为6个,参数输入个数请确认",
+  "指令错误：笛卡尔点位输入参数规则为第一个为存储序号,后续为笛卡尔位置信息,以逗号隔开,不能出现空格",
+  "指令错误: 无效的GET指令参数",
+  "指令错误: GET指令参数非法,参数形式为[JNT|CART],[序号]",
+  "指令错误:指令调用正向运动学发生错误",
+  "指令错误:指令调用逆向运动学发生错误",
+  "指令错误:点位参数输入非法,没有找到点位信息",
+  "开始创建状态反馈TCP socket",
+  "错误: 创建socket失败!",
+  "创建状态反馈socket成功,开始连接控制器...",
+  "错误:无法连接控制器反馈数据端口,程序即将退出!",
+  "控制器状态端口连接成功",
+  "开启tcp心跳检测失败",
+  "守护线程:创建套接字失败, 3s后再次尝试",
+  "守护线程:发起重新连接失败, 3s后再次尝试",
+  "守护线程:重新连接成功",
+  "守护线程:重连线程退出",
+  "网络断开，请检查网络",
+  "反馈状态数据帧长度小于预期,请对齐fairino_hardware功能包与机械臂软件版本。",
+  "反馈状态数据帧长度大于预期,请对齐fairino_hardware功能包与机械臂软件版本。",
+  "帧数据拼接失败，帧尾数据校验失败，重新寻找帧头"};
 #endif
 
 #ifdef ENG_VERSION
-char* msgout[] = {
-    "ROS2 command server created,ready to connect robot",
-    "fairino_hardware:",
-    "Adapt to software version of robot:",
-    "Package build time:",
-    "Robot connect failed! try to reconnect...",
-    "Robot connect failed! program about to exit",
-    "Robot connected!",
-    "Receive ROS command,command name&parameters:",
-    "Command error:invalid fucntion name",
-    "Invalid parameter,please check data types of input parameters",
-    "Parameter out of range,please check value of input parameters",
-    "Incorrect parameter number,please check numbers of input parameters",
-    "Illegal parameters,parameters consist of number,dot and letters,space in not allowed",
-    "Illegal command format,you must follow the format:'function name(parameters)'",
-    "Number of joint position is 6, please check parameter number",
-    "Joint pos container index out of range",
-    "Parameter fomart:index,j1pos...j6pos,please input correct format",
-    "Number of cartesean position is 6, please check parameter number",
-    "Parameter fomart:index,x,y,z,r,p,y,please input correct format",
-    "Invalid command GET parameter",
-    "Illegal command GET parameter,format:[JNT|CART],[index]",
-    "Joint/Cartesean position container index out of range",
-    "Forward kinematic error occur,please check input point",
-    "Inverse kinematic error occur,please check input point",
-    "Invalid container index,can't find the point",
-    "Ready to create state feedback client socket",
-    "Error:socket create failed",
-    "Socket created,ready to connect robot...",
-    "Error:failed to connect robot state feedback port,program about to exit!",
-    "Connected to robot state feedback port",
-    "Failed to set socket keep alive",
-    "Keep alive:recreate socket failed, try again after 3sec",
-    "Keep alive:reconnect robot failed, try again after 3sec",
-    "Keep alive:reconnect success!",
-    "Keep alive:thread exit!",
-    "State feedback socket disconnected, please check your network",
-    "The volumn of state feedback data is smaller than expected, please check robot sofeware version",
-    "The volumn of state feedback data is larger than expected, please check robot sofeware version",
-    "The sumcheck of state feedback data is failed, drop the data and search frame head again"
-};
+char * msgout[] = {
+  "ROS2 command server created,ready to connect robot",
+  "fairino_hardware:",
+  "Adapt to software version of robot:",
+  "Package build time:",
+  "Robot connect failed! try to reconnect...",
+  "Robot connect failed! program about to exit",
+  "Robot connected!",
+  "Receive ROS command,command name&parameters:",
+  "Command error:invalid fucntion name",
+  "Invalid parameter,please check data types of input parameters",
+  "Parameter out of range,please check value of input parameters",
+  "Incorrect parameter number,please check numbers of input parameters",
+  "Illegal parameters,parameters consist of number,dot and letters,space in not allowed",
+  "Illegal command format,you must follow the format:'function name(parameters)'",
+  "Number of joint position is 6, please check parameter number",
+  "Joint pos container index out of range",
+  "Parameter fomart:index,j1pos...j6pos,please input correct format",
+  "Number of cartesean position is 6, please check parameter number",
+  "Parameter fomart:index,x,y,z,r,p,y,please input correct format",
+  "Invalid command GET parameter",
+  "Illegal command GET parameter,format:[JNT|CART],[index]",
+  "Joint/Cartesean position container index out of range",
+  "Forward kinematic error occur,please check input point",
+  "Inverse kinematic error occur,please check input point",
+  "Invalid container index,can't find the point",
+  "Ready to create state feedback client socket",
+  "Error:socket create failed",
+  "Socket created,ready to connect robot...",
+  "Error:failed to connect robot state feedback port,program about to exit!",
+  "Connected to robot state feedback port",
+  "Failed to set socket keep alive",
+  "Keep alive:recreate socket failed, try again after 3sec",
+  "Keep alive:reconnect robot failed, try again after 3sec",
+  "Keep alive:reconnect success!",
+  "Keep alive:thread exit!",
+  "State feedback socket disconnected, please check your network",
+  "The volumn of state feedback data is smaller than expected, please check robot sofeware version",
+  "The volumn of state feedback data is larger than expected, please check robot sofeware version",
+  "The sumcheck of state feedback data is failed, drop the data and search frame head again"};
 #endif
 
-typedef enum _msg_id{
-    hello,
-    ver_package,
-    ver_robot,
-    build_time,
-    try_reconnect,
-    connect_failed,
-    connect_success,
-    receive_cmd,
-    invalid_cmd,
-    invalid_datatype,
-    invalid_range,
-    invalid_paranum,
-    illegal_para,
-    illegal_cmdfomart,
-    invalid_jntposnum,
-    out_container_range,
-    invalid_jntcontainer_format,
-    invalid_cartposnum,
-    invalid_cartcontainer_format,
-    invalid_get_para,
-    illegal_get_para,
-    fwd_kin_error,
-    inv_kin_error,
-    invalid_container_index,
-    create_state_feedback,
-    socket_create_failed,
-    socket_create_success,
-    socket_connect_failed,
-    socket_connect_success,
-    keep_alive_failed,
-    keep_alive_recreate_socket_failed,
-    keep_alive_reconnect_failed,
-    keep_alive_reconnect_success,
-    keep_alive_exit,
-    network_diconnect,
-    feedback_data_small,
-    feedback_data_large,
-    search_head_again
-}msg_id;
-
-
-
-
-
+typedef enum _msg_id {
+  hello,
+  ver_package,
+  ver_robot,
+  build_time,
+  try_reconnect,
+  connect_failed,
+  connect_success,
+  receive_cmd,
+  invalid_cmd,
+  invalid_datatype,
+  invalid_range,
+  invalid_paranum,
+  illegal_para,
+  illegal_cmdfomart,
+  invalid_jntposnum,
+  out_container_range,
+  invalid_jntcontainer_format,
+  invalid_cartposnum,
+  invalid_cartcontainer_format,
+  invalid_get_para,
+  illegal_get_para,
+  fwd_kin_error,
+  inv_kin_error,
+  invalid_container_index,
+  create_state_feedback,
+  socket_create_failed,
+  socket_create_success,
+  socket_connect_failed,
+  socket_connect_success,
+  keep_alive_failed,
+  keep_alive_recreate_socket_failed,
+  keep_alive_reconnect_failed,
+  keep_alive_reconnect_success,
+  keep_alive_exit,
+  network_diconnect,
+  feedback_data_small,
+  feedback_data_large,
+  search_head_again
+} msg_id;
 
 /**
  * @brief 构造函数，用于初始化参数服务器中的变量，加载SDK库并连接机械臂
  * @param[in] node_name-节点名称，构建ros2 node必须的参数
  */
-robot_command_thread::robot_command_thread(const std::string node_name):rclcpp::Node(node_name,
-           rclcpp::NodeOptions().use_intra_process_comms(true)){
-    using namespace std::chrono_literals;
+robot_command_thread::robot_command_thread(const std::string node_name)
+: rclcpp::Node(node_name, rclcpp::NodeOptions().use_intra_process_comms(true))
+{
+  using namespace std::chrono_literals;
 
-    /*******************************************初始化私有变量**************************************/
+  /*******************************************初始化私有变量**************************************/
 
-    /*********************************************************************************************/
+  /*********************************************************************************************/
 
-    /*************************************初始化参数服务器中的变量************************************/
-    this->declare_parameter<uint8_t>("toolcoord_install",0);//默认工具安装在机器人末端
-    this->declare_parameter<uint8_t>("toolcoord_type",0);//默认是工具坐标系
-    this->declare_parameter<uint8_t>("collision_mode",0);//碰撞等级模式,默认是等级
-    this->declare_parameter<uint8_t>("collision_config",1);//碰撞配置文件设置,默认不更新配置文件
-    this->declare_parameter<uint8_t>("gripper_vel",80);
-    this->declare_parameter<uint8_t>("gripper_force",50);
-    this->declare_parameter<int>("gripper_maxtime",30000);
-    this->declare_parameter<uint8_t>("gripper_block",1);//默认夹爪控制非阻塞
-    this->declare_parameter<uint8_t>("DO_smooth",0);//默认DO不平滑
-    this->declare_parameter<uint8_t>("DO_block",1);//默认DO非阻塞
-    this->declare_parameter<uint8_t>("AO_block",1);//默认AO非阻塞
-    this->declare_parameter<uint8_t>("JOG_acc",40);//JOG默认加速度40
-    this->declare_parameter<int>("JOG_maxdis",5);//JOG默认单步5mm
-    this->declare_parameter<int>("MoveJLC_tool",0);
-    this->declare_parameter<int>("MoveJLC_user",0);
-    this->declare_parameter<float>("MoveJLC_acc",0);
-    this->declare_parameter<float>("MoveJLC_ovl",100);
-    this->declare_parameter<double>("MoveJLC_eaxis1",0);
-    this->declare_parameter<double>("MoveJLC_eaxis2",0);
-    this->declare_parameter<double>("MoveJLC_eaxis3",0);
-    this->declare_parameter<double>("MoveJLC_eaxis4",0);
-    this->declare_parameter<float>("MoveJ_blendT",500);
-    this->declare_parameter<float>("MoveL_blendR",500);
-    this->declare_parameter<float>("MoveC_blendR",500);
-    this->declare_parameter<uint8_t>("MoveL_search",0);
-    this->declare_parameter<uint8_t>("MoveJLC_offset_flag",0);
-    this->declare_parameter<double>("MoveJLC_offset_pos_x",0);
-    this->declare_parameter<double>("MoveJLC_offset_pos_y",0);
-    this->declare_parameter<double>("MoveJLC_offset_pos_z",0);
-    this->declare_parameter<double>("MoveJLC_offset_pos_rx",0);
-    this->declare_parameter<double>("MoveJLC_offset_pos_ry",0);
-    this->declare_parameter<double>("MoveJLC_offset_pos_rz",0);
-    this->declare_parameter<int>("Spline_tool",1);
-    this->declare_parameter<int>("Spline_user",0);
-    this->declare_parameter<float>("Spline_acc",0);
-    this->declare_parameter<float>("Spline_ovl",100);
-    this->declare_parameter<float>("NewSpline_blendR",10);
-    /*********************************************************************************************/
+  /*************************************初始化参数服务器中的变量************************************/
+  this->declare_parameter<uint8_t>("toolcoord_install", 0);  //默认工具安装在机器人末端
+  this->declare_parameter<uint8_t>("toolcoord_type", 0);     //默认是工具坐标系
+  this->declare_parameter<uint8_t>("collision_mode", 0);     //碰撞等级模式,默认是等级
+  this->declare_parameter<uint8_t>("collision_config", 1);  //碰撞配置文件设置,默认不更新配置文件
+  this->declare_parameter<uint8_t>("gripper_vel", 80);
+  this->declare_parameter<uint8_t>("gripper_force", 50);
+  this->declare_parameter<int>("gripper_maxtime", 30000);
+  this->declare_parameter<uint8_t>("gripper_block", 1);  //默认夹爪控制非阻塞
+  this->declare_parameter<uint8_t>("DO_smooth", 0);      //默认DO不平滑
+  this->declare_parameter<uint8_t>("DO_block", 1);       //默认DO非阻塞
+  this->declare_parameter<uint8_t>("AO_block", 1);       //默认AO非阻塞
+  this->declare_parameter<uint8_t>("JOG_acc", 40);       //JOG默认加速度40
+  this->declare_parameter<int>("JOG_maxdis", 5);         //JOG默认单步5mm
+  this->declare_parameter<int>("MoveJLC_tool", 0);
+  this->declare_parameter<int>("MoveJLC_user", 0);
+  this->declare_parameter<float>("MoveJLC_acc", 0);
+  this->declare_parameter<float>("MoveJLC_ovl", 100);
+  this->declare_parameter<double>("MoveJLC_eaxis1", 0);
+  this->declare_parameter<double>("MoveJLC_eaxis2", 0);
+  this->declare_parameter<double>("MoveJLC_eaxis3", 0);
+  this->declare_parameter<double>("MoveJLC_eaxis4", 0);
+  this->declare_parameter<float>("MoveJ_blendT", 500);
+  this->declare_parameter<float>("MoveL_blendR", 500);
+  this->declare_parameter<float>("MoveC_blendR", 500);
+  this->declare_parameter<uint8_t>("MoveL_search", 0);
+  this->declare_parameter<uint8_t>("MoveJLC_offset_flag", 0);
+  this->declare_parameter<double>("MoveJLC_offset_pos_x", 0);
+  this->declare_parameter<double>("MoveJLC_offset_pos_y", 0);
+  this->declare_parameter<double>("MoveJLC_offset_pos_z", 0);
+  this->declare_parameter<double>("MoveJLC_offset_pos_rx", 0);
+  this->declare_parameter<double>("MoveJLC_offset_pos_ry", 0);
+  this->declare_parameter<double>("MoveJLC_offset_pos_rz", 0);
+  this->declare_parameter<int>("Spline_tool", 1);
+  this->declare_parameter<int>("Spline_user", 0);
+  this->declare_parameter<float>("Spline_acc", 0);
+  this->declare_parameter<float>("Spline_ovl", 100);
+  this->declare_parameter<float>("NewSpline_blendR", 10);
+  /*********************************************************************************************/
 
-    /***********************************创建字符串指令服务器*****************************************/
-    _recv_ros_command_server = this->create_service<remote_cmd_server_srv_msg>(
-        REMOTE_CMD_SERVER_NAME,
-        std::bind(&robot_command_thread::_parseROSCommandData_callback,\
-            this,\
-            std::placeholders::_1,\
-            std::placeholders::_2)
-        );
-    /*********************************************************************************************/
+  /***********************************创建字符串指令服务器*****************************************/
+  _recv_ros_command_server = this->create_service<remote_cmd_server_srv_msg>(
+    REMOTE_CMD_SERVER_NAME, std::bind(
+                              &robot_command_thread::_parseROSCommandData_callback, this,
+                              std::placeholders::_1, std::placeholders::_2));
+  /*********************************************************************************************/
 
-    /********************************尝试使用SDK库连接机械臂******************************************/
-    _controller_ip = CONTROLLER_IP;//控制器默认ip地址
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"Robot ip:%s",CONTROLLER_IP);
+  /********************************尝试使用SDK库连接机械臂******************************************/
+  _controller_ip = CONTROLLER_IP;  //控制器默认ip地址
+  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Robot ip:%s", CONTROLLER_IP);
 
-    //打印输出版本信息及其他前置信息
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(hello)]);
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),(std::string(msgout[msg_id(ver_package)])+std::string("V%i.%i.%i")).c_str(),\
-        VERSION_MAJOR,VERSION_MINOR,VERSION_MINOR2);
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),(std::string(msgout[msg_id(ver_robot)])+std::string("V%i.%i.%i,")).c_str(),\
-        VERSION_ROBOT_MARJOR,VERSION_ROBOT_MINOR,VERSION_ROBOT_MINOR2);
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),(std::string(msgout[msg_id(build_time)])+std::string("%s,%s")).c_str(),\
-        __TIME__,__DATE__);
+  //打印输出版本信息及其他前置信息
+  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(hello)]);
+  RCLCPP_INFO(
+    rclcpp::get_logger(LOGGER_NAME),
+    (std::string(msgout[msg_id(ver_package)]) + std::string("V%i.%i.%i")).c_str(), VERSION_MAJOR,
+    VERSION_MINOR, VERSION_MINOR2);
+  RCLCPP_INFO(
+    rclcpp::get_logger(LOGGER_NAME),
+    (std::string(msgout[msg_id(ver_robot)]) + std::string("V%i.%i.%i,")).c_str(),
+    VERSION_ROBOT_MARJOR, VERSION_ROBOT_MINOR, VERSION_ROBOT_MINOR2);
+  RCLCPP_INFO(
+    rclcpp::get_logger(LOGGER_NAME),
+    (std::string(msgout[msg_id(build_time)]) + std::string("%s,%s")).c_str(), __TIME__, __DATE__);
 
-    //开始初始化
-    int connect_count = 0;
-    _ptr_robot = std::make_unique<FRRobot>();
-    // _ptr_robot->SetReConnectParam(true,86400000,500);
-    _ptr_robot->SetReConnectParam(true,86400000,500);
-    _ptr_robot->LoggerInit(0,"/home/fairino/ros2_ws/fairino_SDK_log/cppsdk.log",5);
-    _ptr_robot->SetLoggerLevel(3);
+  //开始初始化
+  int connect_count = 0;
+  _ptr_robot = std::make_unique<FRRobot>();
+  // _ptr_robot->SetReConnectParam(true,86400000,500);
+  _ptr_robot->SetReConnectParam(true, 86400000, 500);
+  _ptr_robot->LoggerInit(0, "/home/fairino/ros2_ws/fairino_SDK_log/cppsdk.log", 5);
+  _ptr_robot->SetLoggerLevel(3);
 
-    std::vector<RobotState> states = {
-        // RobotState::FrameHead,
-        // RobotState::FrameCnt,
-        // RobotState::DataLen,
-        RobotState::ProgramState,
-        RobotState::RobotState,
-        RobotState::MainCode,
-        RobotState::SubCode,
-        RobotState::RobotMode,
-        RobotState::JointCurPos,
-        RobotState::ToolCurPos,
-        RobotState::FlangeCurPos,
-        RobotState::ActualJointVel,
-        RobotState::ActualJointAcc,
-        RobotState::TargetTCPCmpSpeed,
-        RobotState::TargetTCPSpeed,
-        RobotState::ActualTCPCmpSpeed,
-        RobotState::ActualTCPSpeed,
-        RobotState::ActualJointTorque,
-        RobotState::Tool,
-        RobotState::User,
-        RobotState::ClDgtOutputH,
-        RobotState::ClDgtOutputL,
-        RobotState::TlDgtOutputL,
-        RobotState::ClDgtInputH,
-        RobotState::ClDgtInputL,
-        RobotState::TlDgtInputL,
-        RobotState::ClAnalogInput,
-        RobotState::TlAnalogInput,
-        RobotState::FtSensorRawData,
-        RobotState::FtSensorData,
-        RobotState::FtSensorActive,
-        RobotState::EmergencyStop,
-        RobotState::MotionDone,
-        RobotState::GripperMotiondone,
-        RobotState::McQueueLen,
-        RobotState::CollisionState,
-        RobotState::TrajectoryPnum,
-        RobotState::SafetyStop0State,
-        RobotState::SafetyStop1State,
-        RobotState::GripperFaultId,
-        RobotState::GripperFault,
-        RobotState::GripperActive,
-        RobotState::GripperPosition,
-        RobotState::GripperSpeed,
-        RobotState::GripperCurrent,
-        RobotState::GripperTemp,
-        RobotState::GripperVoltage,
-        RobotState::AuxState,
-        RobotState::ExtAxisStatus,
-        RobotState::ExtDIState,
-        RobotState::ExtDOState,
-        RobotState::ExtAIState,
-        RobotState::ExtAOState,
-        RobotState::RbtEnableState,
-        RobotState::JointDriverTorque,
-        RobotState::JointDriverTemperature,
-        RobotState::RobotTime,
-        RobotState::SoftwareUpgradeState,
-        RobotState::EndLuaErrCode,
-        RobotState::ClAnalogOutput,
-        RobotState::TlAnalogOutput,
-        RobotState::GripperRotNum,
-        RobotState::GripperRotSpeed,
-        RobotState::GripperRotTorque,
-        RobotState::WeldingBreakOffState,
-        RobotState::TargetJointTorque,
-        RobotState::SmartToolState,
-        RobotState::WideVoltageCtrlBoxTemp,
-        RobotState::WideVoltageCtrlBoxFanCurrent,
-        RobotState::ToolCoord,
-        RobotState::WobjCoord,
-        RobotState::ExtoolCoord,
-        RobotState::ExAxisCoord,
-        RobotState::Load,
-        RobotState::LoadCog,
-        RobotState::LastServoTarget,
-        RobotState::ServoJCmdNum,
-        RobotState::TargetJointPos,
-        RobotState::TargetJointVel,
-        RobotState::TargetJointAcc,
-        RobotState::TargetJointCurrent,
-        RobotState::ActualJointCurrent,
-        RobotState::ActualTCPForce,
-        RobotState::TargetTCPPos,
-        RobotState::CollisionLevel,
-        RobotState::SpeedScaleManual,
-        RobotState::SpeedScaleAuto,
-        RobotState::LuaLineNum,
-        RobotState::AbnomalStop,
-        RobotState::CurrentLuaFileName,
-        RobotState::ProgramTotalLine,
-        RobotState::SafetyBoxSingal,
-        RobotState::WeldVoltage,
-        RobotState::WeldCurrent,
-        RobotState::WeldTrackVel,
-        RobotState::TpdException,
-        RobotState::AlarmRebootRobot,
-        RobotState::ModbusMasterConnect,
-        RobotState::ModbusSlaveConnect,
-        RobotState::BtnBoxStopSignal,
-        RobotState::DragAlarm,
-        RobotState::SafetyDoorAlarm,
-        RobotState::SafetyPlaneAlarm,
-        RobotState::MotonAlarm,
-        RobotState::InterfaceAlarm,
-        RobotState::UdpCmdState,
-        RobotState::WeldReadyState,
-        RobotState::AlarmCheckEmergStopBtn,
-        RobotState::TsTmCmdComError,
-        RobotState::TsTmStateComError,
-        RobotState::CtrlBoxError,
-        RobotState::SafetyDataState,
-        RobotState::ForceSensorErrState,
-        RobotState::CtrlOpenLuaErrCode,
-        RobotState::StrangePosFlag,
-        RobotState::Alarm,
-        RobotState::DriverAlarm,
-        RobotState::AliveSlaveNumError,
-        RobotState::SlaveComError,
-        RobotState::CmdPointError,
-        RobotState::IOError,
-        RobotState::GripperError,
-        RobotState::FileError,
-        RobotState::ParaError,
-        RobotState::ExaxisOutLimitError,
-        RobotState::DriverComError,
-        RobotState::DriverError,
-        RobotState::OutSoftLimitError,
-        RobotState::AxleGenComData,
-        RobotState::SocketConnTimeout,
-        RobotState::SocketReadTimeout,
-        RobotState::TsWebStateComErr,
-        RobotState::ExaxisCoordID,
-        RobotState::ProgramRunState
-    };
-    int rnt = _ptr_robot->SetRobotRealtimeStateConfig(states, 8);
-    while(connect_count <_connect_retry_SDK){
-        error_t returncode = _ptr_robot->RPC(_controller_ip.c_str());
-        if(returncode !=0){
-            connect_count++;
-        }else{//正常情况
-            break;
-        }
-        if(connect_count == _connect_retry_SDK){
-            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(connect_failed)]);
-            exit(0);  
-        }
+  std::vector<RobotState> states = {// RobotState::FrameHead,
+                                    // RobotState::FrameCnt,
+                                    // RobotState::DataLen,
+                                    RobotState::ProgramState,
+                                    RobotState::RobotState,
+                                    RobotState::MainCode,
+                                    RobotState::SubCode,
+                                    RobotState::RobotMode,
+                                    RobotState::JointCurPos,
+                                    RobotState::ToolCurPos,
+                                    RobotState::FlangeCurPos,
+                                    RobotState::ActualJointVel,
+                                    RobotState::ActualJointAcc,
+                                    RobotState::TargetTCPCmpSpeed,
+                                    RobotState::TargetTCPSpeed,
+                                    RobotState::ActualTCPCmpSpeed,
+                                    RobotState::ActualTCPSpeed,
+                                    RobotState::ActualJointTorque,
+                                    RobotState::Tool,
+                                    RobotState::User,
+                                    RobotState::ClDgtOutputH,
+                                    RobotState::ClDgtOutputL,
+                                    RobotState::TlDgtOutputL,
+                                    RobotState::ClDgtInputH,
+                                    RobotState::ClDgtInputL,
+                                    RobotState::TlDgtInputL,
+                                    RobotState::ClAnalogInput,
+                                    RobotState::TlAnalogInput,
+                                    RobotState::FtSensorRawData,
+                                    RobotState::FtSensorData,
+                                    RobotState::FtSensorActive,
+                                    RobotState::EmergencyStop,
+                                    RobotState::MotionDone,
+                                    RobotState::GripperMotiondone,
+                                    RobotState::McQueueLen,
+                                    RobotState::CollisionState,
+                                    RobotState::TrajectoryPnum,
+                                    RobotState::SafetyStop0State,
+                                    RobotState::SafetyStop1State,
+                                    RobotState::GripperFaultId,
+                                    RobotState::GripperFault,
+                                    RobotState::GripperActive,
+                                    RobotState::GripperPosition,
+                                    RobotState::GripperSpeed,
+                                    RobotState::GripperCurrent,
+                                    RobotState::GripperTemp,
+                                    RobotState::GripperVoltage,
+                                    RobotState::AuxState,
+                                    RobotState::ExtAxisStatus,
+                                    RobotState::ExtDIState,
+                                    RobotState::ExtDOState,
+                                    RobotState::ExtAIState,
+                                    RobotState::ExtAOState,
+                                    RobotState::RbtEnableState,
+                                    RobotState::JointDriverTorque,
+                                    RobotState::JointDriverTemperature,
+                                    RobotState::RobotTime,
+                                    RobotState::SoftwareUpgradeState,
+                                    RobotState::EndLuaErrCode,
+                                    RobotState::ClAnalogOutput,
+                                    RobotState::TlAnalogOutput,
+                                    RobotState::GripperRotNum,
+                                    RobotState::GripperRotSpeed,
+                                    RobotState::GripperRotTorque,
+                                    RobotState::WeldingBreakOffState,
+                                    RobotState::TargetJointTorque,
+                                    RobotState::SmartToolState,
+                                    RobotState::WideVoltageCtrlBoxTemp,
+                                    RobotState::WideVoltageCtrlBoxFanCurrent,
+                                    RobotState::ToolCoord,
+                                    RobotState::WobjCoord,
+                                    RobotState::ExtoolCoord,
+                                    RobotState::ExAxisCoord,
+                                    RobotState::Load,
+                                    RobotState::LoadCog,
+                                    RobotState::LastServoTarget,
+                                    RobotState::ServoJCmdNum,
+                                    RobotState::TargetJointPos,
+                                    RobotState::TargetJointVel,
+                                    RobotState::TargetJointAcc,
+                                    RobotState::TargetJointCurrent,
+                                    RobotState::ActualJointCurrent,
+                                    RobotState::ActualTCPForce,
+                                    RobotState::TargetTCPPos,
+                                    RobotState::CollisionLevel,
+                                    RobotState::SpeedScaleManual,
+                                    RobotState::SpeedScaleAuto,
+                                    RobotState::LuaLineNum,
+                                    RobotState::AbnomalStop,
+                                    RobotState::CurrentLuaFileName,
+                                    RobotState::ProgramTotalLine,
+                                    RobotState::SafetyBoxSingal,
+                                    RobotState::WeldVoltage,
+                                    RobotState::WeldCurrent,
+                                    RobotState::WeldTrackVel,
+                                    RobotState::TpdException,
+                                    RobotState::AlarmRebootRobot,
+                                    RobotState::ModbusMasterConnect,
+                                    RobotState::ModbusSlaveConnect,
+                                    RobotState::BtnBoxStopSignal,
+                                    RobotState::DragAlarm,
+                                    RobotState::SafetyDoorAlarm,
+                                    RobotState::SafetyPlaneAlarm,
+                                    RobotState::MotonAlarm,
+                                    RobotState::InterfaceAlarm,
+                                    RobotState::UdpCmdState,
+                                    RobotState::WeldReadyState,
+                                    RobotState::AlarmCheckEmergStopBtn,
+                                    RobotState::TsTmCmdComError,
+                                    RobotState::TsTmStateComError,
+                                    RobotState::CtrlBoxError,
+                                    RobotState::SafetyDataState,
+                                    RobotState::ForceSensorErrState,
+                                    RobotState::CtrlOpenLuaErrCode,
+                                    RobotState::StrangePosFlag,
+                                    RobotState::Alarm,
+                                    RobotState::DriverAlarm,
+                                    RobotState::AliveSlaveNumError,
+                                    RobotState::SlaveComError,
+                                    RobotState::CmdPointError,
+                                    RobotState::IOError,
+                                    RobotState::GripperError,
+                                    RobotState::FileError,
+                                    RobotState::ParaError,
+                                    RobotState::ExaxisOutLimitError,
+                                    RobotState::DriverComError,
+                                    RobotState::DriverError,
+                                    RobotState::OutSoftLimitError,
+                                    RobotState::AxleGenComData,
+                                    RobotState::SocketConnTimeout,
+                                    RobotState::SocketReadTimeout,
+                                    RobotState::TsWebStateComErr,
+                                    RobotState::ExaxisCoordID,
+                                    RobotState::ProgramRunState};
+  int rnt = _ptr_robot->SetRobotRealtimeStateConfig(states, 8);
+  while (connect_count < _connect_retry_SDK) {
+    error_t returncode = _ptr_robot->RPC(_controller_ip.c_str());
+    if (returncode != 0) {
+      connect_count++;
+    } else {  //正常情况
+      break;
     }
+    if (connect_count == _connect_retry_SDK) {
+      RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(connect_failed)]);
+      exit(0);
+    }
+  }
 
-    // _locktimer = this->create_wall_timer(100ms,std::bind(&robot_command_thread::_getRobotRTState,this));
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(connect_success)]);
-    /*********************************************************************************************/
-     _state_publisher = this->create_publisher<robot_feedback_msg>("nonrt_state_data",1);
-    _locktimer1 = this->create_wall_timer(10ms,std::bind(&robot_command_thread::_state_recv_callback,this));//创建一个定时器任务用于获取非实时状态数据,触发间隔为100ms
-    _locktimer2 = this->create_wall_timer(100ms,std::bind(&robot_command_thread::_ping_recv_callback, this));
+  // _locktimer = this->create_wall_timer(100ms,std::bind(&robot_command_thread::_getRobotRTState,this));
+  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(connect_success)]);
+  /*********************************************************************************************/
+  _state_publisher = this->create_publisher<robot_feedback_msg>("nonrt_state_data", 1);
+  _locktimer1 = this->create_wall_timer(
+    10ms, std::bind(
+            &robot_command_thread::_state_recv_callback,
+            this));  //创建一个定时器任务用于获取非实时状态数据,触发间隔为100ms
+  _locktimer2 =
+    this->create_wall_timer(100ms, std::bind(&robot_command_thread::_ping_recv_callback, this));
 }
-
 
 /**
  * @brief 析构函数，关闭xmlrpc连接并销毁SDK实例对象
  */
 robot_command_thread::~robot_command_thread()
 {
-    //_ptr_robot->CloseRPC();
-    _ptr_robot->~FRRobot();
+  //_ptr_robot->CloseRPC();
+  _ptr_robot->~FRRobot();
 }
-
-
 
 /**
  * @brief 私有函数，service的回调函数，用于解析字符串指令，跳转对应的处理函数
  */
 void robot_command_thread::_parseROSCommandData_callback(
-        const std::shared_ptr<remote_cmd_server_srv_msg::Request> req,\ 
-        std::shared_ptr<remote_cmd_server_srv_msg::Response> res){
-    //指令格式为movj(1,10)
-    std::regex func_reg("([A-Z|a-z|_|0-9]+)[(](.*)[)]");//函数名的输入模式应该是字母或者数字函数名后跟(),圆括号中有所有输入参数
-    std::smatch func_match;
-    if(std::regex_match(req->cmd_str,func_match,func_reg)){
-        std::string func_name = func_match[1];
-        std::string para_list = func_match[2];
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),(std::string(msgout[msg_id(receive_cmd)])+\
-            std::string("%s,%s")).c_str(),func_name.c_str(),para_list.c_str());
+  const std::shared_ptr<remote_cmd_server_srv_msg::Request> req,\ 
+        std::shared_ptr<remote_cmd_server_srv_msg::Response>
+    res)
+{
+  //指令格式为movj(1,10)
+  std::regex func_reg(
+    "([A-Z|a-z|_|0-9]+)[(](.*)[)]");  //函数名的输入模式应该是字母或者数字函数名后跟(),圆括号中有所有输入参数
+  std::smatch func_match;
+  if (std::regex_match(req->cmd_str, func_match, func_reg)) {
+    std::string func_name = func_match[1];
+    std::string para_list = func_match[2];
+    RCLCPP_INFO(
+      rclcpp::get_logger(LOGGER_NAME),
+      (std::string(msgout[msg_id(receive_cmd)]) + std::string("%s,%s")).c_str(), func_name.c_str(),
+      para_list.c_str());
 
-        //校验参数的内容,参数部分必须是字母,数字和逗号,负号组成,出现其他字符包括空格都会导致校验失败
-        std::regex para_pattern(".*");
-        if(std::regex_match(para_list,para_pattern)){//检查参数输入是否合法
-            auto find_idx = _fr_function_list.find(func_name);
-            if(find_idx == _fr_function_list.end()){
-                RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_cmd)]);
-                res->cmd_res = std::string("-1");
-            }else if(find_idx != _fr_function_list.end()){
-                try{
-                    res->cmd_res = (this->*(find_idx->second))(para_list);
-                }catch(const std::invalid_argument& e){
-                    RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_datatype)]);
-                    res->cmd_res = "-1";
-                }catch(const std::out_of_range& e){
-                    RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_range)]);
-                    res->cmd_res = "-1";
-                }catch(const std::logic_error& e){
-                    RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_paranum)]);
-                    res->cmd_res = "-1";
-                }
-            }
-        }else{
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(illegal_para)]);
-            res->cmd_res = std::string("-1");
-        }
-    }else{
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(illegal_cmdfomart)]);
+    //校验参数的内容,参数部分必须是字母,数字和逗号,负号组成,出现其他字符包括空格都会导致校验失败
+    std::regex para_pattern(".*");
+    if (std::regex_match(para_list, para_pattern)) {  //检查参数输入是否合法
+      auto find_idx = _fr_function_list.find(func_name);
+      if (find_idx == _fr_function_list.end()) {
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_cmd)]);
         res->cmd_res = std::string("-1");
+      } else if (find_idx != _fr_function_list.end()) {
+        try {
+          res->cmd_res = (this->*(find_idx->second))(para_list);
+        } catch (const std::invalid_argument & e) {
+          RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_datatype)]);
+          res->cmd_res = "-1";
+        } catch (const std::out_of_range & e) {
+          RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_range)]);
+          res->cmd_res = "-1";
+        } catch (const std::logic_error & e) {
+          RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_paranum)]);
+          res->cmd_res = "-1";
+        }
+      }
+    } else {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(illegal_para)]);
+      res->cmd_res = std::string("-1");
     }
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(illegal_cmdfomart)]);
+    res->cmd_res = std::string("-1");
+  }
 }
 
 // template<typename T,typename ... Ts>
@@ -452,15 +454,16 @@ void robot_command_thread::_parseROSCommandData_callback(
  * @param [in] str-需要进行风格的字符串
  * @param [out] list_data-输出的按逗号风格出来的字符串列表 
  */
-void robot_command_thread::_splitString2List(std::string str,std::list<std::string> &list_data){
-    list_data.clear();
-    std::regex search_para(",");//分隔符
-    std::regex_token_iterator iter_data(str.begin(),str.end(),search_para,-1);
-    std::regex_token_iterator<std::string::iterator> end; 
-    while(iter_data != end){
-        list_data.push_back(iter_data->str());
-        iter_data++;
-    }
+void robot_command_thread::_splitString2List(std::string str, std::list<std::string> & list_data)
+{
+  list_data.clear();
+  std::regex search_para(",");  //分隔符
+  std::regex_token_iterator iter_data(str.begin(), str.end(), search_para, -1);
+  std::regex_token_iterator<std::string::iterator> end;
+  while (iter_data != end) {
+    list_data.push_back(iter_data->str());
+    iter_data++;
+  }
 }
 
 /**
@@ -468,15 +471,16 @@ void robot_command_thread::_splitString2List(std::string str,std::list<std::stri
  * @param [in] str-需要进行风格的字符串
  * @param [out] list_data-输出的按逗号风格出来的字符串列表 
  */
-void robot_command_thread::_splitString2Vec(std::string str,std::vector<std::string> &vector_data){
-    vector_data.clear();
-    std::regex search_para(",");//分隔符
-    std::regex_token_iterator iter_data(str.begin(),str.end(),search_para,-1);
-    std::regex_token_iterator<std::string::iterator> end; 
-    while(iter_data != end){
-        vector_data.push_back(iter_data->str());
-        iter_data++;
-    }
+void robot_command_thread::_splitString2Vec(std::string str, std::vector<std::string> & vector_data)
+{
+  vector_data.clear();
+  std::regex search_para(",");  //分隔符
+  std::regex_token_iterator iter_data(str.begin(), str.end(), search_para, -1);
+  std::regex_token_iterator<std::string::iterator> end;
+  while (iter_data != end) {
+    vector_data.push_back(iter_data->str());
+    iter_data++;
+  }
 }
 
 /**
@@ -484,13 +488,20 @@ void robot_command_thread::_splitString2Vec(std::string str,std::vector<std::str
  * @param [in] data-list数据，用于存储字符串列表
  * @param [out] pose-输出的DescPose对象
  */
-void robot_command_thread::_fillDescPose(std::list<std::string>& data,DescPose& pose){
-    pose.tran.x = std::stod(data.front().c_str());data.pop_front();
-    pose.tran.y = std::stod(data.front().c_str());data.pop_front();
-    pose.tran.z = std::stod(data.front().c_str());data.pop_front();
-    pose.rpy.rx = std::stod(data.front().c_str());data.pop_front();
-    pose.rpy.ry = std::stod(data.front().c_str());data.pop_front();
-    pose.rpy.rz = std::stod(data.front().c_str());data.pop_front();
+void robot_command_thread::_fillDescPose(std::list<std::string> & data, DescPose & pose)
+{
+  pose.tran.x = std::stod(data.front().c_str());
+  data.pop_front();
+  pose.tran.y = std::stod(data.front().c_str());
+  data.pop_front();
+  pose.tran.z = std::stod(data.front().c_str());
+  data.pop_front();
+  pose.rpy.rx = std::stod(data.front().c_str());
+  data.pop_front();
+  pose.rpy.ry = std::stod(data.front().c_str());
+  data.pop_front();
+  pose.rpy.rz = std::stod(data.front().c_str());
+  data.pop_front();
 }
 
 /**
@@ -498,32 +509,36 @@ void robot_command_thread::_fillDescPose(std::list<std::string>& data,DescPose& 
  * @param [in] data-list数据，用于存储字符串列表
  * @param [out] pose-输出的DescTran对象
  */
-void robot_command_thread::_fillDescTran(std::list<std::string>& data,DescTran& trans){
-    trans.x = std::stod(data.front().c_str());data.pop_front();
-    trans.y = std::stod(data.front().c_str());data.pop_front();
-    trans.z = std::stod(data.front().c_str());data.pop_front();
+void robot_command_thread::_fillDescTran(std::list<std::string> & data, DescTran & trans)
+{
+  trans.x = std::stod(data.front().c_str());
+  data.pop_front();
+  trans.y = std::stod(data.front().c_str());
+  data.pop_front();
+  trans.z = std::stod(data.front().c_str());
+  data.pop_front();
 }
-
 
 /**
  * @brief 私有函数，用于将list中开头6个数据填充到JointPos对象中
  * @param [in] data-list数据，用于存储字符串列表
  * @param [out] pos-输出的JointPos对象
  */
-void robot_command_thread::_fillJointPose(std::list<std::string>& data,JointPos& pos){
-    for(int i=0;i<6;i++){
-        pos.jPos[i] = std::stod(data.front().c_str());
-        data.pop_front();
-    }
+void robot_command_thread::_fillJointPose(std::list<std::string> & data, JointPos & pos)
+{
+  for (int i = 0; i < 6; i++) {
+    pos.jPos[i] = std::stod(data.front().c_str());
+    data.pop_front();
+  }
 }
 
-void robot_command_thread::_getRobotRTState(){
-    static ROBOT_STATE_PKG tmp;
-    _ptr_robot->GetRobotRealTimeState(&tmp);
-    mainerrcode = tmp.main_code;
-    suberrcode = tmp.sub_code;
+void robot_command_thread::_getRobotRTState()
+{
+  static ROBOT_STATE_PKG tmp;
+  _ptr_robot->GetRobotRealTimeState(&tmp);
+  mainerrcode = tmp.main_code;
+  suberrcode = tmp.sub_code;
 }
-
 
 /**
  * @brief 私有函数，用于处理JNTPoint()指令
@@ -531,49 +546,51 @@ void robot_command_thread::_getRobotRTState(){
  * @return 指令执行是否成功
  * @retval 0-成功，-1-失败
  */
-std::string robot_command_thread::defJntPosition(std::string pos){
-    //std::regex pattern("[-|\\.|,|\\d]*"); //参数模式应该是所有参数都是数字和逗号
-    std::regex pattern("[\\d.\\-,]*"); //参数模式应该是所有参数都是数字和逗号
-    std::smatch para_match;
-    if(std::regex_match(pos,para_match,pattern)){//进行参数正确性判断
-        std::smatch data_match;
-        std::regex search_para(",");//分隔符
-        std::regex_token_iterator iter_data(pos.begin(),pos.end(),search_para,-1);
-        decltype(iter_data) end;
-        int count = 0;
-        for(;iter_data != end;iter_data++){
-            count++;
-        }
-        if(count != 7){
-            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_jntposnum)]);
-            return "-1";
-        }
-        iter_data = std::regex_token_iterator(pos.begin(),pos.end(),search_para,-1);
-        int idx = atol(iter_data->str().c_str());//指令序号
-        iter_data++;
-        if(idx > _cmd_jnt_pos_list.size()+1 || idx <= 0){//如果大于当前容器最大值+1,那么要报错,因为序列容器中间无法留空
-            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            return "-1";
-        }else if(idx <= _cmd_jnt_pos_list.size()){//如果是小于等于当前的容量,那么就是点位信息覆盖
-            int i=0;
-            for(;iter_data != end;iter_data++,i++){
-                _cmd_jnt_pos_list.at(idx-1).jPos[i] = atof(iter_data->str().c_str());
-            }
-        }else if(idx == _cmd_jnt_pos_list.size()+1){//添加元素
-            JointPos pos;
-            int i=0;
-            for(;iter_data != end;iter_data++,i++){
-                pos.jPos[i] = atof(iter_data->str().c_str());
-            }
-            _cmd_jnt_pos_list.push_back(pos);
-        }
-    }else{
-        RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_jntcontainer_format)]);
-        return "-1";
+std::string robot_command_thread::defJntPosition(std::string pos)
+{
+  //std::regex pattern("[-|\\.|,|\\d]*"); //参数模式应该是所有参数都是数字和逗号
+  std::regex pattern("[\\d.\\-,]*");  //参数模式应该是所有参数都是数字和逗号
+  std::smatch para_match;
+  if (std::regex_match(pos, para_match, pattern)) {  //进行参数正确性判断
+    std::smatch data_match;
+    std::regex search_para(",");  //分隔符
+    std::regex_token_iterator iter_data(pos.begin(), pos.end(), search_para, -1);
+    decltype(iter_data) end;
+    int count = 0;
+    for (; iter_data != end; iter_data++) {
+      count++;
     }
-    return "0";
+    if (count != 7) {
+      RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_jntposnum)]);
+      return "-1";
+    }
+    iter_data = std::regex_token_iterator(pos.begin(), pos.end(), search_para, -1);
+    int idx = atol(iter_data->str().c_str());  //指令序号
+    iter_data++;
+    if (
+      idx > _cmd_jnt_pos_list.size() + 1 ||
+      idx <= 0) {  //如果大于当前容器最大值+1,那么要报错,因为序列容器中间无法留空
+      RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      return "-1";
+    } else if (idx <= _cmd_jnt_pos_list.size()) {  //如果是小于等于当前的容量,那么就是点位信息覆盖
+      int i = 0;
+      for (; iter_data != end; iter_data++, i++) {
+        _cmd_jnt_pos_list.at(idx - 1).jPos[i] = atof(iter_data->str().c_str());
+      }
+    } else if (idx == _cmd_jnt_pos_list.size() + 1) {  //添加元素
+      JointPos pos;
+      int i = 0;
+      for (; iter_data != end; iter_data++, i++) {
+        pos.jPos[i] = atof(iter_data->str().c_str());
+      }
+      _cmd_jnt_pos_list.push_back(pos);
+    }
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_jntcontainer_format)]);
+    return "-1";
+  }
+  return "0";
 }
-
 
 /**
  * @brief 私有函数，用于处理CARTPoint()指令
@@ -581,54 +598,66 @@ std::string robot_command_thread::defJntPosition(std::string pos){
  * @return 指令执行是否成功
  * @retval 0-成功，-1-失败
  */
-std::string robot_command_thread::defCartPosition(std::string pos){
-    //std::regex pattern("[\\.\\d|\\d|,|-]*"); //参数模式应该是所有参数都是数字
-    std::regex pattern("[\\d.\\-,]*"); //参数模式应该是所有参数都是数字
-    std::smatch para_match;
-    if(std::regex_match(pos,para_match,pattern)){
-        std::smatch data_match;
-        std::regex search_para(",");//分隔符
-        std::regex_token_iterator iter_data(pos.begin(),pos.end(),search_para,-1);
-        decltype(iter_data) end;
-        int count = 0;
-        for(;iter_data != end;iter_data++){
-            count++;
-        }
-        if(count != 7){
-            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_cartposnum)]);
-            return "-1";
-        }
-        iter_data = std::regex_token_iterator(pos.begin(),pos.end(),search_para,-1);
-        int idx = atol(iter_data->str().c_str());//指令序号
-        iter_data++;
-        if(idx > _cmd_cart_pos_list.size()+1 || idx <= 0){//如果大于当前容器最大值+1,那么要报错,因为序列容器中间无法留空
-            RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            return "-1";
-        }else if(idx <= _cmd_cart_pos_list.size()){//如果是小于等于当前的容量,那么就是点位信息覆盖
-            _cmd_cart_pos_list.at(idx-1).tran.x = atof(iter_data->str().c_str());iter_data++;
-            _cmd_cart_pos_list.at(idx-1).tran.y = atof(iter_data->str().c_str());iter_data++;
-            _cmd_cart_pos_list.at(idx-1).tran.z = atof(iter_data->str().c_str());iter_data++;
-            _cmd_cart_pos_list.at(idx-1).rpy.rx = atof(iter_data->str().c_str());iter_data++;
-            _cmd_cart_pos_list.at(idx-1).rpy.ry = atof(iter_data->str().c_str());iter_data++;
-            _cmd_cart_pos_list.at(idx-1).rpy.rz = atof(iter_data->str().c_str());
-
-        }else if(idx == _cmd_cart_pos_list.size()+1){//添加元素
-            DescPose add_pos;
-                add_pos.tran.x = atof(iter_data->str().c_str());iter_data++;
-                add_pos.tran.y = atof(iter_data->str().c_str());iter_data++;
-                add_pos.tran.z = atof(iter_data->str().c_str());iter_data++;
-                add_pos.rpy.rx = atof(iter_data->str().c_str());iter_data++;
-                add_pos.rpy.ry = atof(iter_data->str().c_str());iter_data++;
-                add_pos.rpy.rz = atof(iter_data->str().c_str());
-            _cmd_cart_pos_list.push_back(add_pos);
-        }
-    }else{
-        RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_cartcontainer_format)]);
-        return "-1";
+std::string robot_command_thread::defCartPosition(std::string pos)
+{
+  //std::regex pattern("[\\.\\d|\\d|,|-]*"); //参数模式应该是所有参数都是数字
+  std::regex pattern("[\\d.\\-,]*");  //参数模式应该是所有参数都是数字
+  std::smatch para_match;
+  if (std::regex_match(pos, para_match, pattern)) {
+    std::smatch data_match;
+    std::regex search_para(",");  //分隔符
+    std::regex_token_iterator iter_data(pos.begin(), pos.end(), search_para, -1);
+    decltype(iter_data) end;
+    int count = 0;
+    for (; iter_data != end; iter_data++) {
+      count++;
     }
-    return "0";
-}
+    if (count != 7) {
+      RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_cartposnum)]);
+      return "-1";
+    }
+    iter_data = std::regex_token_iterator(pos.begin(), pos.end(), search_para, -1);
+    int idx = atol(iter_data->str().c_str());  //指令序号
+    iter_data++;
+    if (
+      idx > _cmd_cart_pos_list.size() + 1 ||
+      idx <= 0) {  //如果大于当前容器最大值+1,那么要报错,因为序列容器中间无法留空
+      RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      return "-1";
+    } else if (idx <= _cmd_cart_pos_list.size()) {  //如果是小于等于当前的容量,那么就是点位信息覆盖
+      _cmd_cart_pos_list.at(idx - 1).tran.x = atof(iter_data->str().c_str());
+      iter_data++;
+      _cmd_cart_pos_list.at(idx - 1).tran.y = atof(iter_data->str().c_str());
+      iter_data++;
+      _cmd_cart_pos_list.at(idx - 1).tran.z = atof(iter_data->str().c_str());
+      iter_data++;
+      _cmd_cart_pos_list.at(idx - 1).rpy.rx = atof(iter_data->str().c_str());
+      iter_data++;
+      _cmd_cart_pos_list.at(idx - 1).rpy.ry = atof(iter_data->str().c_str());
+      iter_data++;
+      _cmd_cart_pos_list.at(idx - 1).rpy.rz = atof(iter_data->str().c_str());
 
+    } else if (idx == _cmd_cart_pos_list.size() + 1) {  //添加元素
+      DescPose add_pos;
+      add_pos.tran.x = atof(iter_data->str().c_str());
+      iter_data++;
+      add_pos.tran.y = atof(iter_data->str().c_str());
+      iter_data++;
+      add_pos.tran.z = atof(iter_data->str().c_str());
+      iter_data++;
+      add_pos.rpy.rx = atof(iter_data->str().c_str());
+      iter_data++;
+      add_pos.rpy.ry = atof(iter_data->str().c_str());
+      iter_data++;
+      add_pos.rpy.rz = atof(iter_data->str().c_str());
+      _cmd_cart_pos_list.push_back(add_pos);
+    }
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_cartcontainer_format)]);
+    return "-1";
+  }
+  return "0";
+}
 
 /**
  * @brief 私有函数，用于处理GET()指令，获取关节或者笛卡尔点位信息
@@ -636,44 +665,39 @@ std::string robot_command_thread::defCartPosition(std::string pos){
  * @return 指令执行是否成功
  * @retval 0-成功，-1-失败
  */
-std::string robot_command_thread::getVariable(std::string para_list){
-    std::regex pattern("([A-Z]*),([0-9]*)");//参数模式应该是 JNT,数字 或 CART,数字 的形式
-    std::smatch para_match;
-    if(std::regex_match(para_list,para_match,pattern)){
-        if(para_match[1] == "JNT"){
-            int idx = atol(para_match[2].str().c_str());
-            if(idx <= _cmd_jnt_pos_list.size() && idx > 0){
-                JointPos pos = _cmd_jnt_pos_list.at(idx-1);
-                std::string res = std::to_string(pos.jPos[0]) + "," +\
-                                  std::to_string(pos.jPos[1]) + "," +\
-                                  std::to_string(pos.jPos[2]) + "," +\
-                                  std::to_string(pos.jPos[3]) + "," +\
-                                  std::to_string(pos.jPos[4]) + "," +\
-                                  std::to_string(pos.jPos[5]);
-                return res;
-            }else{
-                RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            }
-        }else if(para_match[1] == "CART"){
-                int idx = atol(para_match[2].str().c_str());
-                if(idx <= _cmd_cart_pos_list.size() && idx > 0){
-                    DescPose pos = _cmd_cart_pos_list.at(idx-1);
-                    std::string res = std::to_string(pos.tran.x) + "," +\
-                                          std::to_string(pos.tran.y) + "," +\
-                                          std::to_string(pos.tran.z) + "," +\
-                                          std::to_string(pos.rpy.rx) + "," +\
-                                          std::to_string(pos.rpy.ry) + "," +\
-                                          std::to_string(pos.rpy.rz);
-                    return res;
-                }else{
-                    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-                }
-        }else{
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_get_para)]);
-        }
-    }else{
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(illegal_get_para)]);
+std::string robot_command_thread::getVariable(std::string para_list)
+{
+  std::regex pattern("([A-Z]*),([0-9]*)");  //参数模式应该是 JNT,数字 或 CART,数字 的形式
+  std::smatch para_match;
+  if (std::regex_match(para_list, para_match, pattern)) {
+    if (para_match[1] == "JNT") {
+      int idx = atol(para_match[2].str().c_str());
+      if (idx <= _cmd_jnt_pos_list.size() && idx > 0) {
+        JointPos pos = _cmd_jnt_pos_list.at(idx - 1);
+        std::string res = std::to_string(pos.jPos[0]) + "," + std::to_string(pos.jPos[1]) + "," +
+                          std::to_string(pos.jPos[2]) + "," + std::to_string(pos.jPos[3]) + "," +
+                          std::to_string(pos.jPos[4]) + "," + std::to_string(pos.jPos[5]);
+        return res;
+      } else {
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      }
+    } else if (para_match[1] == "CART") {
+      int idx = atol(para_match[2].str().c_str());
+      if (idx <= _cmd_cart_pos_list.size() && idx > 0) {
+        DescPose pos = _cmd_cart_pos_list.at(idx - 1);
+        std::string res = std::to_string(pos.tran.x) + "," + std::to_string(pos.tran.y) + "," +
+                          std::to_string(pos.tran.z) + "," + std::to_string(pos.rpy.rx) + "," +
+                          std::to_string(pos.rpy.ry) + "," + std::to_string(pos.rpy.rz);
+        return res;
+      } else {
+        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      }
+    } else {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_get_para)]);
     }
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(illegal_get_para)]);
+  }
 }
 
 /**
@@ -682,8 +706,9 @@ std::string robot_command_thread::getVariable(std::string para_list){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码
  */
-std::string  robot_command_thread::DragTeachSwitch(std::string para){
-    return std::to_string(_ptr_robot->DragTeachSwitch(std::stoi(para)));
+std::string robot_command_thread::DragTeachSwitch(std::string para)
+{
+  return std::to_string(_ptr_robot->DragTeachSwitch(std::stoi(para)));
 }
 
 /**
@@ -692,8 +717,9 @@ std::string  robot_command_thread::DragTeachSwitch(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string  robot_command_thread::RobotEnable(std::string para){
-    return std::to_string(_ptr_robot->RobotEnable(std::stoi(para)));
+std::string robot_command_thread::RobotEnable(std::string para)
+{
+  return std::to_string(_ptr_robot->RobotEnable(std::stoi(para)));
 }
 
 /**
@@ -702,8 +728,9 @@ std::string  robot_command_thread::RobotEnable(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::Mode(std::string para){
-    return std::to_string(_ptr_robot->Mode(std::stoi(para)));
+std::string robot_command_thread::Mode(std::string para)
+{
+  return std::to_string(_ptr_robot->Mode(std::stoi(para)));
 }
 
 /**
@@ -712,8 +739,9 @@ std::string robot_command_thread::Mode(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetSpeed(std::string para){
-    return std::to_string(_ptr_robot->SetSpeed(std::stoi(para)));
+std::string robot_command_thread::SetSpeed(std::string para)
+{
+  return std::to_string(_ptr_robot->SetSpeed(std::stoi(para)));
 }
 
 /**
@@ -722,53 +750,59 @@ std::string robot_command_thread::SetSpeed(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetToolCoord(std::string para){
-    //int id, DescPose *coord, int type, int install
-    std::string install,type;
-    install = this->get_parameter("toolcoord_install").value_to_string();
-    type = this->get_parameter("toolcoord_type").value_to_string();
-    para = para + "," + type + "," + install;
+std::string robot_command_thread::SetToolCoord(std::string para)
+{
+  //int id, DescPose *coord, int type, int install
+  std::string install, type;
+  install = this->get_parameter("toolcoord_install").value_to_string();
+  type = this->get_parameter("toolcoord_type").value_to_string();
+  para = para + "," + type + "," + install;
 
-    std::list<std::string> datalist;
-    _splitString2List(para,datalist);
-    int id = std::stoi(datalist.front().c_str());datalist.pop_front();
-    DescPose trans;
-    _fillDescPose(datalist,trans);
+  std::list<std::string> datalist;
+  _splitString2List(para, datalist);
+  int id = std::stoi(datalist.front().c_str());
+  datalist.pop_front();
+  DescPose trans;
+  _fillDescPose(datalist, trans);
 
-    int typei = std::stoi(datalist.front().c_str());datalist.pop_front();
-    int installi = std::stoi(datalist.front().c_str());
-    int toolid = 0;
-    double loadNo = 0.;
-    //RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"settoolcoord:%d,%f,%f,%f,%f,%f,%f,%d,%d",\
+  int typei = std::stoi(datalist.front().c_str());
+  datalist.pop_front();
+  int installi = std::stoi(datalist.front().c_str());
+  int toolid = 0;
+  double loadNo = 0.;
+  //RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"settoolcoord:%d,%f,%f,%f,%f,%f,%f,%d,%d",\
     id,trans.tran.x, trans.tran.y, trans.tran.z,trans.rpy.rx,trans.rpy.ry,trans.rpy.rz,typei,installi);
-    return std::to_string(_ptr_robot->SetToolCoord(id,&trans,typei,installi,toolid,loadNo));
+  return std::to_string(_ptr_robot->SetToolCoord(id, &trans, typei, installi, toolid, loadNo));
 }
 
-
-std::string robot_command_thread::SetToolPoint(std::string para){
-    return std::to_string(_ptr_robot->SetToolPoint(std::stoi(para)));
+std::string robot_command_thread::SetToolPoint(std::string para)
+{
+  return std::to_string(_ptr_robot->SetToolPoint(std::stoi(para)));
 }
 
-std::string robot_command_thread::ComputeTool(std::string para){
-    DescPose pose;
-    int res = _ptr_robot->ComputeTool(&pose);
-    return std::string(std::to_string(res) + "," + std::to_string(pose.tran.x) + "," +\
-            std::to_string(pose.tran.y) + "," + std::to_string(pose.tran.z) + "," + \
-            std::to_string(pose.rpy.rx) + "," + std::to_string(pose.rpy.ry) + "," + \
-            std::to_string(pose.rpy.rz));
+std::string robot_command_thread::ComputeTool(std::string para)
+{
+  DescPose pose;
+  int res = _ptr_robot->ComputeTool(&pose);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(pose.tran.x) + "," + std::to_string(pose.tran.y) +
+    "," + std::to_string(pose.tran.z) + "," + std::to_string(pose.rpy.rx) + "," +
+    std::to_string(pose.rpy.ry) + "," + std::to_string(pose.rpy.rz));
 }
 
-std::string robot_command_thread::SetTcp4RefPoint(std::string para){
-    return std::to_string(_ptr_robot->SetTcp4RefPoint(std::stoi(para)));
+std::string robot_command_thread::SetTcp4RefPoint(std::string para)
+{
+  return std::to_string(_ptr_robot->SetTcp4RefPoint(std::stoi(para)));
 }
 
-std::string robot_command_thread::ComputeTcp4(std::string para){
-    DescPose pose;
-    int res = _ptr_robot->ComputeTcp4(&pose);
-    return std::string(std::to_string(res) + "," + std::to_string(pose.tran.x) + "," \
-        + std::to_string(pose.tran.y) + "," + std::to_string(pose.tran.z) + "," + \
-        std::to_string(pose.rpy.rx) + "," + std::to_string(pose.rpy.ry) + "," + \
-        std::to_string(pose.rpy.rz));
+std::string robot_command_thread::ComputeTcp4(std::string para)
+{
+  DescPose pose;
+  int res = _ptr_robot->ComputeTcp4(&pose);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(pose.tran.x) + "," + std::to_string(pose.tran.y) +
+    "," + std::to_string(pose.tran.z) + "," + std::to_string(pose.rpy.rx) + "," +
+    std::to_string(pose.rpy.ry) + "," + std::to_string(pose.rpy.rz));
 }
 
 /**
@@ -777,24 +811,27 @@ std::string robot_command_thread::ComputeTcp4(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetToolList(std::string para){
-    //int id, DescPose *coord, int type, int install
-    std::string install,type;
-    install = this->get_parameter("toolcoord_install").value_to_string();
-    type = this->get_parameter("toolcoord_type").value_to_string();
-    para = para + "," + type  + "," + install;
+std::string robot_command_thread::SetToolList(std::string para)
+{
+  //int id, DescPose *coord, int type, int install
+  std::string install, type;
+  install = this->get_parameter("toolcoord_install").value_to_string();
+  type = this->get_parameter("toolcoord_type").value_to_string();
+  para = para + "," + type + "," + install;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    DescPose trans;
-    _fillDescPose(list,trans);
-    int typei = std::stod(list.front().c_str());list.pop_front();
-    int installi = std::stod(list.front().c_str());
-    uint8_t loadNo = 0;
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    return std::to_string(_ptr_robot->SetToolList(id,&trans,typei,installi,loadNo));
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  DescPose trans;
+  _fillDescPose(list, trans);
+  int typei = std::stod(list.front().c_str());
+  list.pop_front();
+  int installi = std::stod(list.front().c_str());
+  uint8_t loadNo = 0;
+
+  return std::to_string(_ptr_robot->SetToolList(id, &trans, typei, installi, loadNo));
 }
 
 /**
@@ -803,21 +840,22 @@ std::string robot_command_thread::SetToolList(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetExToolCoord(std::string para){
-    //int id, DescPose *etcp, DescPose *etool
-    DescPose etcp,etool;
+std::string robot_command_thread::SetExToolCoord(std::string para)
+{
+  //int id, DescPose *etcp, DescPose *etool
+  DescPose etcp, etool;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    
-    _fillDescPose(list,etcp);
-    _fillDescPose(list,etool);
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    return std::to_string(_ptr_robot->SetExToolCoord(id,&etcp,&etool));
+  _fillDescPose(list, etcp);
+  _fillDescPose(list, etool);
+
+  return std::to_string(_ptr_robot->SetExToolCoord(id, &etcp, &etool));
 }
-
 
 /**
  * @brief 设置外部工具坐标系列表
@@ -825,19 +863,21 @@ std::string robot_command_thread::SetExToolCoord(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetExToolList(std::string para){
-    //int id, DescPose *etcp, DescPose *etool
-    DescPose etcp,etool;
+std::string robot_command_thread::SetExToolList(std::string para)
+{
+  //int id, DescPose *etcp, DescPose *etool
+  DescPose etcp, etool;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    
-    _fillDescPose(list,etcp);
-    _fillDescPose(list,etool);
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    return std::to_string(_ptr_robot->SetExToolList(id,&etcp,&etool));
+  _fillDescPose(list, etcp);
+  _fillDescPose(list, etool);
+
+  return std::to_string(_ptr_robot->SetExToolList(id, &etcp, &etool));
 }
 
 /**
@@ -846,17 +886,19 @@ std::string robot_command_thread::SetExToolList(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetWObjCoord(std::string para){
-    //int id, DescPose *coord
-    DescPose coord;
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWObjCoord(std::string para)
+{
+  //int id, DescPose *coord
+  DescPose coord;
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    
-    _fillDescPose(list,coord);
-    int ref_frame = 0;
-    return std::to_string(_ptr_robot->SetWObjCoord(id,&coord,ref_frame));
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+
+  _fillDescPose(list, coord);
+  int ref_frame = 0;
+  return std::to_string(_ptr_robot->SetWObjCoord(id, &coord, ref_frame));
 }
 
 /**
@@ -865,17 +907,19 @@ std::string robot_command_thread::SetWObjCoord(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetWObjList(std::string para){
-    //int id, DescPose *coord
-        DescPose coord;
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWObjList(std::string para)
+{
+  //int id, DescPose *coord
+  DescPose coord;
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    
-    _fillDescPose(list,coord);
-    int ref_frame = 0;
-    return std::to_string(_ptr_robot->SetWObjList(id,&coord,ref_frame));
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+
+  _fillDescPose(list, coord);
+  int ref_frame = 0;
+  return std::to_string(_ptr_robot->SetWObjList(id, &coord, ref_frame));
 }
 
 /**
@@ -884,15 +928,17 @@ std::string robot_command_thread::SetWObjList(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetLoadWeight(std::string para){
-    //int loadNum,float weight
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLoadWeight(std::string para)
+{
+  //int loadNum,float weight
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    float weight = std::stof(list.front().c_str());
-    //return std::to_string(_ptr_robot->SetLoadWeight(id));
-    return std::to_string(_ptr_robot->SetLoadWeight(id,weight));//V378
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  float weight = std::stof(list.front().c_str());
+  //return std::to_string(_ptr_robot->SetLoadWeight(id));
+  return std::to_string(_ptr_robot->SetLoadWeight(id, weight));  //V378
 }
 
 /**
@@ -901,15 +947,15 @@ std::string robot_command_thread::SetLoadWeight(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetLoadCoord(std::string para){
-    //DescTran *coord
-    DescTran coord;
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    _fillDescTran(list,coord);
-    return std::to_string(_ptr_robot->SetLoadCoord(&coord));
+std::string robot_command_thread::SetLoadCoord(std::string para)
+{
+  //DescTran *coord
+  DescTran coord;
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  _fillDescTran(list, coord);
+  return std::to_string(_ptr_robot->SetLoadCoord(&coord));
 }
-
 
 /**
  * @brief 设置机械臂安装方式
@@ -917,9 +963,10 @@ std::string robot_command_thread::SetLoadCoord(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetRobotInstallPos(std::string para){
-    //uint8_t install
-    return std::to_string(_ptr_robot->SetRobotInstallPos(std::stoi(para)));
+std::string robot_command_thread::SetRobotInstallPos(std::string para)
+{
+  //uint8_t install
+  return std::to_string(_ptr_robot->SetRobotInstallPos(std::stoi(para)));
 }
 
 /**
@@ -928,13 +975,15 @@ std::string robot_command_thread::SetRobotInstallPos(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetRobotInstallAngle(std::string para){
-    //double yangle, double zangle
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    double yangle = std::stod(list.front().c_str());list.pop_front();
-    double zangle = std::stod(list.front().c_str());
-    return std::to_string(_ptr_robot->SetRobotInstallAngle(yangle,zangle));
+std::string robot_command_thread::SetRobotInstallAngle(std::string para)
+{
+  //double yangle, double zangle
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  double yangle = std::stod(list.front().c_str());
+  list.pop_front();
+  double zangle = std::stod(list.front().c_str());
+  return std::to_string(_ptr_robot->SetRobotInstallAngle(yangle, zangle));
 }
 
 /**
@@ -943,24 +992,26 @@ std::string robot_command_thread::SetRobotInstallAngle(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetAnticollision(std::string para){
-    //int mode, float level[6], int config
-    std::string mode,config;
-    mode = this->get_parameter("collision_mode").value_to_string();
-    config = this->get_parameter("collision_config").value_to_string();
-    para = mode + "," + para + "," + config;
+std::string robot_command_thread::SetAnticollision(std::string para)
+{
+  //int mode, float level[6], int config
+  std::string mode, config;
+  mode = this->get_parameter("collision_mode").value_to_string();
+  config = this->get_parameter("collision_config").value_to_string();
+  para = mode + "," + para + "," + config;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    int modei = std::stoi(list.front());list.pop_front();
-    float level[6];
-    for(int i=0;i<6;i++){
-        level[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    int configi = std::stoi(list.front());
-    return std::to_string(_ptr_robot->SetAnticollision(modei,level,configi));
+  std::list<std::string> list;
+  _splitString2List(para, list);
+
+  int modei = std::stoi(list.front());
+  list.pop_front();
+  float level[6];
+  for (int i = 0; i < 6; i++) {
+    level[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  int configi = std::stoi(list.front());
+  return std::to_string(_ptr_robot->SetAnticollision(modei, level, configi));
 }
 
 /**
@@ -969,16 +1020,20 @@ std::string robot_command_thread::SetAnticollision(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetCollisionStrategy(std::string para){
-    //int strategy int safetime,int safedistance,int safevel,int* safemargin
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    int strategy = std::stoi(list.front().c_str());list.pop_front();
-    int safedistance = std::stoi(list.front().c_str());list.pop_front();
-    int safevel = std::stoi(list.front().c_str());
-    int margin[6]{1,1,1,1,1,1};
-    //return std::to_string(_ptr_robot->SetCollisionStrategy(std::stoi(para),1000,safedistance,margin));
-    return std::to_string(_ptr_robot->SetCollisionStrategy(std::stoi(para),1000,safedistance,safevel,margin));//V378
+std::string robot_command_thread::SetCollisionStrategy(std::string para)
+{
+  //int strategy int safetime,int safedistance,int safevel,int* safemargin
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  int strategy = std::stoi(list.front().c_str());
+  list.pop_front();
+  int safedistance = std::stoi(list.front().c_str());
+  list.pop_front();
+  int safevel = std::stoi(list.front().c_str());
+  int margin[6]{1, 1, 1, 1, 1, 1};
+  //return std::to_string(_ptr_robot->SetCollisionStrategy(std::stoi(para),1000,safedistance,margin));
+  return std::to_string(
+    _ptr_robot->SetCollisionStrategy(std::stoi(para), 1000, safedistance, safevel, margin));  //V378
 }
 
 /**
@@ -987,16 +1042,17 @@ std::string robot_command_thread::SetCollisionStrategy(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetLimitPositive(std::string para){
-    //float limit[6]
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    float limit[6];
-    for(int i=0;i<6;i++){
-        limit[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    return std::to_string(_ptr_robot->SetLimitPositive(limit));
+std::string robot_command_thread::SetLimitPositive(std::string para)
+{
+  //float limit[6]
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  float limit[6];
+  for (int i = 0; i < 6; i++) {
+    limit[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  return std::to_string(_ptr_robot->SetLimitPositive(limit));
 }
 
 /**
@@ -1005,26 +1061,29 @@ std::string robot_command_thread::SetLimitPositive(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetLimitNegtive(std::string para){
-    //float limit[6]
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    float limit[6];
-    for(int i=0;i<6;i++){
-        limit[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    return std::to_string(_ptr_robot->SetLimitNegative(limit));}
+std::string robot_command_thread::SetLimitNegtive(std::string para)
+{
+  //float limit[6]
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  float limit[6];
+  for (int i = 0; i < 6; i++) {
+    limit[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  return std::to_string(_ptr_robot->SetLimitNegative(limit));
+}
 
 /**
  * @brief 尝试清除错误
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ResetAllError(std::string para){
-    //empty para
-    para.clear();
-    return std::to_string(_ptr_robot->ResetAllError());
+std::string robot_command_thread::ResetAllError(std::string para)
+{
+  //empty para
+  para.clear();
+  return std::to_string(_ptr_robot->ResetAllError());
 }
 
 /**
@@ -1033,11 +1092,11 @@ std::string robot_command_thread::ResetAllError(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FrictionCompensationOnOff(std::string para){
-    //uint8_t state
-    return std::to_string(_ptr_robot->FrictionCompensationOnOff(std::stoi(para)));
+std::string robot_command_thread::FrictionCompensationOnOff(std::string para)
+{
+  //uint8_t state
+  return std::to_string(_ptr_robot->FrictionCompensationOnOff(std::stoi(para)));
 }
-
 
 /**
  * @brief 设置关节摩擦力等级
@@ -1045,18 +1104,18 @@ std::string robot_command_thread::FrictionCompensationOnOff(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetFrictionValue_level(std::string para){
-    //float coeff[6]
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    float coeff[6];
-    for(int i=0;i<6;i++){
-        coeff[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    return std::to_string(_ptr_robot->SetFrictionValue_level(coeff));
+std::string robot_command_thread::SetFrictionValue_level(std::string para)
+{
+  //float coeff[6]
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  float coeff[6];
+  for (int i = 0; i < 6; i++) {
+    coeff[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  return std::to_string(_ptr_robot->SetFrictionValue_level(coeff));
 }
-
 
 /**
  * @brief 侧装状态设置关节摩擦力
@@ -1064,16 +1123,17 @@ std::string robot_command_thread::SetFrictionValue_level(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetFrictionValue_wall(std::string para){
-    //float coeff[6]
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    float coeff[6];
-    for(int i=0;i<6;i++){
-        coeff[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    return std::to_string(_ptr_robot->SetFrictionValue_wall(coeff));
+std::string robot_command_thread::SetFrictionValue_wall(std::string para)
+{
+  //float coeff[6]
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  float coeff[6];
+  for (int i = 0; i < 6; i++) {
+    coeff[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  return std::to_string(_ptr_robot->SetFrictionValue_wall(coeff));
 }
 
 /**
@@ -1082,16 +1142,17 @@ std::string robot_command_thread::SetFrictionValue_wall(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetFrictionValue_ceiling(std::string para){
-    //float coeff[6]
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    float coeff[6];
-    for(int i=0;i<6;i++){
-        coeff[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    return std::to_string(_ptr_robot->SetFrictionValue_ceiling(coeff));
+std::string robot_command_thread::SetFrictionValue_ceiling(std::string para)
+{
+  //float coeff[6]
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  float coeff[6];
+  for (int i = 0; i < 6; i++) {
+    coeff[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  return std::to_string(_ptr_robot->SetFrictionValue_ceiling(coeff));
 }
 
 /**
@@ -1100,16 +1161,17 @@ std::string robot_command_thread::SetFrictionValue_ceiling(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetFrictionValue_freedom(std::string para){
-    //float coeff[6]
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    float coeff[6];
-    for(int i=0;i<6;i++){
-        coeff[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    return std::to_string(_ptr_robot->SetFrictionValue_freedom(coeff));
+std::string robot_command_thread::SetFrictionValue_freedom(std::string para)
+{
+  //float coeff[6]
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  float coeff[6];
+  for (int i = 0; i < 6; i++) {
+    coeff[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  return std::to_string(_ptr_robot->SetFrictionValue_freedom(coeff));
 }
 
 /**
@@ -1118,13 +1180,15 @@ std::string robot_command_thread::SetFrictionValue_freedom(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ActGripper(std::string para){
-    //int index, uint8_t act
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    int index = std::stoi(list.front());list.pop_front();
-    uint8_t act = std::stoi(list.front());
-    return std::to_string(_ptr_robot->ActGripper(index,act));
+std::string robot_command_thread::ActGripper(std::string para)
+{
+  //int index, uint8_t act
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  int index = std::stoi(list.front());
+  list.pop_front();
+  uint8_t act = std::stoi(list.front());
+  return std::to_string(_ptr_robot->ActGripper(index, act));
 }
 
 /**
@@ -1134,49 +1198,59 @@ std::string robot_command_thread::ActGripper(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveGripper(std::string para){
-    //int index, int pos, int vel, int force, int max_time, uint8_t block
-    std::string vel,force,mtime,block;
-    vel = this->get_parameter("gripper_vel").value_to_string();
-    force = this->get_parameter("gripper_force").value_to_string();
-    mtime  = this->get_parameter("gripper_maxtime").value_to_string();//数据读取异常
-    block = this->get_parameter("gripper_block").value_to_string();
-    para = para + "," + vel + "," + force + "," + mtime + "," + block; 
-    
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    int index = std::stoi(list.front());list.pop_front();
-    int pos = std::stoi(list.front());list.pop_front();
-    int veli = std::stoi(list.front());list.pop_front();
-    int forcei = std::stoi(list.front());list.pop_front();
-    int max_timei = 30000;
-    uint8_t blocki = 1;
-    return std::to_string(_ptr_robot->MoveGripper(index,pos,veli,forcei,max_timei,blocki,0,0,0,0));
+std::string robot_command_thread::MoveGripper(std::string para)
+{
+  //int index, int pos, int vel, int force, int max_time, uint8_t block
+  std::string vel, force, mtime, block;
+  vel = this->get_parameter("gripper_vel").value_to_string();
+  force = this->get_parameter("gripper_force").value_to_string();
+  mtime = this->get_parameter("gripper_maxtime").value_to_string();  //数据读取异常
+  block = this->get_parameter("gripper_block").value_to_string();
+  para = para + "," + vel + "," + force + "," + mtime + "," + block;
+
+  std::list<std::string> list;
+  _splitString2List(para, list);
+
+  int index = std::stoi(list.front());
+  list.pop_front();
+  int pos = std::stoi(list.front());
+  list.pop_front();
+  int veli = std::stoi(list.front());
+  list.pop_front();
+  int forcei = std::stoi(list.front());
+  list.pop_front();
+  int max_timei = 30000;
+  uint8_t blocki = 1;
+  return std::to_string(
+    _ptr_robot->MoveGripper(index, pos, veli, forcei, max_timei, blocki, 0, 0, 0, 0));
 }
-    
+
 /**
  * @brief 设置数字IO输出
  * @param [in] para-顺序依次为id,status
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetDO(std::string para){
-    //int id, uint8_t status, uint8_t smooth, uint8_t block
-    std::string smooth,block;
-    smooth = this->get_parameter("DO_smooth").value_to_string();
-    block = this->get_parameter("DO_block").value_to_string();
-    para = para + "," + smooth + "," + block;
+std::string robot_command_thread::SetDO(std::string para)
+{
+  //int id, uint8_t status, uint8_t smooth, uint8_t block
+  std::string smooth, block;
+  smooth = this->get_parameter("DO_smooth").value_to_string();
+  block = this->get_parameter("DO_block").value_to_string();
+  para = para + "," + smooth + "," + block;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    uint8_t status = std::stoi(list.front());list.pop_front();
-    uint8_t smoothi = std::stoi(list.front());list.pop_front();
-    uint8_t blocki = std::stoi(list.front());
-    
-    return std::to_string(_ptr_robot->SetDO(id,status,smoothi,blocki));
+  int id = std::stoi(list.front());
+  list.pop_front();
+  uint8_t status = std::stoi(list.front());
+  list.pop_front();
+  uint8_t smoothi = std::stoi(list.front());
+  list.pop_front();
+  uint8_t blocki = std::stoi(list.front());
+
+  return std::to_string(_ptr_robot->SetDO(id, status, smoothi, blocki));
 }
 
 /**
@@ -1185,22 +1259,26 @@ std::string robot_command_thread::SetDO(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetToolDO(std::string para){
-    //int id, uint8_t status, uint8_t smooth, uint8_t block
-    std::string smooth,block;
-    smooth = this->get_parameter("DO_smooth").value_to_string();
-    block = this->get_parameter("DO_block").value_to_string();
-    para = para + "," + smooth + "," + block;
+std::string robot_command_thread::SetToolDO(std::string para)
+{
+  //int id, uint8_t status, uint8_t smooth, uint8_t block
+  std::string smooth, block;
+  smooth = this->get_parameter("DO_smooth").value_to_string();
+  block = this->get_parameter("DO_block").value_to_string();
+  para = para + "," + smooth + "," + block;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    uint8_t status = std::stoi(list.front());list.pop_front();
-    uint8_t smoothi = std::stoi(list.front());list.pop_front();
-    uint8_t blocki = std::stoi(list.front());
-    
-    return std::to_string(_ptr_robot->SetToolDO(id,status,smoothi,blocki));
+  int id = std::stoi(list.front());
+  list.pop_front();
+  uint8_t status = std::stoi(list.front());
+  list.pop_front();
+  uint8_t smoothi = std::stoi(list.front());
+  list.pop_front();
+  uint8_t blocki = std::stoi(list.front());
+
+  return std::to_string(_ptr_robot->SetToolDO(id, status, smoothi, blocki));
 }
 
 /**
@@ -1209,20 +1287,23 @@ std::string robot_command_thread::SetToolDO(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetAO(std::string para){
-    //int id, float value, uint8_t block
-    std::string block;
-    block = this->get_parameter("AO_block").value_to_string();
-    para = para + "," + block;
+std::string robot_command_thread::SetAO(std::string para)
+{
+  //int id, float value, uint8_t block
+  std::string block;
+  block = this->get_parameter("AO_block").value_to_string();
+  para = para + "," + block;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    float value = std::stof(list.front())/100*4095;list.pop_front();
-    uint8_t blocki = std::stoi(list.front());
+  int id = std::stoi(list.front());
+  list.pop_front();
+  float value = std::stof(list.front()) / 100 * 4095;
+  list.pop_front();
+  uint8_t blocki = std::stoi(list.front());
 
-    return std::to_string(_ptr_robot->SetAO(id,value,blocki));
+  return std::to_string(_ptr_robot->SetAO(id, value, blocki));
 }
 
 /**
@@ -1231,20 +1312,23 @@ std::string robot_command_thread::SetAO(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetToolAO(std::string para){
-    //int id, float value, uint8_t block
-    std::string block;
-    block = this->get_parameter("AO_block").value_to_string();
-    para = para + "," + block;
+std::string robot_command_thread::SetToolAO(std::string para)
+{
+  //int id, float value, uint8_t block
+  std::string block;
+  block = this->get_parameter("AO_block").value_to_string();
+  para = para + "," + block;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    float value = std::stof(list.front())/100*4095;list.pop_front();
-    uint8_t blocki = std::stoi(list.front());
+  int id = std::stoi(list.front());
+  list.pop_front();
+  float value = std::stof(list.front()) / 100 * 4095;
+  list.pop_front();
+  uint8_t blocki = std::stoi(list.front());
 
-    return std::to_string(_ptr_robot->SetToolAO(id,value,blocki));
+  return std::to_string(_ptr_robot->SetToolAO(id, value, blocki));
 }
 
 /**
@@ -1253,21 +1337,25 @@ std::string robot_command_thread::SetToolAO(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetAuxDO(std::string para){
-    //int DOnumber,bool open, bool smooth, bool block
-    std::string smooth,block;
-    smooth = this->get_parameter("DO_smooth").value_to_string();
-    block = this->get_parameter("DO_block").value_to_string();
-    para = para + "," + smooth + "," + block;
+std::string robot_command_thread::SetAuxDO(std::string para)
+{
+  //int DOnumber,bool open, bool smooth, bool block
+  std::string smooth, block;
+  smooth = this->get_parameter("DO_smooth").value_to_string();
+  block = this->get_parameter("DO_block").value_to_string();
+  para = para + "," + smooth + "," + block;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    uint8_t open = std::stoi(list.front());list.pop_front();
-    uint8_t smoothi = std::stoi(list.front());list.pop_front();
-    uint8_t blocki = std::stoi(list.front());
-    return std::to_string(_ptr_robot->SetAuxDO(id,open,smoothi,blocki));
+  int id = std::stoi(list.front());
+  list.pop_front();
+  uint8_t open = std::stoi(list.front());
+  list.pop_front();
+  uint8_t smoothi = std::stoi(list.front());
+  list.pop_front();
+  uint8_t blocki = std::stoi(list.front());
+  return std::to_string(_ptr_robot->SetAuxDO(id, open, smoothi, blocki));
 }
 
 /**
@@ -1276,20 +1364,23 @@ std::string robot_command_thread::SetAuxDO(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetAuxAO(std::string para){
-    //int number int percentage
-    std::string block;
-    block = this->get_parameter("AO_block").value_to_string();
-    para = para + "," + block;
+std::string robot_command_thread::SetAuxAO(std::string para)
+{
+  //int number int percentage
+  std::string block;
+  block = this->get_parameter("AO_block").value_to_string();
+  para = para + "," + block;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    int number = std::stoi(list.front());list.pop_front();
-    double value = std::stod(list.front())/100*4095;list.pop_front();
-    uint8_t blocki = std::stoi(list.front());
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    return std::to_string(_ptr_robot->SetAuxAO(number,value,blocki));
+  int number = std::stoi(list.front());
+  list.pop_front();
+  double value = std::stod(list.front()) / 100 * 4095;
+  list.pop_front();
+  uint8_t blocki = std::stoi(list.front());
+
+  return std::to_string(_ptr_robot->SetAuxAO(number, value, blocki));
 }
 
 /**
@@ -1298,14 +1389,16 @@ std::string robot_command_thread::SetAuxAO(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ExtAxisServoOn(std::string para){
-    //int number, int switch
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    int number = std::stoi(list.front());list.pop_front();
-    uint8_t sw = std::stoi(list.front());
-    return std::to_string(_ptr_robot->ExtAxisServoOn(number,sw));
+std::string robot_command_thread::ExtAxisServoOn(std::string para)
+{
+  //int number, int switch
+  std::list<std::string> list;
+  _splitString2List(para, list);
+
+  int number = std::stoi(list.front());
+  list.pop_front();
+  uint8_t sw = std::stoi(list.front());
+  return std::to_string(_ptr_robot->ExtAxisServoOn(number, sw));
 }
 
 /**
@@ -1314,18 +1407,23 @@ std::string robot_command_thread::ExtAxisServoOn(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ExtAxisStartJog(std::string para){
-    //6, int number, int direction, int speed, int acc_speed, double max_distance
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    int number = std::stoi(list.front());list.pop_front();
-    int direction = std::stoi(list.front());list.pop_front();
-    int speed = std::stoi(list.front());list.pop_front();
-    int acc = std::stoi(list.front());list.pop_front();
-    double max_dis = std::stod(list.front());
+std::string robot_command_thread::ExtAxisStartJog(std::string para)
+{
+  //6, int number, int direction, int speed, int acc_speed, double max_distance
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    return std::to_string(_ptr_robot->ExtAxisStartJog(number,direction,speed,acc,max_dis));
+  int number = std::stoi(list.front());
+  list.pop_front();
+  int direction = std::stoi(list.front());
+  list.pop_front();
+  int speed = std::stoi(list.front());
+  list.pop_front();
+  int acc = std::stoi(list.front());
+  list.pop_front();
+  double max_dis = std::stod(list.front());
+
+  return std::to_string(_ptr_robot->ExtAxisStartJog(number, direction, speed, acc, max_dis));
 }
 
 /**
@@ -1334,16 +1432,20 @@ std::string robot_command_thread::ExtAxisStartJog(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ExtAxisSetHoming(std::string para){
-    //int number, int zero_mode, int search_speed, int latch_speed
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    int number = std::stoi(list.front());list.pop_front();
-    int mode = std::stoi(list.front());list.pop_front();
-    int search_speed = std::stoi(list.front());list.pop_front();
-    int latch_speed = std::stoi(list.front());
+std::string robot_command_thread::ExtAxisSetHoming(std::string para)
+{
+  //int number, int zero_mode, int search_speed, int latch_speed
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  int number = std::stoi(list.front());
+  list.pop_front();
+  int mode = std::stoi(list.front());
+  list.pop_front();
+  int search_speed = std::stoi(list.front());
+  list.pop_front();
+  int latch_speed = std::stoi(list.front());
 
-    return std::to_string(_ptr_robot->ExtAxisSetHoming(number,mode,search_speed,latch_speed));
+  return std::to_string(_ptr_robot->ExtAxisSetHoming(number, mode, search_speed, latch_speed));
 }
 
 /**
@@ -1352,9 +1454,10 @@ std::string robot_command_thread::ExtAxisSetHoming(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::StopExtAxisJog(std::string para){
-    //int indexid
-    return std::to_string(_ptr_robot->ExtAxisStopJog(std::stoi(para)));
+std::string robot_command_thread::StopExtAxisJog(std::string para)
+{
+  //int indexid
+  return std::to_string(_ptr_robot->ExtAxisStopJog(std::stoi(para)));
 }
 
 /**
@@ -1362,16 +1465,14 @@ std::string robot_command_thread::StopExtAxisJog(std::string para){
  * @return 指令执行是否成功及坐标系数值
  * @retval flag,x,y,z,rx,ry,rz 
  */
-std::string robot_command_thread::ExtAxisGetCoord(std::string para){
-    DescPose cartpos;
-    int res = _ptr_robot->ExtAxisGetCoord(cartpos);
-    return std::to_string(res) + "," + \
-        std::to_string(cartpos.tran.x) + "," + \
-        std::to_string(cartpos.tran.y) + "," + \
-        std::to_string(cartpos.tran.z) + "," + \
-        std::to_string(cartpos.rpy.rx) + "," + \
-        std::to_string(cartpos.rpy.ry) + "," + \
-        std::to_string(cartpos.rpy.rz);
+std::string robot_command_thread::ExtAxisGetCoord(std::string para)
+{
+  DescPose cartpos;
+  int res = _ptr_robot->ExtAxisGetCoord(cartpos);
+  return std::to_string(res) + "," + std::to_string(cartpos.tran.x) + "," +
+         std::to_string(cartpos.tran.y) + "," + std::to_string(cartpos.tran.z) + "," +
+         std::to_string(cartpos.rpy.rx) + "," + std::to_string(cartpos.rpy.ry) + "," +
+         std::to_string(cartpos.rpy.rz);
 }
 
 /**
@@ -1379,16 +1480,21 @@ std::string robot_command_thread::ExtAxisGetCoord(std::string para){
  * @return 指令执行是否成功及坐标系数值
  * @retval flag,x,y,z,rx,ry,rz 
  */
-std::string robot_command_thread::ExtAxisMove(std::string para){
-    ExaxisPos tarpos;
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    tarpos.ePos[0] = std::stof(list.front());list.pop_front();
-    tarpos.ePos[1] = std::stof(list.front());list.pop_front();
-    tarpos.ePos[2] = std::stof(list.front());list.pop_front();
-    tarpos.ePos[3] = std::stof(list.front());list.pop_front();
-    int vel = std::stoi(list.front());
-    return std::to_string(_ptr_robot->ExtAxisMove(tarpos,vel));
+std::string robot_command_thread::ExtAxisMove(std::string para)
+{
+  ExaxisPos tarpos;
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  tarpos.ePos[0] = std::stof(list.front());
+  list.pop_front();
+  tarpos.ePos[1] = std::stof(list.front());
+  list.pop_front();
+  tarpos.ePos[2] = std::stof(list.front());
+  list.pop_front();
+  tarpos.ePos[3] = std::stof(list.front());
+  list.pop_front();
+  int vel = std::stoi(list.front());
+  return std::to_string(_ptr_robot->ExtAxisMove(tarpos, vel));
 }
 
 /**
@@ -1396,131 +1502,184 @@ std::string robot_command_thread::ExtAxisMove(std::string para){
  * @return 指令执行是否成功及坐标系数值
  * @retval flag,x,y,z,rx,ry,rz 
  */
-std::string robot_command_thread::ExtAxisSyncMoveJ(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    JointPos jntpos;
-    DescPose cartpos,offsetpos;
-    ExaxisPos epos;
-    for(int i=0;i<6;i++){
-        jntpos.jPos[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    cartpos.tran.x = std::stof(list.front());list.pop_front();
-    cartpos.tran.y = std::stof(list.front());list.pop_front();
-    cartpos.tran.z = std::stof(list.front());list.pop_front();
-    cartpos.rpy.rx = std::stof(list.front());list.pop_front();
-    cartpos.rpy.ry = std::stof(list.front());list.pop_front();
-    cartpos.rpy.rz = std::stof(list.front());list.pop_front();
+std::string robot_command_thread::ExtAxisSyncMoveJ(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  JointPos jntpos;
+  DescPose cartpos, offsetpos;
+  ExaxisPos epos;
+  for (int i = 0; i < 6; i++) {
+    jntpos.jPos[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  cartpos.tran.x = std::stof(list.front());
+  list.pop_front();
+  cartpos.tran.y = std::stof(list.front());
+  list.pop_front();
+  cartpos.tran.z = std::stof(list.front());
+  list.pop_front();
+  cartpos.rpy.rx = std::stof(list.front());
+  list.pop_front();
+  cartpos.rpy.ry = std::stof(list.front());
+  list.pop_front();
+  cartpos.rpy.rz = std::stof(list.front());
+  list.pop_front();
 
-    int tool = std::stoi(list.front());list.pop_front();
-    int user = std::stoi(list.front());list.pop_front();
-    int vel = std::stoi(list.front());list.pop_front();
-    int acc = std::stoi(list.front());list.pop_front();
-    int ovl = std::stoi(list.front());list.pop_front();
+  int tool = std::stoi(list.front());
+  list.pop_front();
+  int user = std::stoi(list.front());
+  list.pop_front();
+  int vel = std::stoi(list.front());
+  list.pop_front();
+  int acc = std::stoi(list.front());
+  list.pop_front();
+  int ovl = std::stoi(list.front());
+  list.pop_front();
 
-    for(int i=0;i<4;i++){
-        epos.ePos[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    float blend = std::stof(list.front());list.pop_front();
-    uint8_t offset_flag = std::stoi(list.front());list.pop_front();
-    offsetpos.tran.x = std::stof(list.front());list.pop_front();
-    offsetpos.tran.y = std::stof(list.front());list.pop_front();
-    offsetpos.tran.z = std::stof(list.front());list.pop_front();
-    offsetpos.rpy.rx = std::stof(list.front());list.pop_front();
-    offsetpos.rpy.ry = std::stof(list.front());list.pop_front();
-    offsetpos.rpy.rz = std::stof(list.front());
+  for (int i = 0; i < 4; i++) {
+    epos.ePos[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  float blend = std::stof(list.front());
+  list.pop_front();
+  uint8_t offset_flag = std::stoi(list.front());
+  list.pop_front();
+  offsetpos.tran.x = std::stof(list.front());
+  list.pop_front();
+  offsetpos.tran.y = std::stof(list.front());
+  list.pop_front();
+  offsetpos.tran.z = std::stof(list.front());
+  list.pop_front();
+  offsetpos.rpy.rx = std::stof(list.front());
+  list.pop_front();
+  offsetpos.rpy.ry = std::stof(list.front());
+  list.pop_front();
+  offsetpos.rpy.rz = std::stof(list.front());
 
-    return std::to_string(_ptr_robot->ExtAxisSyncMoveJ(jntpos,cartpos,tool,user,vel,acc,ovl,epos,\
-        blend,offset_flag,offsetpos));
+  return std::to_string(_ptr_robot->ExtAxisSyncMoveJ(
+    jntpos, cartpos, tool, user, vel, acc, ovl, epos, blend, offset_flag, offsetpos));
 }
 
-std::string robot_command_thread::ExtAxisSyncMoveL(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    JointPos jntpos;
-    DescPose cartpos,offsetpos;
-    ExaxisPos epos;
-    for(int i=0;i<6;i++){
-        jntpos.jPos[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    cartpos.tran.x = std::stof(list.front());list.pop_front();
-    cartpos.tran.y = std::stof(list.front());list.pop_front();
-    cartpos.tran.z = std::stof(list.front());list.pop_front();
-    cartpos.rpy.rx = std::stof(list.front());list.pop_front();
-    cartpos.rpy.ry = std::stof(list.front());list.pop_front();
-    cartpos.rpy.rz = std::stof(list.front());list.pop_front();
+std::string robot_command_thread::ExtAxisSyncMoveL(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  JointPos jntpos;
+  DescPose cartpos, offsetpos;
+  ExaxisPos epos;
+  for (int i = 0; i < 6; i++) {
+    jntpos.jPos[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  cartpos.tran.x = std::stof(list.front());
+  list.pop_front();
+  cartpos.tran.y = std::stof(list.front());
+  list.pop_front();
+  cartpos.tran.z = std::stof(list.front());
+  list.pop_front();
+  cartpos.rpy.rx = std::stof(list.front());
+  list.pop_front();
+  cartpos.rpy.ry = std::stof(list.front());
+  list.pop_front();
+  cartpos.rpy.rz = std::stof(list.front());
+  list.pop_front();
 
-    int tool = std::stoi(list.front());list.pop_front();
-    int user = std::stoi(list.front());list.pop_front();
-    int vel = std::stoi(list.front());list.pop_front();
-    int acc = std::stoi(list.front());list.pop_front();
-    int ovl = std::stoi(list.front());list.pop_front();
+  int tool = std::stoi(list.front());
+  list.pop_front();
+  int user = std::stoi(list.front());
+  list.pop_front();
+  int vel = std::stoi(list.front());
+  list.pop_front();
+  int acc = std::stoi(list.front());
+  list.pop_front();
+  int ovl = std::stoi(list.front());
+  list.pop_front();
 
-    for(int i=0;i<4;i++){
-        epos.ePos[i] = std::stof(list.front());
-        list.pop_front();
-    }
-    float blend = std::stof(list.front());list.pop_front();
-    uint8_t offset_flag = std::stoi(list.front());list.pop_front();
-    offsetpos.tran.x = std::stof(list.front());list.pop_front();
-    offsetpos.tran.y = std::stof(list.front());list.pop_front();
-    offsetpos.tran.z = std::stof(list.front());list.pop_front();
-    offsetpos.rpy.rx = std::stof(list.front());list.pop_front();
-    offsetpos.rpy.ry = std::stof(list.front());list.pop_front();
-    offsetpos.rpy.rz = std::stof(list.front());
+  for (int i = 0; i < 4; i++) {
+    epos.ePos[i] = std::stof(list.front());
+    list.pop_front();
+  }
+  float blend = std::stof(list.front());
+  list.pop_front();
+  uint8_t offset_flag = std::stoi(list.front());
+  list.pop_front();
+  offsetpos.tran.x = std::stof(list.front());
+  list.pop_front();
+  offsetpos.tran.y = std::stof(list.front());
+  list.pop_front();
+  offsetpos.tran.z = std::stof(list.front());
+  list.pop_front();
+  offsetpos.rpy.rx = std::stof(list.front());
+  list.pop_front();
+  offsetpos.rpy.ry = std::stof(list.front());
+  list.pop_front();
+  offsetpos.rpy.rz = std::stof(list.front());
 
-    return std::to_string(_ptr_robot->ExtAxisSyncMoveL(jntpos,cartpos,tool,user,vel,acc,ovl,\
-        blend,epos,offset_flag,offsetpos));
+  return std::to_string(_ptr_robot->ExtAxisSyncMoveL(
+    jntpos, cartpos, tool, user, vel, acc, ovl, blend, epos, offset_flag, offsetpos));
 }
 
-
-std::string robot_command_thread::ExtAxisSetRefPoint(std::string para){
-    return std::to_string(_ptr_robot->ExtAxisSetRefPoint(std::stoi(para)));
+std::string robot_command_thread::ExtAxisSetRefPoint(std::string para)
+{
+  return std::to_string(_ptr_robot->ExtAxisSetRefPoint(std::stoi(para)));
 }
 
-std::string robot_command_thread::ExtAxisComputeECoordSys(std::string para){
-    DescPose pose;
-    int res = _ptr_robot->ExtAxisComputeECoordSys(pose);
-    return std::string(std::to_string(res) + "," + std::to_string(pose.tran.x) + "," + std::to_string(pose.tran.y) + \
-                "," + std::to_string(pose.tran.z) + "," + std::to_string(pose.rpy.rx) + "," + std::to_string(pose.rpy.ry) + \
-                "," + std::to_string(pose.rpy.rz));
+std::string robot_command_thread::ExtAxisComputeECoordSys(std::string para)
+{
+  DescPose pose;
+  int res = _ptr_robot->ExtAxisComputeECoordSys(pose);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(pose.tran.x) + "," + std::to_string(pose.tran.y) +
+    "," + std::to_string(pose.tran.z) + "," + std::to_string(pose.rpy.rx) + "," +
+    std::to_string(pose.rpy.ry) + "," + std::to_string(pose.rpy.rz));
 }
 
-std::string robot_command_thread::ExtAxisActiveECoordSys(std::string para){
-    std::list<std::string> datalist;
-    _splitString2List(para,datalist);
-    int axiscoordnum = stoi(datalist.front());datalist.pop_front();
-    int toolnum = stoi(datalist.front());datalist.pop_front();
-    DescPose pose;
-    _fillDescPose(datalist,pose);
-    int flag = stoi(datalist.front());
-    return std::to_string(_ptr_robot->ExtAxisActiveECoordSys(axiscoordnum,toolnum,pose,flag));
+std::string robot_command_thread::ExtAxisActiveECoordSys(std::string para)
+{
+  std::list<std::string> datalist;
+  _splitString2List(para, datalist);
+  int axiscoordnum = stoi(datalist.front());
+  datalist.pop_front();
+  int toolnum = stoi(datalist.front());
+  datalist.pop_front();
+  DescPose pose;
+  _fillDescPose(datalist, pose);
+  int flag = stoi(datalist.front());
+  return std::to_string(_ptr_robot->ExtAxisActiveECoordSys(axiscoordnum, toolnum, pose, flag));
 }
 
-std::string robot_command_thread::SetAxisDHParaConfig(std::string para){
-    std::list<std::string> datalist;
-    _splitString2List(para,datalist);
-    int axisconfig = stoi(datalist.front());datalist.pop_front();
-    double d1 = stod(datalist.front());datalist.pop_front();
-    double d2 = stod(datalist.front());datalist.pop_front();
-    double d3 = stod(datalist.front());datalist.pop_front();
-    double d4 = stod(datalist.front());datalist.pop_front();
-    double a1 = stod(datalist.front());datalist.pop_front();
-    double a2 = stod(datalist.front());datalist.pop_front();
-    double a3 = stod(datalist.front());datalist.pop_front();
-    double a4 = stod(datalist.front());datalist.pop_front();
+std::string robot_command_thread::SetAxisDHParaConfig(std::string para)
+{
+  std::list<std::string> datalist;
+  _splitString2List(para, datalist);
+  int axisconfig = stoi(datalist.front());
+  datalist.pop_front();
+  double d1 = stod(datalist.front());
+  datalist.pop_front();
+  double d2 = stod(datalist.front());
+  datalist.pop_front();
+  double d3 = stod(datalist.front());
+  datalist.pop_front();
+  double d4 = stod(datalist.front());
+  datalist.pop_front();
+  double a1 = stod(datalist.front());
+  datalist.pop_front();
+  double a2 = stod(datalist.front());
+  datalist.pop_front();
+  double a3 = stod(datalist.front());
+  datalist.pop_front();
+  double a4 = stod(datalist.front());
+  datalist.pop_front();
 
-    return std::to_string(_ptr_robot->SetAxisDHParaConfig(axisconfig,d1,d2,d3,d4,a1,a2,a3,a4));
+  return std::to_string(
+    _ptr_robot->SetAxisDHParaConfig(axisconfig, d1, d2, d3, d4, a1, a2, a3, a4));
 }
 
-
-std::string robot_command_thread::ExtDevLoadUDPDriver(std::string para){
-    return std::to_string(_ptr_robot->ExtDevLoadUDPDriver());
+std::string robot_command_thread::ExtDevLoadUDPDriver(std::string para)
+{
+  return std::to_string(_ptr_robot->ExtDevLoadUDPDriver());
 }
-
 
 /**
  * @brief 机械臂关节点动
@@ -1528,19 +1687,25 @@ std::string robot_command_thread::ExtDevLoadUDPDriver(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::StartJOG(std::string para){
-    //uint8_t ref, uint8_t nb, uint8_t dir, float vel, float acc, float max_dis
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    uint8_t ref = std::stoi(list.front());list.pop_front();
-    uint8_t nb = std::stoi(list.front());list.pop_front();
-    uint8_t dir = std::stoi(list.front());list.pop_front();
-    float vel = std::stof(list.front());list.pop_front();
-    float acc = std::stof(list.front());list.pop_front();
-    float dis = std::stof(list.front());
+std::string robot_command_thread::StartJOG(std::string para)
+{
+  //uint8_t ref, uint8_t nb, uint8_t dir, float vel, float acc, float max_dis
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    return std::to_string(_ptr_robot->StartJOG(ref,nb,dir,vel,acc,dis));
+  uint8_t ref = std::stoi(list.front());
+  list.pop_front();
+  uint8_t nb = std::stoi(list.front());
+  list.pop_front();
+  uint8_t dir = std::stoi(list.front());
+  list.pop_front();
+  float vel = std::stof(list.front());
+  list.pop_front();
+  float acc = std::stof(list.front());
+  list.pop_front();
+  float dis = std::stof(list.front());
+
+  return std::to_string(_ptr_robot->StartJOG(ref, nb, dir, vel, acc, dis));
 }
 
 /**
@@ -1549,9 +1714,10 @@ std::string robot_command_thread::StartJOG(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::StopJOG(std::string para){
-    //uint8_t ref
-    return std::to_string(_ptr_robot->StopJOG(std::stoi(para)));
+std::string robot_command_thread::StopJOG(std::string para)
+{
+  //uint8_t ref
+  return std::to_string(_ptr_robot->StopJOG(std::stoi(para)));
 }
 
 /**
@@ -1559,10 +1725,11 @@ std::string robot_command_thread::StopJOG(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ImmStopJOG(std::string para){
-    //empty para
-    para.clear();
-    return std::to_string(_ptr_robot->ImmStopJOG());
+std::string robot_command_thread::ImmStopJOG(std::string para)
+{
+  //empty para
+  para.clear();
+  return std::to_string(_ptr_robot->ImmStopJOG());
 }
 
 /**
@@ -1571,113 +1738,121 @@ std::string robot_command_thread::ImmStopJOG(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveJ(std::string para){
-    //JointPos *joint_pos, DescPose *desc_pos, int tool, int user, float vel, float acc, float ovl, ExaxisPos *epos, float blendT, uint8_t offset_flag, DescPose *offset_pos
-    int speed,tool,user;
+std::string robot_command_thread::MoveJ(std::string para)
+{
+  //JointPos *joint_pos, DescPose *desc_pos, int tool, int user, float vel, float acc, float ovl, ExaxisPos *epos, float blendT, uint8_t offset_flag, DescPose *offset_pos
+  int speed, tool, user;
 
-    float acc = this->get_parameter("MoveJLC_acc").as_double();
-    float ovl = this->get_parameter("MoveJLC_ovl").as_double();
-    double eaxis1 = this->get_parameter("MoveJLC_eaxis1").as_double();
-    double eaxis2 = this->get_parameter("MoveJLC_eaxis2").as_double();
-    double eaxis3 = this->get_parameter("MoveJLC_eaxis3").as_double();
-    double eaxis4 = this->get_parameter("MoveJLC_eaxis4").as_double();
-    float blendT = this->get_parameter("MoveJ_blendT").as_double();
-    uint8_t offset_flag = this->get_parameter("MoveJLC_offset_flag").as_int();
-    double offset_pos_x = this->get_parameter("MoveJLC_offset_pos_x").as_double();
-    double offset_pos_y = this->get_parameter("MoveJLC_offset_pos_y").as_double();
-    double offset_pos_z = this->get_parameter("MoveJLC_offset_pos_z").as_double();
-    double offset_pos_rx = this->get_parameter("MoveJLC_offset_pos_rx").as_double();
-    double offset_pos_ry = this->get_parameter("MoveJLC_offset_pos_ry").as_double();
-    double offset_pos_rz = this->get_parameter("MoveJLC_offset_pos_rz").as_double();
+  float acc = this->get_parameter("MoveJLC_acc").as_double();
+  float ovl = this->get_parameter("MoveJLC_ovl").as_double();
+  double eaxis1 = this->get_parameter("MoveJLC_eaxis1").as_double();
+  double eaxis2 = this->get_parameter("MoveJLC_eaxis2").as_double();
+  double eaxis3 = this->get_parameter("MoveJLC_eaxis3").as_double();
+  double eaxis4 = this->get_parameter("MoveJLC_eaxis4").as_double();
+  float blendT = this->get_parameter("MoveJ_blendT").as_double();
+  uint8_t offset_flag = this->get_parameter("MoveJLC_offset_flag").as_int();
+  double offset_pos_x = this->get_parameter("MoveJLC_offset_pos_x").as_double();
+  double offset_pos_y = this->get_parameter("MoveJLC_offset_pos_y").as_double();
+  double offset_pos_z = this->get_parameter("MoveJLC_offset_pos_z").as_double();
+  double offset_pos_rx = this->get_parameter("MoveJLC_offset_pos_rx").as_double();
+  double offset_pos_ry = this->get_parameter("MoveJLC_offset_pos_ry").as_double();
+  double offset_pos_rz = this->get_parameter("MoveJLC_offset_pos_rz").as_double();
 
+  std::regex search_para(",");
+  std::regex_token_iterator iter_data(para.begin(), para.end(), search_para, -1);
+  std::regex_token_iterator<std::string::iterator> end;
+  std::smatch num_match;
+  std::string head_str = iter_data->str();
 
-    std::regex search_para(",");
-    std::regex_token_iterator iter_data(para.begin(),para.end(),search_para,-1);
-    std::regex_token_iterator<std::string::iterator> end;
-    std::smatch num_match;
-    std::string head_str = iter_data->str();
+  JointPos tmp_jnt_pos;
+  DescPose cartpos;
 
-    JointPos tmp_jnt_pos;
-    DescPose cartpos;
-
-    if(std::regex_match(head_str,num_match,std::regex("(JNT)([0-9]*)"))){//第一个元素是否满足JNT1这种模式
-        int index = atol(num_match[2].str().c_str());
-        if(index > _cmd_jnt_pos_list.size()){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            return "-1";
-        }
-        tmp_jnt_pos = _cmd_jnt_pos_list.at(index-1);
-        if(_ptr_robot->GetForwardKin(&tmp_jnt_pos,&cartpos) != 0){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(fwd_kin_error)]);
-            return "-1";
-        }
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"返回正向运动学结果:%f,%f,%f,%f,%f,%f",cartpos.tran.x,\
-            cartpos.tran.y,cartpos.tran.z,cartpos.rpy.rx,cartpos.rpy.ry,cartpos.rpy.rz);
-    }else if(std::regex_match(head_str,num_match,std::regex("(CART)([0-9]*)"))){
-        int index = atol(num_match[2].str().c_str());
-        if(index > _cmd_cart_pos_list.size()){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            return "-1";
-        }
-        cartpos = _cmd_cart_pos_list.at(index-1);
-        // if(_ptr_robot->GetInverseKin(0,&cartpos,-1,&tmp_jnt_pos) != 0){
-        // 从参数迭代器中提前取出tool和user用于逆运动学计算
-        {
-            auto tmp_iter = iter_data;
-            tmp_iter++; // 跳过head_str
-            if(tmp_iter != end){
-                tmp_iter++; // 跳过speed
-                if(tmp_iter != end){
-                    tool = std::stoi(tmp_iter->str());
-                    tmp_iter++;
-                    if(tmp_iter != end){
-                        user = std::stoi(tmp_iter->str());
-                    }
-                }
-            }
-        }
-        ExaxisPos exaxis{exaxis_1,exaxis_2,exaxis_3,exaxis_4};
-        if(_ptr_robot->GetInverseKinExaxis(0,cartpos,exaxis,tool,user,tmp_jnt_pos) != 0){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(inv_kin_error)]);
-            return "-1";
-        }
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"返回逆向运动学结果:%f,%f,%f,%f,%f,%f",tmp_jnt_pos.jPos[0],\
-            tmp_jnt_pos.jPos[1],tmp_jnt_pos.jPos[2],tmp_jnt_pos.jPos[3],tmp_jnt_pos.jPos[4],tmp_jnt_pos.jPos[5]);
-    }else{
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_container_index)]);
-        return "-1";
+  if (std::regex_match(
+        head_str, num_match, std::regex("(JNT)([0-9]*)"))) {  //第一个元素是否满足JNT1这种模式
+    int index = atol(num_match[2].str().c_str());
+    if (index > _cmd_jnt_pos_list.size()) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      return "-1";
     }
-
-    if (iter_data != end){
-        iter_data++;
-
-        speed = std::stoi(iter_data->str());
-        iter_data++;
-
-        // Check if there are more elements in the iterator
-        tool = std::stoi(iter_data->str());
-        iter_data++;
-
-        user = std::stoi(iter_data->str());
-        iter_data++;
+    tmp_jnt_pos = _cmd_jnt_pos_list.at(index - 1);
+    if (_ptr_robot->GetForwardKin(&tmp_jnt_pos, &cartpos) != 0) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(fwd_kin_error)]);
+      return "-1";
     }
-    if (iter_data != end){
-        eaxis1 = std::stod(iter_data->str());iter_data++;
-        eaxis2 = std::stod(iter_data->str());iter_data++;
-        eaxis3 = std::stod(iter_data->str());iter_data++;
-        eaxis4 = std::stod(iter_data->str());iter_data++;
+    RCLCPP_INFO(
+      rclcpp::get_logger(LOGGER_NAME), "返回正向运动学结果:%f,%f,%f,%f,%f,%f", cartpos.tran.x,
+      cartpos.tran.y, cartpos.tran.z, cartpos.rpy.rx, cartpos.rpy.ry, cartpos.rpy.rz);
+  } else if (std::regex_match(head_str, num_match, std::regex("(CART)([0-9]*)"))) {
+    int index = atol(num_match[2].str().c_str());
+    if (index > _cmd_cart_pos_list.size()) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      return "-1";
     }
-    eaxis1 = exaxis_1;
-    eaxis2 = exaxis_2;
-    eaxis3 = exaxis_3;
-    eaxis4 = exaxis_4;
-    ExaxisPos extpos{eaxis1,eaxis2,eaxis3,eaxis4};
-    DescPose offsetpos{offset_pos_x,offset_pos_y,offset_pos_z,offset_pos_rx,offset_pos_ry,offset_pos_rz};
+    cartpos = _cmd_cart_pos_list.at(index - 1);
+    // if(_ptr_robot->GetInverseKin(0,&cartpos,-1,&tmp_jnt_pos) != 0){
+    // 从参数迭代器中提前取出tool和user用于逆运动学计算
+    {
+      auto tmp_iter = iter_data;
+      tmp_iter++;  // 跳过head_str
+      if (tmp_iter != end) {
+        tmp_iter++;  // 跳过speed
+        if (tmp_iter != end) {
+          tool = std::stoi(tmp_iter->str());
+          tmp_iter++;
+          if (tmp_iter != end) {
+            user = std::stoi(tmp_iter->str());
+          }
+        }
+      }
+    }
+    ExaxisPos exaxis{exaxis_1, exaxis_2, exaxis_3, exaxis_4};
+    if (_ptr_robot->GetInverseKinExaxis(0, cartpos, exaxis, tool, user, tmp_jnt_pos) != 0) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(inv_kin_error)]);
+      return "-1";
+    }
+    RCLCPP_INFO(
+      rclcpp::get_logger(LOGGER_NAME), "返回逆向运动学结果:%f,%f,%f,%f,%f,%f", tmp_jnt_pos.jPos[0],
+      tmp_jnt_pos.jPos[1], tmp_jnt_pos.jPos[2], tmp_jnt_pos.jPos[3], tmp_jnt_pos.jPos[4],
+      tmp_jnt_pos.jPos[5]);
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_container_index)]);
+    return "-1";
+  }
 
-    return std::to_string(_ptr_robot->MoveJ(&tmp_jnt_pos,&cartpos,tool,user,speed,acc,\
-        ovl,&extpos,blendT,offset_flag,&offsetpos));
+  if (iter_data != end) {
+    iter_data++;
+
+    speed = std::stoi(iter_data->str());
+    iter_data++;
+
+    // Check if there are more elements in the iterator
+    tool = std::stoi(iter_data->str());
+    iter_data++;
+
+    user = std::stoi(iter_data->str());
+    iter_data++;
+  }
+  if (iter_data != end) {
+    eaxis1 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis2 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis3 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis4 = std::stod(iter_data->str());
+    iter_data++;
+  }
+  eaxis1 = exaxis_1;
+  eaxis2 = exaxis_2;
+  eaxis3 = exaxis_3;
+  eaxis4 = exaxis_4;
+  ExaxisPos extpos{eaxis1, eaxis2, eaxis3, eaxis4};
+  DescPose offsetpos{offset_pos_x,  offset_pos_y,  offset_pos_z,
+                     offset_pos_rx, offset_pos_ry, offset_pos_rz};
+
+  return std::to_string(_ptr_robot->MoveJ(
+    &tmp_jnt_pos, &cartpos, tool, user, speed, acc, ovl, &extpos, blendT, offset_flag, &offsetpos));
 }
-
 
 /**
  * @brief 机械臂笛卡尔空间直线运动
@@ -1685,89 +1860,96 @@ std::string robot_command_thread::MoveJ(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveL(std::string para){
-    //JointPos *joint_pos, DescPose *desc_pos, int tool, int user, float vel, float acc, float ovl, float blendR, ExaxisPos *epos, uint8_t search, uint8_t offset_flag, DescPose *offset_pos
-    int speed,tool,user;
+std::string robot_command_thread::MoveL(std::string para)
+{
+  //JointPos *joint_pos, DescPose *desc_pos, int tool, int user, float vel, float acc, float ovl, float blendR, ExaxisPos *epos, uint8_t search, uint8_t offset_flag, DescPose *offset_pos
+  int speed, tool, user;
 
-    float acc = this->get_parameter("MoveJLC_acc").as_double();
-    float ovl = this->get_parameter("MoveJLC_ovl").as_double();
-    double eaxis1 = this->get_parameter("MoveJLC_eaxis1").as_double();
-    double eaxis2 = this->get_parameter("MoveJLC_eaxis2").as_double();
-    double eaxis3 = this->get_parameter("MoveJLC_eaxis3").as_double();
-    double eaxis4 = this->get_parameter("MoveJLC_eaxis4").as_double();
-    float blendR = this->get_parameter("MoveL_blendR").as_double();
-    uint8_t search = this->get_parameter("MoveL_search").as_int();
-    uint8_t offset_flag = this->get_parameter("MoveJLC_offset_flag").as_int();
-    double offset_pos_x = this->get_parameter("MoveJLC_offset_pos_x").as_double();
-    double offset_pos_y = this->get_parameter("MoveJLC_offset_pos_y").as_double();
-    double offset_pos_z = this->get_parameter("MoveJLC_offset_pos_z").as_double();
-    double offset_pos_rx = this->get_parameter("MoveJLC_offset_pos_rx").as_double();
-    double offset_pos_ry = this->get_parameter("MoveJLC_offset_pos_ry").as_double();
-    double offset_pos_rz = this->get_parameter("MoveJLC_offset_pos_rz").as_double();
+  float acc = this->get_parameter("MoveJLC_acc").as_double();
+  float ovl = this->get_parameter("MoveJLC_ovl").as_double();
+  double eaxis1 = this->get_parameter("MoveJLC_eaxis1").as_double();
+  double eaxis2 = this->get_parameter("MoveJLC_eaxis2").as_double();
+  double eaxis3 = this->get_parameter("MoveJLC_eaxis3").as_double();
+  double eaxis4 = this->get_parameter("MoveJLC_eaxis4").as_double();
+  float blendR = this->get_parameter("MoveL_blendR").as_double();
+  uint8_t search = this->get_parameter("MoveL_search").as_int();
+  uint8_t offset_flag = this->get_parameter("MoveJLC_offset_flag").as_int();
+  double offset_pos_x = this->get_parameter("MoveJLC_offset_pos_x").as_double();
+  double offset_pos_y = this->get_parameter("MoveJLC_offset_pos_y").as_double();
+  double offset_pos_z = this->get_parameter("MoveJLC_offset_pos_z").as_double();
+  double offset_pos_rx = this->get_parameter("MoveJLC_offset_pos_rx").as_double();
+  double offset_pos_ry = this->get_parameter("MoveJLC_offset_pos_ry").as_double();
+  double offset_pos_rz = this->get_parameter("MoveJLC_offset_pos_rz").as_double();
 
-    std::regex search_para(",");
-    std::regex_token_iterator iter_data(para.begin(),para.end(),search_para,-1);
-    std::regex_token_iterator<std::string::iterator> end;
-    std::smatch num_match;
-    std::string head_str = iter_data->str();
+  std::regex search_para(",");
+  std::regex_token_iterator iter_data(para.begin(), para.end(), search_para, -1);
+  std::regex_token_iterator<std::string::iterator> end;
+  std::smatch num_match;
+  std::string head_str = iter_data->str();
 
-    JointPos tmp_jnt_pos;
-    DescPose cartpos;
+  JointPos tmp_jnt_pos;
+  DescPose cartpos;
 
-     if(std::regex_match(head_str,num_match,std::regex("(JNT)([0-9]*)"))){//第一个元素是否满足JNT1这种模式
-        int index = atol(num_match[2].str().c_str());
-        if(index > _cmd_jnt_pos_list.size()){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            return "-1";
-        }
-        tmp_jnt_pos = _cmd_jnt_pos_list.at(index-1);
-        if(_ptr_robot->GetForwardKin(&tmp_jnt_pos,&cartpos) != 0){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(fwd_kin_error)]);
-            return "-1";
-        }
-    }else if(std::regex_match(head_str,num_match,std::regex("(CART)([0-9]*)"))){
-        int index = atol(num_match[2].str().c_str());
-        if(index > _cmd_cart_pos_list.size()){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            return "-1";
-        }
-        cartpos = _cmd_cart_pos_list.at(index-1);
-        if(_ptr_robot->GetInverseKin(0,&cartpos,-1,&tmp_jnt_pos) != 0){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(inv_kin_error)]);
-            return "-1";
-        }
-    }else{
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_container_index)]);
-        return "-1";
+  if (std::regex_match(
+        head_str, num_match, std::regex("(JNT)([0-9]*)"))) {  //第一个元素是否满足JNT1这种模式
+    int index = atol(num_match[2].str().c_str());
+    if (index > _cmd_jnt_pos_list.size()) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      return "-1";
     }
-
-    if (iter_data != end){
-        iter_data++;
-
-        speed = std::stoi(iter_data->str());
-        iter_data++;
-
-        // Check if there are more elements in the iterator
-        tool = std::stoi(iter_data->str());
-        iter_data++;
-
-        user = std::stoi(iter_data->str());
-        iter_data++;
+    tmp_jnt_pos = _cmd_jnt_pos_list.at(index - 1);
+    if (_ptr_robot->GetForwardKin(&tmp_jnt_pos, &cartpos) != 0) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(fwd_kin_error)]);
+      return "-1";
     }
-    if (iter_data != end){
-        eaxis1 = std::stod(iter_data->str());iter_data++;
-        eaxis2 = std::stod(iter_data->str());iter_data++;
-        eaxis3 = std::stod(iter_data->str());iter_data++;
-        eaxis4 = std::stod(iter_data->str());iter_data++;
+  } else if (std::regex_match(head_str, num_match, std::regex("(CART)([0-9]*)"))) {
+    int index = atol(num_match[2].str().c_str());
+    if (index > _cmd_cart_pos_list.size()) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      return "-1";
     }
+    cartpos = _cmd_cart_pos_list.at(index - 1);
+    if (_ptr_robot->GetInverseKin(0, &cartpos, -1, &tmp_jnt_pos) != 0) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(inv_kin_error)]);
+      return "-1";
+    }
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_container_index)]);
+    return "-1";
+  }
 
-    ExaxisPos extpos{eaxis1,eaxis2,eaxis3,eaxis4};
-    DescPose offsetpos{offset_pos_x,offset_pos_y,offset_pos_z,offset_pos_rx,offset_pos_ry,offset_pos_rz};
+  if (iter_data != end) {
+    iter_data++;
 
-    return std::to_string(_ptr_robot->MoveL(&tmp_jnt_pos,&cartpos,tool,user,speed,acc,ovl,blendR,\
-        &extpos,search,offset_flag,&offsetpos));
+    speed = std::stoi(iter_data->str());
+    iter_data++;
+
+    // Check if there are more elements in the iterator
+    tool = std::stoi(iter_data->str());
+    iter_data++;
+
+    user = std::stoi(iter_data->str());
+    iter_data++;
+  }
+  if (iter_data != end) {
+    eaxis1 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis2 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis3 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis4 = std::stod(iter_data->str());
+    iter_data++;
+  }
+
+  ExaxisPos extpos{eaxis1, eaxis2, eaxis3, eaxis4};
+  DescPose offsetpos{offset_pos_x,  offset_pos_y,  offset_pos_z,
+                     offset_pos_rx, offset_pos_ry, offset_pos_rz};
+
+  return std::to_string(_ptr_robot->MoveL(
+    &tmp_jnt_pos, &cartpos, tool, user, speed, acc, ovl, blendR, &extpos, search, offset_flag,
+    &offsetpos));
 }
-
 
 /**
  * @brief 机械臂笛卡尔空间圆弧运动
@@ -1775,127 +1957,142 @@ std::string robot_command_thread::MoveL(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveC(std::string para){
-    /*JointPos *joint_pos_p, DescPose *desc_pos_p, int ptool, int puser, float pvel, float pacc, ExaxisPos *epos_p, uint8_t poffset_flag, DescPose *offset_pos_p,
+std::string robot_command_thread::MoveC(std::string para)
+{
+  /*JointPos *joint_pos_p, DescPose *desc_pos_p, int ptool, int puser, float pvel, float pacc, ExaxisPos *epos_p, uint8_t poffset_flag, DescPose *offset_pos_p,
     JointPos *joint_pos_t, DescPose *desc_pos_t, int ttool, int tuser, float tvel, float tacc, ExaxisPos *epos_t, uint8_t toffset_flag, DescPose *offset_pos_t,float ovl, float blendR*/
-    int speed,tool,user;
+  int speed, tool, user;
 
-    float acc = this->get_parameter("MoveJLC_acc").as_double();
-    float ovl = this->get_parameter("MoveJLC_ovl").as_double();
-    double eaxis1 = this->get_parameter("MoveJLC_eaxis1").as_double();
-    double eaxis2 = this->get_parameter("MoveJLC_eaxis2").as_double();
-    double eaxis3 = this->get_parameter("MoveJLC_eaxis3").as_double();
-    double eaxis4 = this->get_parameter("MoveJLC_eaxis4").as_double();
-    float blendR = this->get_parameter("MoveL_blendR").as_double();
-    uint8_t search = this->get_parameter("MoveL_search").as_int();
-    uint8_t offset_flag = this->get_parameter("MoveJLC_offset_flag").as_int();
-    double offset_pos_x = this->get_parameter("MoveJLC_offset_pos_x").as_double();
-    double offset_pos_y = this->get_parameter("MoveJLC_offset_pos_y").as_double();
-    double offset_pos_z = this->get_parameter("MoveJLC_offset_pos_z").as_double();
-    double offset_pos_rx = this->get_parameter("MoveJLC_offset_pos_rx").as_double();
-    double offset_pos_ry = this->get_parameter("MoveJLC_offset_pos_ry").as_double();
-    double offset_pos_rz = this->get_parameter("MoveJLC_offset_pos_rz").as_double();
+  float acc = this->get_parameter("MoveJLC_acc").as_double();
+  float ovl = this->get_parameter("MoveJLC_ovl").as_double();
+  double eaxis1 = this->get_parameter("MoveJLC_eaxis1").as_double();
+  double eaxis2 = this->get_parameter("MoveJLC_eaxis2").as_double();
+  double eaxis3 = this->get_parameter("MoveJLC_eaxis3").as_double();
+  double eaxis4 = this->get_parameter("MoveJLC_eaxis4").as_double();
+  float blendR = this->get_parameter("MoveL_blendR").as_double();
+  uint8_t search = this->get_parameter("MoveL_search").as_int();
+  uint8_t offset_flag = this->get_parameter("MoveJLC_offset_flag").as_int();
+  double offset_pos_x = this->get_parameter("MoveJLC_offset_pos_x").as_double();
+  double offset_pos_y = this->get_parameter("MoveJLC_offset_pos_y").as_double();
+  double offset_pos_z = this->get_parameter("MoveJLC_offset_pos_z").as_double();
+  double offset_pos_rx = this->get_parameter("MoveJLC_offset_pos_rx").as_double();
+  double offset_pos_ry = this->get_parameter("MoveJLC_offset_pos_ry").as_double();
+  double offset_pos_rz = this->get_parameter("MoveJLC_offset_pos_rz").as_double();
 
-    std::regex search_para(",");
-    std::regex_token_iterator iter_data(para.begin(),para.end(),search_para,-1);
-    std::regex_token_iterator<std::string::iterator> end;
+  std::regex search_para(",");
+  std::regex_token_iterator iter_data(para.begin(), para.end(), search_para, -1);
+  std::regex_token_iterator<std::string::iterator> end;
 
-    std::smatch num_match,num_match2;
-    std::string head_str = iter_data->str();//第一个点位
+  std::smatch num_match, num_match2;
+  std::string head_str = iter_data->str();  //第一个点位
+  iter_data++;
+  std::string second_str = iter_data->str();  //第二个点位
+
+  JointPos tmp_jnt_pos, tmp_jnt_pos2;
+  DescPose cartpos, cartpos2;
+
+  if (
+    std::regex_match(head_str, num_match, std::regex("(JNT)([0-9]*)")) &&
+    std::regex_match(second_str, num_match2, std::regex("(JNT)([0-9]*)"))) {
+    int index = atol(num_match[2].str().c_str());
+    int index2 = atol(num_match2[2].str().c_str());
+    if (index > _cmd_jnt_pos_list.size() || index2 > _cmd_jnt_pos_list.size()) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      return "-1";
+    }
+    JointPos tmp_jnt_pos = _cmd_jnt_pos_list.at(index - 1);
+    JointPos tmp_jnt_pos2 = _cmd_jnt_pos_list.at(index2 - 1);
+
+    if (
+      _ptr_robot->GetForwardKin(&tmp_jnt_pos, &cartpos) != 0 ||
+      _ptr_robot->GetForwardKin(&tmp_jnt_pos2, &cartpos2) != 0) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(fwd_kin_error)]);
+      return "-1";
+    }
+  } else if (
+    std::regex_match(head_str, num_match, std::regex("(CART)([0-9]*)")) &&
+    std::regex_match(second_str, num_match2, std::regex("(CART)([0-9]*)"))) {
+    int index = atol(num_match[2].str().c_str());
+    int index2 = atol(num_match2[2].str().c_str());
+    if (index > _cmd_cart_pos_list.size() || index2 > _cmd_cart_pos_list.size()) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      return "-1";
+    }
+    cartpos = _cmd_cart_pos_list.at(index - 1);
+    cartpos2 = _cmd_cart_pos_list.at(index2 - 1);
+    if (
+      _ptr_robot->GetInverseKin(0, &cartpos, -1, &tmp_jnt_pos) != 0 ||
+      _ptr_robot->GetInverseKin(0, &cartpos2, -1, &tmp_jnt_pos2) != 0) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(inv_kin_error)]);
+      return "-1";
+    }
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_container_index)]);
+    return "-1";
+  }
+
+  ExaxisPos extpos1{eaxis1, eaxis2, eaxis3, eaxis4}, extpos2{eaxis1, eaxis2, eaxis3, eaxis4};
+
+  if (iter_data != end) {
     iter_data++;
-    std::string second_str = iter_data->str();//第二个点位
 
-    JointPos tmp_jnt_pos,tmp_jnt_pos2;
-    DescPose cartpos,cartpos2;
+    speed = std::stoi(iter_data->str());
+    iter_data++;
 
-    if(std::regex_match(head_str,num_match,std::regex("(JNT)([0-9]*)")) && \
-        std::regex_match(second_str,num_match2,std::regex("(JNT)([0-9]*)"))){   
-        int index = atol(num_match[2].str().c_str());
-        int index2 = atol(num_match2[2].str().c_str());
-        if(index > _cmd_jnt_pos_list.size() || index2 > _cmd_jnt_pos_list.size()){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            return "-1";
-        }
-        JointPos tmp_jnt_pos = _cmd_jnt_pos_list.at(index-1);
-        JointPos tmp_jnt_pos2 = _cmd_jnt_pos_list.at(index2-1);
+    // Check if there are more elements in the iterator
+    tool = std::stoi(iter_data->str());
+    iter_data++;
 
-        if(_ptr_robot->GetForwardKin(&tmp_jnt_pos,&cartpos) != 0 ||
-            _ptr_robot->GetForwardKin(&tmp_jnt_pos2,&cartpos2) != 0){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(fwd_kin_error)]);
-            return "-1";
-        } 
-    }else if(std::regex_match(head_str,num_match,std::regex("(CART)([0-9]*)")) && \
-              std::regex_match(second_str,num_match2,std::regex("(CART)([0-9]*)"))){
-        int index = atol(num_match[2].str().c_str());
-        int index2 = atol(num_match2[2].str().c_str());
-        if(index > _cmd_cart_pos_list.size() || index2 > _cmd_cart_pos_list.size()){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            return "-1";
-        }
-        cartpos = _cmd_cart_pos_list.at(index-1);
-        cartpos2 = _cmd_cart_pos_list.at(index2-1);
-        if(_ptr_robot->GetInverseKin(0,&cartpos,-1,&tmp_jnt_pos) != 0 ||
-            _ptr_robot->GetInverseKin(0,&cartpos2,-1,&tmp_jnt_pos2) != 0){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(inv_kin_error)]);
-            return "-1";
-        }
-    }else{
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_container_index)]);
-        return "-1";
-    }
+    user = std::stoi(iter_data->str());
+    iter_data++;
+  }
 
-    ExaxisPos extpos1{eaxis1,eaxis2,eaxis3,eaxis4},extpos2{eaxis1,eaxis2,eaxis3,eaxis4};
+  if (iter_data != end) {
+    eaxis1 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis2 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis3 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis4 = std::stod(iter_data->str());
+    iter_data++;
 
-    if (iter_data != end){
-        iter_data++;
+    extpos1.ePos[0] = eaxis1;
+    extpos1.ePos[1] = eaxis2;
+    extpos1.ePos[2] = eaxis3;
+    extpos1.ePos[3] = eaxis4;
 
-        speed = std::stoi(iter_data->str());
-        iter_data++;
+    eaxis1 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis2 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis3 = std::stod(iter_data->str());
+    iter_data++;
+    eaxis4 = std::stod(iter_data->str());
+    iter_data++;
 
-        // Check if there are more elements in the iterator
-        tool = std::stoi(iter_data->str());
-        iter_data++;
+    extpos2.ePos[0] = eaxis1;
+    extpos2.ePos[1] = eaxis2;
+    extpos2.ePos[2] = eaxis3;
+    extpos2.ePos[3] = eaxis4;
+  }
 
-        user = std::stoi(iter_data->str());
-        iter_data++;
-    }
+  DescPose offsetpos{offset_pos_x,  offset_pos_y,  offset_pos_z,
+                     offset_pos_rx, offset_pos_ry, offset_pos_rz};
 
-    if (iter_data != end){
-        eaxis1 = std::stod(iter_data->str());iter_data++;
-        eaxis2 = std::stod(iter_data->str());iter_data++;
-        eaxis3 = std::stod(iter_data->str());iter_data++;
-        eaxis4 = std::stod(iter_data->str());iter_data++;
-
-        extpos1.ePos[0] = eaxis1;
-        extpos1.ePos[1] = eaxis2;
-        extpos1.ePos[2] = eaxis3;
-        extpos1.ePos[3] = eaxis4;
-
-        eaxis1 = std::stod(iter_data->str());iter_data++;
-        eaxis2 = std::stod(iter_data->str());iter_data++;
-        eaxis3 = std::stod(iter_data->str());iter_data++;
-        eaxis4 = std::stod(iter_data->str());iter_data++;
-
-        extpos2.ePos[0] = eaxis1;
-        extpos2.ePos[1] = eaxis2;
-        extpos2.ePos[2] = eaxis3;
-        extpos2.ePos[3] = eaxis4;
-    }
-
-    DescPose offsetpos{offset_pos_x,offset_pos_y,offset_pos_z,offset_pos_rx,\
-        offset_pos_ry,offset_pos_rz};
-
-    return std::to_string(_ptr_robot->MoveC(&tmp_jnt_pos,&cartpos,tool,user,speed,acc,\
-        &extpos1,offset_flag,&offsetpos,&tmp_jnt_pos2,&cartpos2,tool,user,speed,acc,&extpos2,\
-        offset_flag,&offsetpos,ovl,blendR));      
+  return std::to_string(_ptr_robot->MoveC(
+    &tmp_jnt_pos, &cartpos, tool, user, speed, acc, &extpos1, offset_flag, &offsetpos,
+    &tmp_jnt_pos2, &cartpos2, tool, user, speed, acc, &extpos2, offset_flag, &offsetpos, ovl,
+    blendR));
 }
 
-std::string robot_command_thread::Circle(std::string para){
-    /*JointPos *joint_pos_p, DescPose *desc_pos_p, int ptool, 
+std::string robot_command_thread::Circle(std::string para)
+{
+  /*JointPos *joint_pos_p, DescPose *desc_pos_p, int ptool, 
     int puser, float pvel, float pacc, ExaxisPos *epos_p, JointPos *joint_pos_t, 
     DescPose *desc_pos_t, int ttool, int tuser, float tvel, float tacc, 
     ExaxisPos *epos_t, float ovl, uint8_t offset_flag, DescPose *offset_pos*/
-    return "-1";
+  return "-1";
 }
 
 /**
@@ -1904,21 +2101,26 @@ std::string robot_command_thread::Circle(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ServoJ(std::string para){
-    std::list<std::string> datalist;
-    _splitString2List(para,datalist);
+std::string robot_command_thread::ServoJ(std::string para)
+{
+  std::list<std::string> datalist;
+  _splitString2List(para, datalist);
 
-    JointPos jpos;
-    _fillJointPose(datalist,jpos);
+  JointPos jpos;
+  _fillJointPose(datalist, jpos);
 
-    ExaxisPos eaxispos;
-    eaxispos.ePos[0] = std::stod(datalist.front().c_str());datalist.pop_front();
-    eaxispos.ePos[1] = std::stod(datalist.front().c_str());datalist.pop_front();
-    eaxispos.ePos[2] = std::stod(datalist.front().c_str());datalist.pop_front();
-    eaxispos.ePos[3] = std::stod(datalist.front().c_str());datalist.pop_front();
+  ExaxisPos eaxispos;
+  eaxispos.ePos[0] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  eaxispos.ePos[1] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  eaxispos.ePos[2] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  eaxispos.ePos[3] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
 
-    double deltaT = std::stod(datalist.front().c_str());
-    return std::to_string(_ptr_robot->ServoJ(&jpos,&eaxispos,0,0,deltaT,0,0));
+  double deltaT = std::stod(datalist.front().c_str());
+  return std::to_string(_ptr_robot->ServoJ(&jpos, &eaxispos, 0, 0, deltaT, 0, 0));
 }
 
 /**
@@ -1928,43 +2130,48 @@ std::string robot_command_thread::ServoJ(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::ServoJMultiPoint(std::string para){
-    std::list<std::string> datalist;
-    _splitString2List(para,datalist);
+std::string robot_command_thread::ServoJMultiPoint(std::string para)
+{
+  std::list<std::string> datalist;
+  _splitString2List(para, datalist);
 
-    int pointNum = std::stoi(datalist.front().c_str());datalist.pop_front();
+  int pointNum = std::stoi(datalist.front().c_str());
+  datalist.pop_front();
 
-    std::vector<JointPos> joint_pos_list;
-    for(int i = 0; i < pointNum; i++){
-        JointPos jpos;
-        _fillJointPose(datalist,jpos);
-        joint_pos_list.push_back(jpos);
-    }
+  std::vector<JointPos> joint_pos_list;
+  for (int i = 0; i < pointNum; i++) {
+    JointPos jpos;
+    _fillJointPose(datalist, jpos);
+    joint_pos_list.push_back(jpos);
+  }
 
-    ExaxisPos eaxispos;
-    eaxispos.ePos[0] = std::stod(datalist.front().c_str());datalist.pop_front();
-    eaxispos.ePos[1] = std::stod(datalist.front().c_str());datalist.pop_front();
-    eaxispos.ePos[2] = std::stod(datalist.front().c_str());datalist.pop_front();
-    eaxispos.ePos[3] = std::stod(datalist.front().c_str());datalist.pop_front();
+  ExaxisPos eaxispos;
+  eaxispos.ePos[0] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  eaxispos.ePos[1] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  eaxispos.ePos[2] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  eaxispos.ePos[3] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
 
-    double cmdT = std::stod(datalist.front().c_str());
+  double cmdT = std::stod(datalist.front().c_str());
 
-    int servoJCmdCount = 0;
-    int res = _ptr_robot->ServoJ(joint_pos_list,&eaxispos,0,0,cmdT,0,0,servoJCmdCount);
-    return std::string(std::to_string(res) + "," + std::to_string(servoJCmdCount));
+  int servoJCmdCount = 0;
+  int res = _ptr_robot->ServoJ(joint_pos_list, &eaxispos, 0, 0, cmdT, 0, 0, servoJCmdCount);
+  return std::string(std::to_string(res) + "," + std::to_string(servoJCmdCount));
 }
-
-
 
 /**
  * @brief 机械臂关节空间样条运动开始
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SplineStart(std::string para){
-    //empty para
-    para.clear();
-    return std::to_string(_ptr_robot->SplineStart());
+std::string robot_command_thread::SplineStart(std::string para)
+{
+  //empty para
+  para.clear();
+  return std::to_string(_ptr_robot->SplineStart());
 }
 
 /**
@@ -1973,69 +2180,69 @@ std::string robot_command_thread::SplineStart(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SplinePTP(std::string para){
-    /*JointPos *joint_pos, DescPose *desc_pos, int tool, 
+std::string robot_command_thread::SplinePTP(std::string para)
+{
+  /*JointPos *joint_pos, DescPose *desc_pos, int tool, 
     int user, float vel, float acc, float ovl*/
-    //默认进来的都是JNT数据
-    int speed,tool,user;
+  //默认进来的都是JNT数据
+  int speed, tool, user;
 
-    float acc = this->get_parameter("Spline_acc").as_double();
-    float ovl = this->get_parameter("Spline_ovl").as_double();
+  float acc = this->get_parameter("Spline_acc").as_double();
+  float ovl = this->get_parameter("Spline_ovl").as_double();
 
-    std::regex search_para(",");
-    std::regex_token_iterator iter_data(para.begin(),para.end(),search_para,-1);
-    std::regex_token_iterator<std::string::iterator> end;
+  std::regex search_para(",");
+  std::regex_token_iterator iter_data(para.begin(), para.end(), search_para, -1);
+  std::regex_token_iterator<std::string::iterator> end;
 
-    std::smatch num_match;
-    std::string head_str = iter_data->str();
-    if(std::regex_match(head_str,num_match,std::regex("(JNT)([0-9]*)"))){ 
-        int index = atol(num_match[2].str().c_str());
-        if(index > _cmd_jnt_pos_list.size()){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            return "-1";
-        }
-
-        JointPos tmp_jnt_pos = _cmd_jnt_pos_list.at(index-1);
-        DescPose cartpos;
-
-        if(_ptr_robot->GetForwardKin(&tmp_jnt_pos,&cartpos) != 0){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(fwd_kin_error)]);
-            return "-1";
-        }
-
-        if (iter_data != end){
-            iter_data++;
-
-            speed = std::stoi(iter_data->str());
-            iter_data++;
-
-            // Check if there are more elements in the iterator
-            tool = std::stoi(iter_data->str());
-            iter_data++;
-
-            user = std::stoi(iter_data->str());
-        }
-
-        return std::to_string(_ptr_robot->SplinePTP(&tmp_jnt_pos,&cartpos,\
-                                tool,user,speed,acc,ovl));
-    }else{
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_container_index)]);
-        return "-1";
+  std::smatch num_match;
+  std::string head_str = iter_data->str();
+  if (std::regex_match(head_str, num_match, std::regex("(JNT)([0-9]*)"))) {
+    int index = atol(num_match[2].str().c_str());
+    if (index > _cmd_jnt_pos_list.size()) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      return "-1";
     }
-}
 
+    JointPos tmp_jnt_pos = _cmd_jnt_pos_list.at(index - 1);
+    DescPose cartpos;
+
+    if (_ptr_robot->GetForwardKin(&tmp_jnt_pos, &cartpos) != 0) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(fwd_kin_error)]);
+      return "-1";
+    }
+
+    if (iter_data != end) {
+      iter_data++;
+
+      speed = std::stoi(iter_data->str());
+      iter_data++;
+
+      // Check if there are more elements in the iterator
+      tool = std::stoi(iter_data->str());
+      iter_data++;
+
+      user = std::stoi(iter_data->str());
+    }
+
+    return std::to_string(
+      _ptr_robot->SplinePTP(&tmp_jnt_pos, &cartpos, tool, user, speed, acc, ovl));
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_container_index)]);
+    return "-1";
+  }
+}
 
 /**
  * @brief 机械臂关节空间样条运动结束
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SplineEnd(std::string para){
-    //empty para
-    para.clear();
-    return std::to_string(_ptr_robot->SplineEnd());
+std::string robot_command_thread::SplineEnd(std::string para)
+{
+  //empty para
+  para.clear();
+  return std::to_string(_ptr_robot->SplineEnd());
 }
-
 
 /**
  * @brief 机械臂笛卡尔空间样条运动开始
@@ -2043,9 +2250,10 @@ std::string robot_command_thread::SplineEnd(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::NewSplineStart(std::string para){
-    //uint8_t ctlPoint
-    return std::to_string(_ptr_robot->NewSplineStart(std::stoi(para)));
+std::string robot_command_thread::NewSplineStart(std::string para)
+{
+  //uint8_t ctlPoint
+  return std::to_string(_ptr_robot->NewSplineStart(std::stoi(para)));
 }
 
 /**
@@ -2054,62 +2262,62 @@ std::string robot_command_thread::NewSplineStart(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::NewSplinePoint(std::string para){
-    /*JointPos *joint_pos, DescPose *desc_pos, int tool, int user, float vel, 
+std::string robot_command_thread::NewSplinePoint(std::string para)
+{
+  /*JointPos *joint_pos, DescPose *desc_pos, int tool, int user, float vel, 
       float acc, float ovl float blendR uint8_t lastFlag*/
-    //输入参数:pos,speed,lastflag
+  //输入参数:pos,speed,lastflag
 
-    int speed,tool,user;
-    uint8_t lastflag;
+  int speed, tool, user;
+  uint8_t lastflag;
 
-    float acc = this->get_parameter("Spline_acc").as_double();
-    float ovl = this->get_parameter("Spline_ovl").as_double();
-    double blendR = this->get_parameter("NewSpline_blendR").as_double();
+  float acc = this->get_parameter("Spline_acc").as_double();
+  float ovl = this->get_parameter("Spline_ovl").as_double();
+  double blendR = this->get_parameter("NewSpline_blendR").as_double();
 
+  std::regex search_para(",");
+  std::regex_token_iterator iter_data(para.begin(), para.end(), search_para, -1);
+  std::regex_token_iterator<std::string::iterator> end;
 
-    std::regex search_para(",");
-    std::regex_token_iterator iter_data(para.begin(),para.end(),search_para,-1);
-    std::regex_token_iterator<std::string::iterator> end;
+  std::smatch num_match;
+  std::string head_str = iter_data->str();
 
-    std::smatch num_match;
-    std::string head_str = iter_data->str();
-
-    if(std::regex_match(head_str,num_match,std::regex("(CART)([0-9]*)"))){
-        int index = atol(num_match[2].str().c_str());
-        if(index > _cmd_cart_pos_list.size()){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(out_container_range)]);
-            return "-1";
-        }
-        DescPose cartpos = _cmd_cart_pos_list.at(index-1);
-        JointPos jntpos;
-
-        if(_ptr_robot->GetInverseKin(0,&cartpos,-1,&jntpos) != 0){
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(inv_kin_error)]);
-            return "-1";
-        }
-
-        if (iter_data != end){
-            iter_data++;
-
-            speed = std::stoi(iter_data->str());
-            iter_data++;
-
-            // Check if there are more elements in the iterator
-            tool = std::stoi(iter_data->str());
-            iter_data++;
-
-            user = std::stoi(iter_data->str());
-            iter_data++;
-
-            lastflag = std::stoi(iter_data->str());
-        }
-        
-        return std::to_string(_ptr_robot->NewSplinePoint(&jntpos,&cartpos,tool,user,speed,\
-            acc,ovl,blendR,lastflag));
-    }else{
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),msgout[msg_id(invalid_container_index)]);
-        return "-1";
+  if (std::regex_match(head_str, num_match, std::regex("(CART)([0-9]*)"))) {
+    int index = atol(num_match[2].str().c_str());
+    if (index > _cmd_cart_pos_list.size()) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(out_container_range)]);
+      return "-1";
     }
+    DescPose cartpos = _cmd_cart_pos_list.at(index - 1);
+    JointPos jntpos;
+
+    if (_ptr_robot->GetInverseKin(0, &cartpos, -1, &jntpos) != 0) {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(inv_kin_error)]);
+      return "-1";
+    }
+
+    if (iter_data != end) {
+      iter_data++;
+
+      speed = std::stoi(iter_data->str());
+      iter_data++;
+
+      // Check if there are more elements in the iterator
+      tool = std::stoi(iter_data->str());
+      iter_data++;
+
+      user = std::stoi(iter_data->str());
+      iter_data++;
+
+      lastflag = std::stoi(iter_data->str());
+    }
+
+    return std::to_string(
+      _ptr_robot->NewSplinePoint(&jntpos, &cartpos, tool, user, speed, acc, ovl, blendR, lastflag));
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(invalid_container_index)]);
+    return "-1";
+  }
 }
 
 /**
@@ -2117,10 +2325,11 @@ std::string robot_command_thread::NewSplinePoint(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::NewSplineEnd(std::string para){
-    //empty para
-    para.clear();
-    return std::to_string(_ptr_robot->NewSplineEnd());
+std::string robot_command_thread::NewSplineEnd(std::string para)
+{
+  //empty para
+  para.clear();
+  return std::to_string(_ptr_robot->NewSplineEnd());
 }
 
 /**
@@ -2128,10 +2337,11 @@ std::string robot_command_thread::NewSplineEnd(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::StopMotion(std::string para){
-    //empty para
-    para.clear();
-    return std::to_string(_ptr_robot->StopMotion());
+std::string robot_command_thread::StopMotion(std::string para)
+{
+  //empty para
+  para.clear();
+  return std::to_string(_ptr_robot->StopMotion());
 }
 
 /**
@@ -2140,16 +2350,18 @@ std::string robot_command_thread::StopMotion(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::PointsOffsetEnable(std::string para){
-    //int flag, DescPose *offset_pos
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::PointsOffsetEnable(std::string para)
+{
+  //int flag, DescPose *offset_pos
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int flag = std::stoi(list.front());list.pop_front();
-    DescPose cartpos;
-    _fillDescPose(list,cartpos);
-    
-    return std::to_string(_ptr_robot->PointsOffsetEnable(flag,&cartpos));
+  int flag = std::stoi(list.front());
+  list.pop_front();
+  DescPose cartpos;
+  _fillDescPose(list, cartpos);
+
+  return std::to_string(_ptr_robot->PointsOffsetEnable(flag, &cartpos));
 }
 
 /**
@@ -2157,9 +2369,10 @@ std::string robot_command_thread::PointsOffsetEnable(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::PointsOffsetDisable(std::string para){
-    //empty para
-    return std::to_string(_ptr_robot->PointsOffsetDisable());
+std::string robot_command_thread::PointsOffsetDisable(std::string para)
+{
+  //empty para
+  return std::to_string(_ptr_robot->PointsOffsetDisable());
 }
 
 /**
@@ -2168,21 +2381,27 @@ std::string robot_command_thread::PointsOffsetDisable(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoSetParam(std::string para){ 
-    int servoid,servocomany,model,version,resolution;
-    double ratio;
+std::string robot_command_thread::AuxServoSetParam(std::string para)
+{
+  int servoid, servocomany, model, version, resolution;
+  double ratio;
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    servoid = std::stoi(list.front());list.pop_front();
-    servocomany = std::stoi(list.front());list.pop_front();
-    model = std::stoi(list.front());list.pop_front();
-    version = std::stoi(list.front());list.pop_front();
-    resolution = std::stoi(list.front());list.pop_front();
-    ratio = std::stod(list.front());
-    return std::to_string(_ptr_robot->AuxServoSetParam(servoid,servocomany,model,\
-                            version,resolution,ratio));
+  std::list<std::string> list;
+  _splitString2List(para, list);
+
+  servoid = std::stoi(list.front());
+  list.pop_front();
+  servocomany = std::stoi(list.front());
+  list.pop_front();
+  model = std::stoi(list.front());
+  list.pop_front();
+  version = std::stoi(list.front());
+  list.pop_front();
+  resolution = std::stoi(list.front());
+  list.pop_front();
+  ratio = std::stod(list.front());
+  return std::to_string(
+    _ptr_robot->AuxServoSetParam(servoid, servocomany, model, version, resolution, ratio));
 }
 
 /**
@@ -2191,18 +2410,19 @@ std::string robot_command_thread::AuxServoSetParam(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoEnable(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    int servoid;
-    uint8_t status;
-    servoid = std::stoi(list.front());list.pop_front();
-    status = std::stoi(list.front());
+std::string robot_command_thread::AuxServoEnable(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    return std::to_string(_ptr_robot->AuxServoEnable(servoid,status));
+  int servoid;
+  uint8_t status;
+  servoid = std::stoi(list.front());
+  list.pop_front();
+  status = std::stoi(list.front());
+
+  return std::to_string(_ptr_robot->AuxServoEnable(servoid, status));
 }
-
 
 /**
  * @brief 设置扩展轴控制模式
@@ -2210,15 +2430,17 @@ std::string robot_command_thread::AuxServoEnable(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoSetControlMode(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AuxServoSetControlMode(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int servoid,mode;
-    servoid = std::stoi(list.front());list.pop_front();
-    mode = std::stoi(list.front());
-    
-    return std::to_string(_ptr_robot->AuxServoSetControlMode(servoid,mode));
+  int servoid, mode;
+  servoid = std::stoi(list.front());
+  list.pop_front();
+  mode = std::stoi(list.front());
+
+  return std::to_string(_ptr_robot->AuxServoSetControlMode(servoid, mode));
 }
 
 /**
@@ -2227,17 +2449,20 @@ std::string robot_command_thread::AuxServoSetControlMode(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoSetTargetPos(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AuxServoSetTargetPos(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int servoid;
-    double pos,speed;
-    servoid = std::stoi(list.front());list.pop_front();
-    pos = std::stod(list.front());list.pop_front();
-    speed = std::stod(list.front());
-    
-    return std::to_string(_ptr_robot->AuxServoSetTargetPos(servoid,pos,speed));
+  int servoid;
+  double pos, speed;
+  servoid = std::stoi(list.front());
+  list.pop_front();
+  pos = std::stod(list.front());
+  list.pop_front();
+  speed = std::stod(list.front());
+
+  return std::to_string(_ptr_robot->AuxServoSetTargetPos(servoid, pos, speed));
 }
 
 /**
@@ -2246,17 +2471,18 @@ std::string robot_command_thread::AuxServoSetTargetPos(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoSetTargetSpeed(std::string para){
+std::string robot_command_thread::AuxServoSetTargetSpeed(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::list<std::string> list;
-    _splitString2List(para,list);
+  int servoid;
+  double speed;
 
-    int servoid;
-    double speed;
-
-    servoid = std::stoi(list.front());list.pop_front();
-    speed = std::stod(list.front());
-    return std::to_string(_ptr_robot->AuxServoSetTargetSpeed(servoid,speed));
+  servoid = std::stoi(list.front());
+  list.pop_front();
+  speed = std::stod(list.front());
+  return std::to_string(_ptr_robot->AuxServoSetTargetSpeed(servoid, speed));
 }
 
 /**
@@ -2265,16 +2491,18 @@ std::string robot_command_thread::AuxServoSetTargetSpeed(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoSetTargetTorque(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AuxServoSetTargetTorque(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int servoid;
-    double torque;
-    servoid = std::stoi(list.front());list.pop_front();
-    torque = std::stod(list.front());
+  int servoid;
+  double torque;
+  servoid = std::stoi(list.front());
+  list.pop_front();
+  torque = std::stod(list.front());
 
-    return std::to_string(_ptr_robot->AuxServoSetTargetTorque(servoid,torque));
+  return std::to_string(_ptr_robot->AuxServoSetTargetTorque(servoid, torque));
 }
 
 /**
@@ -2283,18 +2511,22 @@ std::string robot_command_thread::AuxServoSetTargetTorque(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoHoming(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AuxServoHoming(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int servoid,mode;
-    double searchvel,latchvel;
-    servoid = std::stoi(list.front());list.pop_front();
-    mode = std::stoi(list.front());list.pop_front();
-    searchvel = std::stod(list.front());list.pop_front();
-    latchvel = std::stod(list.front());
+  int servoid, mode;
+  double searchvel, latchvel;
+  servoid = std::stoi(list.front());
+  list.pop_front();
+  mode = std::stoi(list.front());
+  list.pop_front();
+  searchvel = std::stod(list.front());
+  list.pop_front();
+  latchvel = std::stod(list.front());
 
-    return std::to_string(_ptr_robot->AuxServoHoming(servoid,mode,searchvel,latchvel));
+  return std::to_string(_ptr_robot->AuxServoHoming(servoid, mode, searchvel, latchvel));
 }
 
 /**
@@ -2303,8 +2535,9 @@ std::string robot_command_thread::AuxServoHoming(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoClearError(std::string para){
-    return std::to_string(_ptr_robot->AuxServoClearError(std::stoi(para)));
+std::string robot_command_thread::AuxServoClearError(std::string para)
+{
+  return std::to_string(_ptr_robot->AuxServoClearError(std::stoi(para)));
 }
 
 /**
@@ -2313,12 +2546,10 @@ std::string robot_command_thread::AuxServoClearError(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoSetStatusID(std::string para){
-    return std::to_string(_ptr_robot->AuxServosetStatusID(std::stoi(para)));
+std::string robot_command_thread::AuxServoSetStatusID(std::string para)
+{
+  return std::to_string(_ptr_robot->AuxServosetStatusID(std::stoi(para)));
 }
-
-
-
 
 /**
  * @brief 加载脚本
@@ -2326,24 +2557,25 @@ std::string robot_command_thread::AuxServoSetStatusID(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ScriptLoad(std::string para){
-    //program_name[64]
-    char name[64];
-    if(para.length() < 64){
-        para.copy(name,para.length());
-        name[para.length()] = '\0';
-    }
-    return std::to_string(_ptr_robot->ProgramLoad(name));
+std::string robot_command_thread::ScriptLoad(std::string para)
+{
+  //program_name[64]
+  char name[64];
+  if (para.length() < 64) {
+    para.copy(name, para.length());
+    name[para.length()] = '\0';
+  }
+  return std::to_string(_ptr_robot->ProgramLoad(name));
 }
-
 
 /**
  * @brief 开始执行脚本
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ScriptStart(std::string para){
-    return std::to_string(_ptr_robot->ProgramRun());
+std::string robot_command_thread::ScriptStart(std::string para)
+{
+  return std::to_string(_ptr_robot->ProgramRun());
 }
 
 /**
@@ -2351,9 +2583,10 @@ std::string robot_command_thread::ScriptStart(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ScriptStop(std::string para){
-    //empty
-    return std::to_string(_ptr_robot->ProgramStop());
+std::string robot_command_thread::ScriptStop(std::string para)
+{
+  //empty
+  return std::to_string(_ptr_robot->ProgramStop());
 }
 
 /**
@@ -2361,9 +2594,10 @@ std::string robot_command_thread::ScriptStop(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ScriptPause(std::string para){
-    //empty
-    return std::to_string(_ptr_robot->ProgramPause());
+std::string robot_command_thread::ScriptPause(std::string para)
+{
+  //empty
+  return std::to_string(_ptr_robot->ProgramPause());
 }
 
 /**
@@ -2371,9 +2605,10 @@ std::string robot_command_thread::ScriptPause(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ScriptResume(std::string para){
-    //empty
-    return std::to_string(_ptr_robot->ProgramResume());
+std::string robot_command_thread::ScriptResume(std::string para)
+{
+  //empty
+  return std::to_string(_ptr_robot->ProgramResume());
 }
 
 /**
@@ -2381,10 +2616,11 @@ std::string robot_command_thread::ScriptResume(std::string para){
  * @return 错误码及版本号
  * @retval res,version
  */
-std::string robot_command_thread::GetVersion(std::string para){
-    std::string ver = "fairino_hardware:V" + std::to_string(VERSION_MAJOR) + "." + \
-        std::to_string(VERSION_MINOR) + "." + std::to_string(VERSION_MINOR2);
-    return std::string("0," + ver);
+std::string robot_command_thread::GetVersion(std::string para)
+{
+  std::string ver = "fairino_hardware:V" + std::to_string(VERSION_MAJOR) + "." +
+                    std::to_string(VERSION_MINOR) + "." + std::to_string(VERSION_MINOR2);
+  return std::string("0," + ver);
 }
 
 /**
@@ -2392,20 +2628,22 @@ std::string robot_command_thread::GetVersion(std::string para){
  * @return 错误码及版本号
  * @retval res,version
  */
-std::string robot_command_thread::GetMsgVersion(std::string para){
-    std::string ver = "fairino_msgs:V" + std::to_string(VERSION_MSG_MARJOR) + "." + \
-        std::to_string(VERSION_MSG_MINOR) + "." + std::to_string(VERSION_MSG_MINOR2);
-    return std::string("0," + ver);
+std::string robot_command_thread::GetMsgVersion(std::string para)
+{
+  std::string ver = "fairino_msgs:V" + std::to_string(VERSION_MSG_MARJOR) + "." +
+                    std::to_string(VERSION_MSG_MINOR) + "." + std::to_string(VERSION_MSG_MINOR2);
+  return std::string("0," + ver);
 }
 /**
  * @brief 获取机械臂版本号
  * @return 错误码及版本号
  * @retval res,softwareversion
  */
-std::string robot_command_thread::GetRobotVersion(std::string para){
-    char robotmodel[64],softversion[64],ctrversion[64];
-    int res = _ptr_robot->GetSoftwareVersion(robotmodel,softversion,ctrversion);
-    return std::string(std::to_string(res) + ",robot:" + std::string(softversion));
+std::string robot_command_thread::GetRobotVersion(std::string para)
+{
+  char robotmodel[64], softversion[64], ctrversion[64];
+  int res = _ptr_robot->GetSoftwareVersion(robotmodel, softversion, ctrversion);
+  return std::string(std::to_string(res) + ",robot:" + std::string(softversion));
 }
 
 /**
@@ -2413,10 +2651,11 @@ std::string robot_command_thread::GetRobotVersion(std::string para){
  * @return 错误码及版本号
  * @retval res,sofewareversion
  */
-std::string robot_command_thread::GetControllerVersion(std::string para){
-    char robotmodel[64],softversion[64],ctrversion[64];
-    int res = _ptr_robot->GetSoftwareVersion(robotmodel,softversion,ctrversion);
-    return std::string(std::to_string(res) + ",robot_controller:" + std::string(ctrversion));
+std::string robot_command_thread::GetControllerVersion(std::string para)
+{
+  char robotmodel[64], softversion[64], ctrversion[64];
+  int res = _ptr_robot->GetSoftwareVersion(robotmodel, softversion, ctrversion);
+  return std::string(std::to_string(res) + ",robot_controller:" + std::string(ctrversion));
 }
 
 /**
@@ -2424,17 +2663,15 @@ std::string robot_command_thread::GetControllerVersion(std::string para){
  * @return TCP标定值
  * @retval res,x,y,z,rx,ry,rz 
  */
-std::string robot_command_thread::GetTCPOffset(std::string para){
-    uint8_t index = std::stoi(para);
-    DescPose cartpos;
-    int res = _ptr_robot->GetTCPOffset(index,&cartpos);
-    return std::to_string(res) + "," + \
-            std::to_string(cartpos.tran.x) + "," + \
-            std::to_string(cartpos.tran.y) + "," + \
-            std::to_string(cartpos.tran.z) + "," + \
-            std::to_string(cartpos.rpy.rx) + "," + \
-            std::to_string(cartpos.rpy.ry) + "," + \
-            std::to_string(cartpos.rpy.rz);
+std::string robot_command_thread::GetTCPOffset(std::string para)
+{
+  uint8_t index = std::stoi(para);
+  DescPose cartpos;
+  int res = _ptr_robot->GetTCPOffset(index, &cartpos);
+  return std::to_string(res) + "," + std::to_string(cartpos.tran.x) + "," +
+         std::to_string(cartpos.tran.y) + "," + std::to_string(cartpos.tran.z) + "," +
+         std::to_string(cartpos.rpy.rx) + "," + std::to_string(cartpos.rpy.ry) + "," +
+         std::to_string(cartpos.rpy.rz);
 }
 
 /**
@@ -2442,16 +2679,13 @@ std::string robot_command_thread::GetTCPOffset(std::string para){
  * @return DH补偿值
  * @retval a1,a2,a3,a4,a5,a6
  */
-std::string robot_command_thread::GetDHCompensation(std::string para){
-    double dhcomp[6];
-    int res = _ptr_robot->GetDHCompensation(dhcomp);
-    return std::to_string(res) + "," + \
-            std::to_string(dhcomp[0]) + "," + \
-            std::to_string(dhcomp[1]) + "," + \
-            std::to_string(dhcomp[2]) + "," + \
-            std::to_string(dhcomp[3]) + "," + \
-            std::to_string(dhcomp[4]) + "," + \
-            std::to_string(dhcomp[5]);
+std::string robot_command_thread::GetDHCompensation(std::string para)
+{
+  double dhcomp[6];
+  int res = _ptr_robot->GetDHCompensation(dhcomp);
+  return std::to_string(res) + "," + std::to_string(dhcomp[0]) + "," + std::to_string(dhcomp[1]) +
+         "," + std::to_string(dhcomp[2]) + "," + std::to_string(dhcomp[3]) + "," +
+         std::to_string(dhcomp[4]) + "," + std::to_string(dhcomp[5]);
 }
 
 /**
@@ -2459,14 +2693,15 @@ std::string robot_command_thread::GetDHCompensation(std::string para){
  * @return 焊接中断状态结构体信息
  * @retval breakOffState,weldArcState
  */
-std::string robot_command_thread::GetWeldingBreakOffState(std::string para){
-    // static WELDING_BREAKOFF_STATE state;
-    // int res = _ptr_robot->GetRobotRealTimeState(&_robot_realtime_state);
-    // state = _robot_realtime_state.weldingBreakOffState;
-    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"焊接状态参数:%i,%i",\
+std::string robot_command_thread::GetWeldingBreakOffState(std::string para)
+{
+  // static WELDING_BREAKOFF_STATE state;
+  // int res = _ptr_robot->GetRobotRealTimeState(&_robot_realtime_state);
+  // state = _robot_realtime_state.weldingBreakOffState;
+  // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"焊接状态参数:%i,%i",\
     //     _robot_realtime_state.weldingBreakOffState.breakOffState,
-    //     _robot_realtime_state.weldingBreakOffState.weldArcState);
-    // return std::string(std::to_string(res) + "," + std::to_string(state.breakOffState) + \
+  //     _robot_realtime_state.weldingBreakOffState.weldArcState);
+  // return std::string(std::to_string(res) + "," + std::to_string(state.breakOffState) + \
     //         "," + std::to_string(state.weldArcState));
 }
 
@@ -2475,10 +2710,11 @@ std::string robot_command_thread::GetWeldingBreakOffState(std::string para){
  * @return 错误码
  * @retval maincode,subcode
  */
-std::string robot_command_thread::GetErrorCode(std::string para){
-    int maincode,subcode;
-    _ptr_robot->GetRobotErrorCode(&maincode,&subcode);
-    return std::string(std::to_string(maincode) + "," + std::to_string(subcode));
+std::string robot_command_thread::GetErrorCode(std::string para)
+{
+  int maincode, subcode;
+  _ptr_robot->GetRobotErrorCode(&maincode, &subcode);
+  return std::string(std::to_string(maincode) + "," + std::to_string(subcode));
 }
 
 /**
@@ -2486,22 +2722,25 @@ std::string robot_command_thread::GetErrorCode(std::string para){
  * @return 逆向运动学解
  * @retval maincode,subcode
  */
-std::string robot_command_thread::GetInverseKin(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetInverseKin(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front());list.pop_front();
-    DescPose cartpose;
-    _fillDescPose(list,cartpose);
-    int config = std::stoi(list.front());list.pop_front();
-    JointPos jntpose;
-    int res = _ptr_robot->GetInverseKin(type,&cartpose,config,&jntpose);
-    return std::string(std::to_string(res) + "," + std::to_string(jntpose.jPos[0]) + "," +\
-            std::to_string(jntpose.jPos[1]) + "," + std::to_string(jntpose.jPos[2]) + "," +\
-            std::to_string(jntpose.jPos[3]) + "," + std::to_string(jntpose.jPos[4]) + "," +\
-            std::to_string(jntpose.jPos[5]));
+  int type = std::stoi(list.front());
+  list.pop_front();
+  DescPose cartpose;
+  _fillDescPose(list, cartpose);
+  int config = std::stoi(list.front());
+  list.pop_front();
+  JointPos jntpose;
+  int res = _ptr_robot->GetInverseKin(type, &cartpose, config, &jntpose);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(jntpose.jPos[0]) + "," +
+    std::to_string(jntpose.jPos[1]) + "," + std::to_string(jntpose.jPos[2]) + "," +
+    std::to_string(jntpose.jPos[3]) + "," + std::to_string(jntpose.jPos[4]) + "," +
+    std::to_string(jntpose.jPos[5]));
 }
-
 
 /**
  * @brief 可移动设备使能
@@ -2509,10 +2748,11 @@ std::string robot_command_thread::GetInverseKin(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::TractorEnable(std::string para){
-    //bool enable
-    int sw = std::stoi(para);
-    return std::to_string(_ptr_robot->TractorEnable(sw));
+std::string robot_command_thread::TractorEnable(std::string para)
+{
+  //bool enable
+  int sw = std::stoi(para);
+  return std::to_string(_ptr_robot->TractorEnable(sw));
 }
 
 /**
@@ -2520,9 +2760,10 @@ std::string robot_command_thread::TractorEnable(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::TractorHoming(std::string para){
-    //empty para
-    return std::to_string(_ptr_robot->TractorHoming());
+std::string robot_command_thread::TractorHoming(std::string para)
+{
+  //empty para
+  return std::to_string(_ptr_robot->TractorHoming());
 }
 
 /**
@@ -2531,14 +2772,16 @@ std::string robot_command_thread::TractorHoming(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::TractorMoveL(std::string para){
-    //double distance, double vel
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    double distance = std::stod(list.front());list.pop_front();
-    double vel = std::stod(list.front());
-    return std::to_string(_ptr_robot->TractorMoveL(distance,vel));
+std::string robot_command_thread::TractorMoveL(std::string para)
+{
+  //double distance, double vel
+  std::list<std::string> list;
+  _splitString2List(para, list);
+
+  double distance = std::stod(list.front());
+  list.pop_front();
+  double vel = std::stod(list.front());
+  return std::to_string(_ptr_robot->TractorMoveL(distance, vel));
 }
 
 /**
@@ -2547,15 +2790,18 @@ std::string robot_command_thread::TractorMoveL(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::TractorMoveC(std::string para){
-    //double ratio, double angle, double vel
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    double ratio = std::stod(list.front());list.pop_front();
-    double angle = std::stod(list.front());list.pop_front();
-    double vel = std::stod(list.front());
-    return std::to_string(_ptr_robot->TractorMoveC(ratio,angle,vel));
+std::string robot_command_thread::TractorMoveC(std::string para)
+{
+  //double ratio, double angle, double vel
+  std::list<std::string> list;
+  _splitString2List(para, list);
+
+  double ratio = std::stod(list.front());
+  list.pop_front();
+  double angle = std::stod(list.front());
+  list.pop_front();
+  double vel = std::stod(list.front());
+  return std::to_string(_ptr_robot->TractorMoveC(ratio, angle, vel));
 }
 
 /**
@@ -2563,11 +2809,11 @@ std::string robot_command_thread::TractorMoveC(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::TractorStop(std::string para){
-    //empty para
-    return std::to_string(_ptr_robot->TractorStop());
+std::string robot_command_thread::TractorStop(std::string para)
+{
+  //empty para
+  return std::to_string(_ptr_robot->TractorStop());
 }
-
 
 /**
  * @brief 上传轨迹J文件
@@ -2575,9 +2821,10 @@ std::string robot_command_thread::TractorStop(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::TrajectoryJUpLoad(std::string para){
-    //string filepath
-    return std::to_string(_ptr_robot->TrajectoryJUpLoad(para));
+std::string robot_command_thread::TrajectoryJUpLoad(std::string para)
+{
+  //string filepath
+  return std::to_string(_ptr_robot->TrajectoryJUpLoad(para));
 }
 
 /**
@@ -2586,9 +2833,10 @@ std::string robot_command_thread::TrajectoryJUpLoad(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::TrajectoryJDelete(std::string para){
-    //const string filename
-    return std::to_string(_ptr_robot->TrajectoryJDelete(para));
+std::string robot_command_thread::TrajectoryJDelete(std::string para)
+{
+  //const string filename
+  return std::to_string(_ptr_robot->TrajectoryJDelete(para));
 }
 
 /**
@@ -2597,14 +2845,16 @@ std::string robot_command_thread::TrajectoryJDelete(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LoadTrajectoryJ(std::string para){
-    //char name[30], float ovl
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    char name[30];
-    list.front().copy(name,list.front().size());list.pop_front();
-    float ovl = std::stof(list.front());
-    return std::to_string(_ptr_robot->LoadTrajectoryJ(name,ovl,1));
+std::string robot_command_thread::LoadTrajectoryJ(std::string para)
+{
+  //char name[30], float ovl
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  char name[30];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
+  float ovl = std::stof(list.front());
+  return std::to_string(_ptr_robot->LoadTrajectoryJ(name, ovl, 1));
 }
 
 /**
@@ -2612,9 +2862,10 @@ std::string robot_command_thread::LoadTrajectoryJ(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveTrajectoryJ(std::string para){
-    //empty para
-    return std::to_string(_ptr_robot->MoveTrajectoryJ());
+std::string robot_command_thread::MoveTrajectoryJ(std::string para)
+{
+  //empty para
+  return std::to_string(_ptr_robot->MoveTrajectoryJ());
 }
 
 /**
@@ -2623,24 +2874,23 @@ std::string robot_command_thread::MoveTrajectoryJ(std::string para){
  * @return 初始点位姿 
  * @retval x,y,z,rx,ry,rz
  */
-std::string robot_command_thread::GetTrajectoryStartPose(std::string para){
-    //char name[30]
-    char name[30];
-    if(para.length() <= 29){
-        para.copy(name,para.length());
-        name[para.length()] = '\0';
-    }
-    DescPose pos;
-    if(_ptr_robot->GetTrajectoryStartPose(name,&pos) == 0){
-        return std::to_string(pos.tran.x) + "," +\
-                std::to_string(pos.tran.y) + "," +\
-                std::to_string(pos.tran.z) + "," +\
-                std::to_string(pos.rpy.rx) + "," +\
-                std::to_string(pos.rpy.ry) + "," +\   
+std::string robot_command_thread::GetTrajectoryStartPose(std::string para)
+{
+  //char name[30]
+  char name[30];
+  if (para.length() <= 29) {
+    para.copy(name, para.length());
+    name[para.length()] = '\0';
+  }
+  DescPose pos;
+  if (_ptr_robot->GetTrajectoryStartPose(name, &pos) == 0) {
+    return std::to_string(pos.tran.x) + "," + std::to_string(pos.tran.y) + "," +
+           std::to_string(pos.tran.z) + "," + std::to_string(pos.rpy.rx) + "," +
+           std::to_string(pos.rpy.ry) + "," +\   
                 std::to_string(pos.rpy.rz);
-    }else{
-        return std::string("0,0,0,0,0,0");
-    }
+  } else {
+    return std::string("0,0,0,0,0,0");
+  }
 }
 
 /**
@@ -2648,14 +2898,15 @@ std::string robot_command_thread::GetTrajectoryStartPose(std::string para){
  * @return 点数
  * @retval num
  */
-std::string robot_command_thread::GetTrajectoryPointNum(std::string para){
-    //empty para
-    int num;
-    if(_ptr_robot->GetTrajectoryPointNum(&num) == 0){
-        return std::to_string(num);
-    }else{
-        return "-1";
-    }
+std::string robot_command_thread::GetTrajectoryPointNum(std::string para)
+{
+  //empty para
+  int num;
+  if (_ptr_robot->GetTrajectoryPointNum(&num) == 0) {
+    return std::to_string(num);
+  } else {
+    return "-1";
+  }
 }
 
 /**
@@ -2664,16 +2915,18 @@ std::string robot_command_thread::GetTrajectoryPointNum(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTrajectoryJSpeed(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetTrajectoryJSpeed(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    float ovl = std::stod(list.front().c_str());list.pop_front();
-    int mode = std::stoi(list.front().c_str());list.pop_front();
-    //double vel
-    return std::to_string(_ptr_robot->SetTrajectoryJSpeed(ovl,mode));
+  float ovl = std::stod(list.front().c_str());
+  list.pop_front();
+  int mode = std::stoi(list.front().c_str());
+  list.pop_front();
+  //double vel
+  return std::to_string(_ptr_robot->SetTrajectoryJSpeed(ovl, mode));
 }
-
 
 /**
  * @brief 下载LUA脚本
@@ -2681,14 +2934,16 @@ std::string robot_command_thread::SetTrajectoryJSpeed(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LuaDownLoad(std::string para){
-    //string filename,string filepath
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LuaDownLoad(std::string para)
+{
+  //string filename,string filepath
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string name = list.front();list.pop_front();
-    std::string path = list.front();
-    return std::to_string(_ptr_robot->LuaDownLoad(name,path));
+  std::string name = list.front();
+  list.pop_front();
+  std::string path = list.front();
+  return std::to_string(_ptr_robot->LuaDownLoad(name, path));
 }
 
 /**
@@ -2697,14 +2952,15 @@ std::string robot_command_thread::LuaDownLoad(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LuaUpload(std::string para){
-    //string filepath
-    std::string luaFormatErrStr;
-    int res = _ptr_robot->LuaUpload(para,luaFormatErrStr);
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"上传LUA脚本名称为:%s",para.c_str());
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"上传LUA脚本调用SDK的结果为:%i",res);
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"LUA upload result:%i",res);
-    return std::to_string(res) + "," + luaFormatErrStr;
+std::string robot_command_thread::LuaUpload(std::string para)
+{
+  //string filepath
+  std::string luaFormatErrStr;
+  int res = _ptr_robot->LuaUpload(para, luaFormatErrStr);
+  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "上传LUA脚本名称为:%s", para.c_str());
+  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "上传LUA脚本调用SDK的结果为:%i", res);
+  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "LUA upload result:%i", res);
+  return std::to_string(res) + "," + luaFormatErrStr;
 }
 
 /**
@@ -2713,9 +2969,10 @@ std::string robot_command_thread::LuaUpload(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LuaDelete(std::string para){
-    //string filename
-    return std::to_string(_ptr_robot->LuaDelete(para));
+std::string robot_command_thread::LuaDelete(std::string para)
+{
+  //string filename
+  return std::to_string(_ptr_robot->LuaDelete(para));
 }
 
 /**
@@ -2724,18 +2981,19 @@ std::string robot_command_thread::LuaDelete(std::string para){
  * @return LUA脚本名称列表
  * @retval name1,name2,name3...
  */
-std::string robot_command_thread::GetLuaList(std::string para){
-    std::list<std::string> list;
-    if(_ptr_robot->GetLuaList(&list) == 0){
-        std::string str = "";
-        for(auto item : list){
-            str += item;
-            str += ",";
-        }
-        return str;
-    }else{
-        return "-1";
+std::string robot_command_thread::GetLuaList(std::string para)
+{
+  std::list<std::string> list;
+  if (_ptr_robot->GetLuaList(&list) == 0) {
+    std::string str = "";
+    for (auto item : list) {
+      str += item;
+      str += ",";
     }
+    return str;
+  } else {
+    return "-1";
+  }
 }
 
 /**
@@ -2744,20 +3002,23 @@ std::string robot_command_thread::GetLuaList(std::string para){
  * @return 工具坐标系结果及错误码
  * @retval errorcode,x,y,z,rx,ry,rz
  */
-std::string robot_command_thread::ComputeToolCoordWithPoints(std::string para){
-    //int method,Jointpos pos
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ComputeToolCoordWithPoints(std::string para)
+{
+  //int method,Jointpos pos
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int method = std::stoi(list.front().c_str());list.pop_front();
-    JointPos pos;
-    _fillJointPose(list,pos);
-    DescPose cartpos;
-    int res = _ptr_robot->ComputeToolCoordWithPoints(method,&pos,cartpos);
-    return std::string(std::to_string(res) + "," + std::to_string(cartpos.tran.x) + "," + \
-            std::to_string(cartpos.tran.y) + "," + std::to_string(cartpos.tran.z) + "," + \
-            std::to_string(cartpos.rpy.rx) + "," + std::to_string(cartpos.rpy.ry) + "," + \
-            std::to_string(cartpos.rpy.rz));
+  int method = std::stoi(list.front().c_str());
+  list.pop_front();
+  JointPos pos;
+  _fillJointPose(list, pos);
+  DescPose cartpos;
+  int res = _ptr_robot->ComputeToolCoordWithPoints(method, &pos, cartpos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(cartpos.tran.x) + "," +
+    std::to_string(cartpos.tran.y) + "," + std::to_string(cartpos.tran.z) + "," +
+    std::to_string(cartpos.rpy.rx) + "," + std::to_string(cartpos.rpy.ry) + "," +
+    std::to_string(cartpos.rpy.rz));
 }
 
 /**
@@ -2766,47 +3027,55 @@ std::string robot_command_thread::ComputeToolCoordWithPoints(std::string para){
  * @return 工件坐标系结果及错误码
  * @retval errorcode,x,y,z,rx,ry,rz
  */
-std::string robot_command_thread::ComputeWObjCoordWithPoints(std::string para){
-    //int method,descpos pos,int refframe
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ComputeWObjCoordWithPoints(std::string para)
+{
+  //int method,descpos pos,int refframe
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int method = std::stoi(list.front().c_str());list.pop_front();
-    DescPose posin,posout;
-    _fillDescPose(list,posin);
-    int reframe = std::stoi(list.front().c_str());
-    int res = _ptr_robot->ComputeWObjCoordWithPoints(method,&posin,reframe,posout);
-    return std::string(std::to_string(res) + "," + std::to_string(posout.tran.x) + "," + \
-            std::to_string(posout.tran.y) + "," + std::to_string(posout.tran.z) + "," + \
-            std::to_string(posout.rpy.rx) + "," + std::to_string(posout.rpy.ry) + "," + \
-            std::to_string(posout.rpy.rz));
+  int method = std::stoi(list.front().c_str());
+  list.pop_front();
+  DescPose posin, posout;
+  _fillDescPose(list, posin);
+  int reframe = std::stoi(list.front().c_str());
+  int res = _ptr_robot->ComputeWObjCoordWithPoints(method, &posin, reframe, posout);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(posout.tran.x) + "," +
+    std::to_string(posout.tran.y) + "," + std::to_string(posout.tran.z) + "," +
+    std::to_string(posout.rpy.rx) + "," + std::to_string(posout.rpy.ry) + "," +
+    std::to_string(posout.rpy.rz));
 }
 
+std::string robot_command_thread::WeldingSetCurrent(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-std::string robot_command_thread::WeldingSetCurrent(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    int iotype = std::stoi(list.front().c_str());list.pop_front();
-    double current = std::stof(list.front().c_str());list.pop_front();
-    int AOIndex = std::stoi(list.front().c_str());list.pop_front();
-    int blend = std::stoi(list.front().c_str());
-    return std::to_string(_ptr_robot->WeldingSetCurrent(iotype,current,AOIndex,blend));
+  int iotype = std::stoi(list.front().c_str());
+  list.pop_front();
+  double current = std::stof(list.front().c_str());
+  list.pop_front();
+  int AOIndex = std::stoi(list.front().c_str());
+  list.pop_front();
+  int blend = std::stoi(list.front().c_str());
+  return std::to_string(_ptr_robot->WeldingSetCurrent(iotype, current, AOIndex, blend));
 }
 
+std::string robot_command_thread::WeldingSetVoltage(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-std::string robot_command_thread::WeldingSetVoltage(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+  int iotype = std::stoi(list.front().c_str());
+  list.pop_front();
+  double current = std::stof(list.front().c_str());
+  list.pop_front();
+  int AOIndex = std::stoi(list.front().c_str());
+  list.pop_front();
+  int blend = std::stoi(list.front().c_str());
 
-    int iotype = std::stoi(list.front().c_str());list.pop_front();
-    double current = std::stof(list.front().c_str());list.pop_front();
-    int AOIndex = std::stoi(list.front().c_str());list.pop_front();
-    int blend = std::stoi(list.front().c_str());
-
-    return std::to_string(_ptr_robot->WeldingSetVoltage(iotype,current,AOIndex,blend));
+  return std::to_string(_ptr_robot->WeldingSetVoltage(iotype, current, AOIndex, blend));
 }
-
 
 /**
  * @brief 设置机器人焊接电弧意外中断检测参数
@@ -2815,14 +3084,16 @@ std::string robot_command_thread::WeldingSetVoltage(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WeldingSetCheckArcInterruptionParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeldingSetCheckArcInterruptionParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int checkenable = std::stoi(list.front().c_str());list.pop_front();
-    int arcInterruptTimeLength  = std::stoi(list.front().c_str());
-    return std::to_string(_ptr_robot->WeldingSetCheckArcInterruptionParam(\
-            checkenable,arcInterruptTimeLength));
+  int checkenable = std::stoi(list.front().c_str());
+  list.pop_front();
+  int arcInterruptTimeLength = std::stoi(list.front().c_str());
+  return std::to_string(
+    _ptr_robot->WeldingSetCheckArcInterruptionParam(checkenable, arcInterruptTimeLength));
 }
 
 /**
@@ -2830,11 +3101,13 @@ std::string robot_command_thread::WeldingSetCheckArcInterruptionParam(std::strin
  * @return 错误码及返回参数
  * @retval errorcode,checkenable,arcInterruptTimeLength
  */
-std::string robot_command_thread::WeldingGetCheckArcInterruptionParam(std::string para){
-    int checkenable,arcInterruptTimeLength;
-    int res = _ptr_robot->WeldingGetCheckArcInterruptionParam(&checkenable,&arcInterruptTimeLength);
-    return std::string(std::to_string(res) + "," + std::to_string(checkenable) + "," \
-            + std::to_string(arcInterruptTimeLength));
+std::string robot_command_thread::WeldingGetCheckArcInterruptionParam(std::string para)
+{
+  int checkenable, arcInterruptTimeLength;
+  int res = _ptr_robot->WeldingGetCheckArcInterruptionParam(&checkenable, &arcInterruptTimeLength);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(checkenable) + "," +
+    std::to_string(arcInterruptTimeLength));
 }
 
 /**
@@ -2846,15 +3119,20 @@ std::string robot_command_thread::WeldingGetCheckArcInterruptionParam(std::strin
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::WeldingSetReWeldAfterBreakOffParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeldingSetReWeldAfterBreakOffParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int enable = std::stoi(list.front().c_str());list.pop_front();
-    double length = std::stod(list.front().c_str());list.pop_front();
-    double velocity = std::stod(list.front().c_str());list.pop_front();
-    int moveType = std::stoi(list.front().c_str());
-    return std::to_string(_ptr_robot->WeldingSetReWeldAfterBreakOffParam(enable,length,velocity,moveType));
+  int enable = std::stoi(list.front().c_str());
+  list.pop_front();
+  double length = std::stod(list.front().c_str());
+  list.pop_front();
+  double velocity = std::stod(list.front().c_str());
+  list.pop_front();
+  int moveType = std::stoi(list.front().c_str());
+  return std::to_string(
+    _ptr_robot->WeldingSetReWeldAfterBreakOffParam(enable, length, velocity, moveType));
 }
 
 /**
@@ -2862,13 +3140,14 @@ std::string robot_command_thread::WeldingSetReWeldAfterBreakOffParam(std::string
  * @return 错误码及返回参数
  * @retval errorcode,enable,length,velocity,movetype
  */
-std::string robot_command_thread::WeldingGetReWeldAfterBreakOffParam(std::string para){
-    int enable,moveType;
-    double length,velocity;
-    int res = _ptr_robot->WeldingGetReWeldAfterBreakOffParam(&enable,&length,&velocity,&moveType);
-    return std::string(std::to_string(res) + "," + std::to_string(enable) + "," + \
-            std::to_string(length) + "," + std::to_string(velocity) + "," + \
-            std::to_string(moveType));
+std::string robot_command_thread::WeldingGetReWeldAfterBreakOffParam(std::string para)
+{
+  int enable, moveType;
+  double length, velocity;
+  int res = _ptr_robot->WeldingGetReWeldAfterBreakOffParam(&enable, &length, &velocity, &moveType);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(enable) + "," + std::to_string(length) + "," +
+    std::to_string(velocity) + "," + std::to_string(moveType));
 }
 
 /**
@@ -2876,8 +3155,9 @@ std::string robot_command_thread::WeldingGetReWeldAfterBreakOffParam(std::string
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WeldingStartReWeldAfterBreakOff(std::string para){
-    return std::to_string(_ptr_robot->WeldingStartReWeldAfterBreakOff());
+std::string robot_command_thread::WeldingStartReWeldAfterBreakOff(std::string para)
+{
+  return std::to_string(_ptr_robot->WeldingStartReWeldAfterBreakOff());
 }
 
 /**
@@ -2885,8 +3165,9 @@ std::string robot_command_thread::WeldingStartReWeldAfterBreakOff(std::string pa
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WeldingAbortWeldAfterBreakOff(std::string para){
-    return std::to_string(_ptr_robot->WeldingAbortWeldAfterBreakOff());
+std::string robot_command_thread::WeldingAbortWeldAfterBreakOff(std::string para)
+{
+  return std::to_string(_ptr_robot->WeldingAbortWeldAfterBreakOff());
 }
 
 /**
@@ -2918,19 +3199,21 @@ std::string robot_command_thread::WeldingAbortWeldAfterBreakOff(std::string para
  * @return 返回错误码及标定结果
  * @retval res-0成功，其他失败 pose-标定结果
  */
-std::string robot_command_thread::PhotoelectricSensorTCPCalibration(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    DescTran coord;
+std::string robot_command_thread::PhotoelectricSensorTCPCalibration(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  DescTran coord;
 
-    std::string luapath = list.front().c_str();list.pop_front();
-    _fillDescTran(list,coord);
-    DescPose pose;
-    int res = _ptr_robot->PhotoelectricSensorTCPCalibration(luapath,coord,pose);
-    return std::string(std::to_string(res) + "," + std::to_string(pose.tran.x) + "," + \
-    std::to_string(pose.tran.y) + "," + std::to_string(pose.tran.z) + "," + \
-    std::to_string(pose.rpy.rx) + "," + std::to_string(pose.rpy.ry) + "," + \
-    std::to_string(pose.rpy.rz));
+  std::string luapath = list.front().c_str();
+  list.pop_front();
+  _fillDescTran(list, coord);
+  DescPose pose;
+  int res = _ptr_robot->PhotoelectricSensorTCPCalibration(luapath, coord, pose);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(pose.tran.x) + "," + std::to_string(pose.tran.y) +
+    "," + std::to_string(pose.tran.z) + "," + std::to_string(pose.rpy.rx) + "," +
+    std::to_string(pose.rpy.ry) + "," + std::to_string(pose.rpy.rz));
 }
 
 /**
@@ -2946,18 +3229,19 @@ std::string robot_command_thread::PhotoelectricSensorTCPCalibration(std::string 
  * 36-进入安全速度移动;37-电流环拖动锁定;38-力传感器辅助锁定
  * @return 错误码
  */
-std::string robot_command_thread::SetDIConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-        
-    int config[8];
-    for(int i = 0; i < 8; i++)
-    {
-        config[i] = std::stoi(list.front().c_str());list.pop_front();
-    }
+std::string robot_command_thread::SetDIConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int res = _ptr_robot->SetDIConfig(config);
-    return std::string(std::to_string(res));
+  int config[8];
+  for (int i = 0; i < 8; i++) {
+    config[i] = std::stoi(list.front().c_str());
+    list.pop_front();
+  }
+
+  int res = _ptr_robot->SetDIConfig(config);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -2976,15 +3260,15 @@ std::string robot_command_thread::SetDIConfig(std::string para){
  * 212-安全墙6-双通道; 213-安全墙7-双通道; 214-安全墙8-双通道; 215-安全停止重置-双通道;
  * @return 错误码
  */
-std::string robot_command_thread::GetDIConfig(std::string para){
-        
-    int config[8];
+std::string robot_command_thread::GetDIConfig(std::string para)
+{
+  int config[8];
 
-    int res = _ptr_robot->GetDIConfig(config);
-    return std::string(std::to_string(res) + "," + std::to_string(config[0]) + "," + \
-    std::to_string(config[1]) + "," + std::to_string(config[2]) + "," + \
-    std::to_string(config[3]) + "," + std::to_string(config[4]) + "," + \
-    std::to_string(config[5])+ "," + std::to_string(config[6]) + "," + \
+  int res = _ptr_robot->GetDIConfig(config);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(config[0]) + "," + std::to_string(config[1]) + "," +
+    std::to_string(config[2]) + "," + std::to_string(config[3]) + "," + std::to_string(config[4]) +
+    "," + std::to_string(config[5]) + "," + std::to_string(config[6]) + "," +
     std::to_string(config[7]));
 }
 
@@ -3003,18 +3287,19 @@ std::string robot_command_thread::GetDIConfig(std::string para){
 47-使能状态;48-断线自动抬升中;49-立方体1干涉警告;50-立方体2干涉警告;51-立方体3干涉警告;52-立方体4干涉警告;
 * @return 错误码
 */
-std::string robot_command_thread::SetDOConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetDOConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int config[8];
-    for(int i = 0; i < 8; i++)
-    {
-        config[i] = std::stoi(list.front().c_str());list.pop_front();
-    }
+  int config[8];
+  for (int i = 0; i < 8; i++) {
+    config[i] = std::stoi(list.front().c_str());
+    list.pop_front();
+  }
 
-    int res = _ptr_robot->SetDOConfig(config);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetDOConfig(config);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3034,15 +3319,15 @@ std::string robot_command_thread::SetDOConfig(std::string para){
  * 206-机器人缩减模式-双通道; 207-机器人非缩减模式-双通道;
  * @return 错误码
  */
-std::string robot_command_thread::GetDOConfig(std::string para){
-        
-    int config[8];
+std::string robot_command_thread::GetDOConfig(std::string para)
+{
+  int config[8];
 
-    int res = _ptr_robot->GetDOConfig(config);
-    return std::string(std::to_string(res) + "," + std::to_string(config[0]) + "," + \
-    std::to_string(config[1]) + "," + std::to_string(config[2]) + "," + \
-    std::to_string(config[3]) + "," + std::to_string(config[4]) + "," + \
-    std::to_string(config[5])+ "," + std::to_string(config[6]) + "," + \
+  int res = _ptr_robot->GetDOConfig(config);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(config[0]) + "," + std::to_string(config[1]) + "," +
+    std::to_string(config[2]) + "," + std::to_string(config[3]) + "," + std::to_string(config[4]) +
+    "," + std::to_string(config[5]) + "," + std::to_string(config[6]) + "," +
     std::to_string(config[7]));
 }
 
@@ -3058,15 +3343,16 @@ std::string robot_command_thread::GetDOConfig(std::string para){
                                 DIConfig[7-15]-预留
  * @return  错误码
  */
-std::string robot_command_thread::GetExtDIConfig(std::string para){
+std::string robot_command_thread::GetExtDIConfig(std::string para)
+{
+  int DIConfig[16];
 
-    int DIConfig[16];
-
-    int res = _ptr_robot->GetExtDIConfig(DIConfig);
-    return std::string(std::to_string(res) + "," + std::to_string(DIConfig[0]) + "," + \
-    std::to_string(DIConfig[1]) + "," + std::to_string(DIConfig[2]) + "," + \
-    std::to_string(DIConfig[3]) + "," + std::to_string(DIConfig[4]) + "," + \
-    std::to_string(DIConfig[5])+ "," + std::to_string(DIConfig[6]));
+  int res = _ptr_robot->GetExtDIConfig(DIConfig);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(DIConfig[0]) + "," + std::to_string(DIConfig[1]) +
+    "," + std::to_string(DIConfig[2]) + "," + std::to_string(DIConfig[3]) + "," +
+    std::to_string(DIConfig[4]) + "," + std::to_string(DIConfig[5]) + "," +
+    std::to_string(DIConfig[6]));
 }
 
 /**
@@ -3083,16 +3369,17 @@ std::string robot_command_thread::GetExtDIConfig(std::string para){
                                 DOConfig[9-15]-预留
  * @return  错误码
  */
-std::string robot_command_thread::GetExtDOConfig(std::string para){
+std::string robot_command_thread::GetExtDOConfig(std::string para)
+{
+  int DOConfig[16];
 
-    int DOConfig[16];
-
-    int res = _ptr_robot->GetExtDOConfig(DOConfig);
-    return std::string(std::to_string(res) + "," + std::to_string(DOConfig[0]) + "," + \
-    std::to_string(DOConfig[1]) + "," + std::to_string(DOConfig[2]) + "," + \
-    std::to_string(DOConfig[3]) + "," + std::to_string(DOConfig[4]) + "," + \
-    std::to_string(DOConfig[5])+ "," + std::to_string(DOConfig[6]) + "," + \
-    std::to_string(DOConfig[7]) + "," + std::to_string(DOConfig[8]));
+  int res = _ptr_robot->GetExtDOConfig(DOConfig);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(DOConfig[0]) + "," + std::to_string(DOConfig[1]) +
+    "," + std::to_string(DOConfig[2]) + "," + std::to_string(DOConfig[3]) + "," +
+    std::to_string(DOConfig[4]) + "," + std::to_string(DOConfig[5]) + "," +
+    std::to_string(DOConfig[6]) + "," + std::to_string(DOConfig[7]) + "," +
+    std::to_string(DOConfig[8]));
 }
 
 /**
@@ -3105,20 +3392,20 @@ std::string robot_command_thread::GetExtDOConfig(std::string para){
 25-使能;26-去使能;27-使能/去使能;28-激光伺服跟踪启停信号;
 * @return 错误码
 */
-std::string robot_command_thread::SetToolDIConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-        
-    int config[2];
-    for(int i = 0; i < 2; i++)
-    {
-        config[i] = std::stoi(list.front().c_str());list.pop_front();
-    }
+std::string robot_command_thread::SetToolDIConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int res = _ptr_robot->SetToolDIConfig(config);
-    return std::string(std::to_string(res));
+  int config[2];
+  for (int i = 0; i < 2; i++) {
+    config[i] = std::stoi(list.front().c_str());
+    list.pop_front();
+  }
+
+  int res = _ptr_robot->SetToolDIConfig(config);
+  return std::string(std::to_string(res));
 }
-
 
 /**
  * @brief 获取末端可配置End-CI端口功能
@@ -3130,33 +3417,33 @@ std::string robot_command_thread::SetToolDIConfig(std::string para){
 25-使能;26-去使能;27-使能/去使能;28-激光伺服跟踪启停信号;
 * @return 错误码
 */
-std::string robot_command_thread::GetToolDIConfig(std::string para){
-        
-    int config[2];
+std::string robot_command_thread::GetToolDIConfig(std::string para)
+{
+  int config[2];
 
-    int res = _ptr_robot->GetToolDIConfig(config);
-    return std::string(std::to_string(res) + "," + std::to_string(config[0]) + "," + \
-    std::to_string(config[1]));
+  int res = _ptr_robot->GetToolDIConfig(config);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(config[0]) + "," + std::to_string(config[1]));
 }
-
 
 /**
  * @brief 设置控制箱可配置CI有效状态
  * @param [in] config CI0-CI7端口有效状态；0-高电平有效；1-低电平有效
  * @return 错误码
  */
-std::string robot_command_thread::SetDIConfigLevel(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-        
-    int config[8];
-    for(int i = 0; i < 8; i++)
-    {
-        config[i] = std::stoi(list.front().c_str());list.pop_front();
-    }
+std::string robot_command_thread::SetDIConfigLevel(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int res = _ptr_robot->SetDIConfigLevel(config);
-    return std::string(std::to_string(res));
+  int config[8];
+  for (int i = 0; i < 8; i++) {
+    config[i] = std::stoi(list.front().c_str());
+    list.pop_front();
+  }
+
+  int res = _ptr_robot->SetDIConfigLevel(config);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3164,14 +3451,15 @@ std::string robot_command_thread::SetDIConfigLevel(std::string para){
  * @param [out] config CI0-CI7端口有效状态；0-高电平有效；1-低电平有效
  * @return 错误码
  */
-std::string robot_command_thread::GetDIConfigLevel(std::string para){
-    int config[8];
+std::string robot_command_thread::GetDIConfigLevel(std::string para)
+{
+  int config[8];
 
-    int res = _ptr_robot->GetDIConfigLevel(config);
-    return std::string(std::to_string(res) + "," + std::to_string(config[0]) + "," + \
-    std::to_string(config[1]) + "," + std::to_string(config[2]) + "," + \
-    std::to_string(config[3]) + "," + std::to_string(config[4]) + "," + \
-    std::to_string(config[5])+ "," + std::to_string(config[6]) + "," + \
+  int res = _ptr_robot->GetDIConfigLevel(config);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(config[0]) + "," + std::to_string(config[1]) + "," +
+    std::to_string(config[2]) + "," + std::to_string(config[3]) + "," + std::to_string(config[4]) +
+    "," + std::to_string(config[5]) + "," + std::to_string(config[6]) + "," +
     std::to_string(config[7]));
 }
 
@@ -3180,18 +3468,19 @@ std::string robot_command_thread::GetDIConfigLevel(std::string para){
  * @param [in] config CO0-CO7端口有效状态；0-高电平有效；1-低电平有效
  * @return 错误码
  */
-std::string robot_command_thread::SetDOConfigLevel(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-        
-    int config[8];
-    for(int i = 0; i < 8; i++)
-    {
-        config[i] = std::stoi(list.front().c_str());list.pop_front();
-    }
+std::string robot_command_thread::SetDOConfigLevel(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int res = _ptr_robot->SetDOConfigLevel(config);
-    return std::string(std::to_string(res));
+  int config[8];
+  for (int i = 0; i < 8; i++) {
+    config[i] = std::stoi(list.front().c_str());
+    list.pop_front();
+  }
+
+  int res = _ptr_robot->SetDOConfigLevel(config);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3199,17 +3488,18 @@ std::string robot_command_thread::SetDOConfigLevel(std::string para){
  * @param [out] config CO0-CO7端口有效状态；0-高电平有效；1-低电平有效
  * @return 错误码
  */
-std::string robot_command_thread::GetDOConfigLevel(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-        
-    int config[8];
+std::string robot_command_thread::GetDOConfigLevel(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int res = _ptr_robot->GetDOConfigLevel(config);
-    return std::string(std::to_string(res) + "," + std::to_string(config[0]) + "," + \
-    std::to_string(config[1]) + "," + std::to_string(config[2]) + "," + \
-    std::to_string(config[3]) + "," + std::to_string(config[4]) + "," + \
-    std::to_string(config[5])+ "," + std::to_string(config[6]) + "," + \
+  int config[8];
+
+  int res = _ptr_robot->GetDOConfigLevel(config);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(config[0]) + "," + std::to_string(config[1]) + "," +
+    std::to_string(config[2]) + "," + std::to_string(config[3]) + "," + std::to_string(config[4]) +
+    "," + std::to_string(config[5]) + "," + std::to_string(config[6]) + "," +
     std::to_string(config[7]));
 }
 
@@ -3218,18 +3508,19 @@ std::string robot_command_thread::GetDOConfigLevel(std::string para){
  * @param [in] config CI0-CI1端口有效状态；0-高电平有效；1-低电平有效
  * @return 错误码
  */
-std::string robot_command_thread::SetToolDIConfigLevel(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-        
-    int config[2];
-    for(int i = 0; i < 2; i++)
-    {
-        config[i] = std::stoi(list.front().c_str());list.pop_front();
-    }
+std::string robot_command_thread::SetToolDIConfigLevel(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int res = _ptr_robot->SetToolDIConfigLevel(config);
-    return std::string(std::to_string(res));
+  int config[2];
+  for (int i = 0; i < 2; i++) {
+    config[i] = std::stoi(list.front().c_str());
+    list.pop_front();
+  }
+
+  int res = _ptr_robot->SetToolDIConfigLevel(config);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3237,12 +3528,13 @@ std::string robot_command_thread::SetToolDIConfigLevel(std::string para){
  * @param [out] config CI0-CI1端口有效状态；0-高电平有效；1-低电平有效
  * @return 错误码
  */
-std::string robot_command_thread::GetToolDIConfigLevel(std::string para){        
-    int config[2];
+std::string robot_command_thread::GetToolDIConfigLevel(std::string para)
+{
+  int config[2];
 
-    int res = _ptr_robot->GetToolDIConfigLevel(config);
-    return std::string(std::to_string(res) + "," + std::to_string(config[0]) + "," + \
-    std::to_string(config[1]));
+  int res = _ptr_robot->GetToolDIConfigLevel(config);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(config[0]) + "," + std::to_string(config[1]));
 }
 
 /**
@@ -3250,18 +3542,19 @@ std::string robot_command_thread::GetToolDIConfigLevel(std::string para){
  * @param [in] config DI0-DI7端口有效状态；0-高电平有效；1-低电平有效
  * @return 错误码
  */
-std::string robot_command_thread::SetStandardDILevel(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-        
-    int config[8];
-    for(int i = 0; i < 8; i++)
-    {
-        config[i] = std::stoi(list.front().c_str());list.pop_front();
-    }
+std::string robot_command_thread::SetStandardDILevel(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int res = _ptr_robot->SetStandardDILevel(config);
-    return std::string(std::to_string(res));
+  int config[8];
+  for (int i = 0; i < 8; i++) {
+    config[i] = std::stoi(list.front().c_str());
+    list.pop_front();
+  }
+
+  int res = _ptr_robot->SetStandardDILevel(config);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3269,14 +3562,15 @@ std::string robot_command_thread::SetStandardDILevel(std::string para){
  * @param [out] config DI0-DI7端口有效状态；0-高电平有效；1-低电平有效
  * @return 错误码
  */
-std::string robot_command_thread::GetStandardDILevel(std::string para){        
-    int config[8];
+std::string robot_command_thread::GetStandardDILevel(std::string para)
+{
+  int config[8];
 
-    int res = _ptr_robot->GetStandardDILevel(config);
-    return std::string(std::to_string(res) + "," + std::to_string(config[0]) + "," + \
-    std::to_string(config[1]) + "," + std::to_string(config[2]) + "," + \
-    std::to_string(config[3]) + "," + std::to_string(config[4]) + "," + \
-    std::to_string(config[5])+ "," + std::to_string(config[6]) + "," + \
+  int res = _ptr_robot->GetStandardDILevel(config);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(config[0]) + "," + std::to_string(config[1]) + "," +
+    std::to_string(config[2]) + "," + std::to_string(config[3]) + "," + std::to_string(config[4]) +
+    "," + std::to_string(config[5]) + "," + std::to_string(config[6]) + "," +
     std::to_string(config[7]));
 }
 
@@ -3285,34 +3579,35 @@ std::string robot_command_thread::GetStandardDILevel(std::string para){
  * @param [in] config DO0-DO7端口有效状态；0-高电平有效；1-低电平有效
  * @return 错误码
  */
-std::string robot_command_thread::SetStandardDOLevel(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-        
-    int config[8];
-    for(int i = 0; i < 8; i++)
-    {
-        config[i] = std::stoi(list.front().c_str());list.pop_front();
-    }
+std::string robot_command_thread::SetStandardDOLevel(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int res = _ptr_robot->SetStandardDOLevel(config);
-    return std::string(std::to_string(res));
+  int config[8];
+  for (int i = 0; i < 8; i++) {
+    config[i] = std::stoi(list.front().c_str());
+    list.pop_front();
+  }
+
+  int res = _ptr_robot->SetStandardDOLevel(config);
+  return std::string(std::to_string(res));
 }
-
 
 /**
  * @brief 获取控制箱标准DO有效状态
  * @param [out] config DO0-DO7端口有效状态；0-高电平有效；1-低电平有效
  * @return 错误码
  */
-std::string robot_command_thread::GetStandardDOLevel(std::string para){
-    int config[8];
+std::string robot_command_thread::GetStandardDOLevel(std::string para)
+{
+  int config[8];
 
-    int res = _ptr_robot->GetStandardDOLevel(config);
-    return std::string(std::to_string(res) + "," + std::to_string(config[0]) + "," + \
-    std::to_string(config[1]) + "," + std::to_string(config[2]) + "," + \
-    std::to_string(config[3]) + "," + std::to_string(config[4]) + "," + \
-    std::to_string(config[5])+ "," + std::to_string(config[6]) + "," + \
+  int res = _ptr_robot->GetStandardDOLevel(config);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(config[0]) + "," + std::to_string(config[1]) + "," +
+    std::to_string(config[2]) + "," + std::to_string(config[3]) + "," + std::to_string(config[4]) +
+    "," + std::to_string(config[5]) + "," + std::to_string(config[6]) + "," +
     std::to_string(config[7]));
 }
 
@@ -3321,14 +3616,16 @@ std::string robot_command_thread::GetStandardDOLevel(std::string para){
  * @param [in] time 定位完成时间[ms]
  * @return 错误码
  */
-std::string robot_command_thread::SetExAxisCmdDoneTime(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-        
-    double time = std::stod(list.front().c_str());list.pop_front();
+std::string robot_command_thread::SetExAxisCmdDoneTime(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int res = _ptr_robot->SetExAxisCmdDoneTime(time);
-    return std::string(std::to_string(res));
+  double time = std::stod(list.front().c_str());
+  list.pop_front();
+
+  int res = _ptr_robot->SetExAxisCmdDoneTime(time);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3337,15 +3634,18 @@ std::string robot_command_thread::SetExAxisCmdDoneTime(std::string para){
  * @param [in] savePath 开放协议保存文件路径
  * @return 错误码
  */
-std::string robot_command_thread::OpenLuaDownload(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::OpenLuaDownload(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string pointTableName = list.front();list.pop_front();
-    std::string saveFilePath = list.front();list.pop_front();
+  std::string pointTableName = list.front();
+  list.pop_front();
+  std::string saveFilePath = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->OpenLuaDownload(pointTableName,saveFilePath);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->OpenLuaDownload(pointTableName, saveFilePath);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3362,38 +3662,40 @@ std::string robot_command_thread::OpenLuaDownload(std::string para){
  * @param [out] selfStart 重启控制箱后是否自动重连；0-不重连；1-重连
  * @return 错误码
  */
-std::string robot_command_thread::ExtDevGetUDPComParam(std::string para){
-        
-    std::string ip;
-    int port;
-    int period;
-    int lossPkgTime;
-    int lossPkgNum;
-    int disconnectTime;
-    int reconnectEnable;
-    int reconnectPeriod;
-    int reconnectNum;
-    int selfStart;
+std::string robot_command_thread::ExtDevGetUDPComParam(std::string para)
+{
+  std::string ip;
+  int port;
+  int period;
+  int lossPkgTime;
+  int lossPkgNum;
+  int disconnectTime;
+  int reconnectEnable;
+  int reconnectPeriod;
+  int reconnectNum;
+  int selfStart;
 
-    int res = _ptr_robot->ExtDevGetUDPComParam(ip, port, period, lossPkgTime, lossPkgNum, disconnectTime, reconnectEnable, reconnectPeriod, reconnectNum, selfStart);
-    std::cout << "UDPComParam result:" << std::endl;
-    std::cout << "res = " << res << std::endl;
-    std::cout << "ip = " << ip << std::endl;
-    std::cout << "port = " << port << std::endl;
-    std::cout << "period = " << period << std::endl;
-    std::cout << "lossPkgTime = " << lossPkgTime << std::endl;
-    std::cout << "lossPkgNum = " << lossPkgNum << std::endl;
-    std::cout << "disconnectTime = " << disconnectTime << std::endl;
-    std::cout << "reconnectEnable = " << reconnectEnable << std::endl;
-    std::cout << "reconnectPeriod = " << reconnectPeriod << std::endl;
-    std::cout << "reconnectNum = " << reconnectNum << std::endl;
-    std::cout << "selfStart = " << selfStart << std::endl;
+  int res = _ptr_robot->ExtDevGetUDPComParam(
+    ip, port, period, lossPkgTime, lossPkgNum, disconnectTime, reconnectEnable, reconnectPeriod,
+    reconnectNum, selfStart);
+  std::cout << "UDPComParam result:" << std::endl;
+  std::cout << "res = " << res << std::endl;
+  std::cout << "ip = " << ip << std::endl;
+  std::cout << "port = " << port << std::endl;
+  std::cout << "period = " << period << std::endl;
+  std::cout << "lossPkgTime = " << lossPkgTime << std::endl;
+  std::cout << "lossPkgNum = " << lossPkgNum << std::endl;
+  std::cout << "disconnectTime = " << disconnectTime << std::endl;
+  std::cout << "reconnectEnable = " << reconnectEnable << std::endl;
+  std::cout << "reconnectPeriod = " << reconnectPeriod << std::endl;
+  std::cout << "reconnectNum = " << reconnectNum << std::endl;
+  std::cout << "selfStart = " << selfStart << std::endl;
 
-    return std::to_string(res) + "," + ip + "," +std::to_string(port) + "," +
-           std::to_string(period) + "," +std::to_string(lossPkgTime) + "," +
-           std::to_string(lossPkgNum) + "," +std::to_string(disconnectTime) + "," +
-           std::to_string(reconnectEnable) + "," +std::to_string(reconnectPeriod) + "," +
-           std::to_string(reconnectNum) + "," +std::to_string(selfStart);
+  return std::to_string(res) + "," + ip + "," + std::to_string(port) + "," +
+         std::to_string(period) + "," + std::to_string(lossPkgTime) + "," +
+         std::to_string(lossPkgNum) + "," + std::to_string(disconnectTime) + "," +
+         std::to_string(reconnectEnable) + "," + std::to_string(reconnectPeriod) + "," +
+         std::to_string(reconnectNum) + "," + std::to_string(selfStart);
 }
 
 /**
@@ -3410,23 +3712,36 @@ std::string robot_command_thread::ExtDevGetUDPComParam(std::string para){
 * @param [in] selfConnect 断电重启是否自动建立连接；0-不建立连接；1-建立连接
 * @return 错误码
 */
-std::string robot_command_thread::ExtDevSetUDPComParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ExtDevSetUDPComParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string ip = list.front();list.pop_front();
-    int port = std::stoi(list.front().c_str());list.pop_front();
-    int period = std::stoi(list.front().c_str());list.pop_front();
-    int lossPkgTime = std::stoi(list.front().c_str());list.pop_front();
-    int lossPkgNum = std::stoi(list.front().c_str());list.pop_front();
-    int disconnectTime = std::stoi(list.front().c_str());list.pop_front();
-    int reconnectEnable = std::stoi(list.front().c_str());list.pop_front();
-    int reconnectPeriod = std::stoi(list.front().c_str());list.pop_front();
-    int reconnectNum = std::stoi(list.front().c_str());list.pop_front();
-    int selfConnect = std::stoi(list.front().c_str());list.pop_front();
+  std::string ip = list.front();
+  list.pop_front();
+  int port = std::stoi(list.front().c_str());
+  list.pop_front();
+  int period = std::stoi(list.front().c_str());
+  list.pop_front();
+  int lossPkgTime = std::stoi(list.front().c_str());
+  list.pop_front();
+  int lossPkgNum = std::stoi(list.front().c_str());
+  list.pop_front();
+  int disconnectTime = std::stoi(list.front().c_str());
+  list.pop_front();
+  int reconnectEnable = std::stoi(list.front().c_str());
+  list.pop_front();
+  int reconnectPeriod = std::stoi(list.front().c_str());
+  list.pop_front();
+  int reconnectNum = std::stoi(list.front().c_str());
+  list.pop_front();
+  int selfConnect = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->ExtDevSetUDPComParam(ip, port, period, lossPkgTime, lossPkgNum, disconnectTime, reconnectEnable, reconnectPeriod, reconnectNum, selfConnect);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ExtDevSetUDPComParam(
+    ip, port, period, lossPkgTime, lossPkgNum, disconnectTime, reconnectEnable, reconnectPeriod,
+    reconnectNum, selfConnect);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3434,16 +3749,17 @@ std::string robot_command_thread::ExtDevSetUDPComParam(std::string para){
  * @param [in] installType 0-机器人安装在外部轴上，1-机器人安装在外部轴外
  * @return 错误码
  */
-std::string robot_command_thread::SetRobotPosToAxis(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetRobotPosToAxis(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int installType = std::stoi(list.front().c_str());list.pop_front();
+  int installType = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->SetRobotPosToAxis(installType);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetRobotPosToAxis(installType);
+  return std::string(std::to_string(res));
 }
-
 
 /**
  * @brief UDP扩展轴参数配置
@@ -3462,29 +3778,43 @@ std::string robot_command_thread::SetRobotPosToAxis(std::string para){
  * @param [in] axisEncType 编码器类型  0-增量；1-绝对值
  * @return 错误码
  */
-std::string robot_command_thread::ExtAxisParamConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ExtAxisParamConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int axisID = std::stoi(list.front());list.pop_front();
-    int axisType = std::stoi(list.front());list.pop_front();
-    int axisDirection = std::stoi(list.front());list.pop_front();
-    double axisMax = std::stod(list.front());list.pop_front();
-    double axisMin = std::stod(list.front());list.pop_front();
-    double axisVel = std::stod(list.front());list.pop_front();
-    double axisAcc = std::stod(list.front());list.pop_front();
-    double axisLead = std::stod(list.front());list.pop_front();
-    int encResolution = std::stoi(list.front());list.pop_front();
-    double axisOffect = std::stod(list.front());list.pop_front();
-    int axisCompany = std::stoi(list.front());list.pop_front();
-    int axisModel = std::stoi(list.front());list.pop_front();
-    int axisEncType = std::stoi(list.front());list.pop_front();
+  int axisID = std::stoi(list.front());
+  list.pop_front();
+  int axisType = std::stoi(list.front());
+  list.pop_front();
+  int axisDirection = std::stoi(list.front());
+  list.pop_front();
+  double axisMax = std::stod(list.front());
+  list.pop_front();
+  double axisMin = std::stod(list.front());
+  list.pop_front();
+  double axisVel = std::stod(list.front());
+  list.pop_front();
+  double axisAcc = std::stod(list.front());
+  list.pop_front();
+  double axisLead = std::stod(list.front());
+  list.pop_front();
+  int encResolution = std::stoi(list.front());
+  list.pop_front();
+  double axisOffect = std::stod(list.front());
+  list.pop_front();
+  int axisCompany = std::stoi(list.front());
+  list.pop_front();
+  int axisModel = std::stoi(list.front());
+  list.pop_front();
+  int axisEncType = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ExtAxisParamConfig(axisID,axisType,axisDirection,axisMax,axisMin,axisVel,axisAcc,axisLead,
-                                                encResolution,axisOffect,axisCompany,axisModel,axisEncType);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ExtAxisParamConfig(
+    axisID, axisType, axisDirection, axisMax, axisMin, axisVel, axisAcc, axisLead, encResolution,
+    axisOffect, axisCompany, axisModel, axisEncType);
+  return std::string(std::to_string(res));
 }
-
 
 /**
  * @brief 设置焊接电流与输出模拟量对应关系
@@ -3495,20 +3825,26 @@ std::string robot_command_thread::ExtAxisParamConfig(std::string para){
  * @param [in] AOIndex 焊接电流模拟量输出端口
  * @return 错误码
  */
-std::string robot_command_thread::WeldingSetCurrentRelation(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeldingSetCurrentRelation(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double currentMin = std::stod(list.front());list.pop_front();
-    double currentMax = std::stod(list.front());list.pop_front();
-    double outputVoltageMin = std::stod(list.front());list.pop_front();
-    double outputVoltageMax = std::stod(list.front());list.pop_front();
-    int AOIndex = std::stoi(list.front());list.pop_front();
+  double currentMin = std::stod(list.front());
+  list.pop_front();
+  double currentMax = std::stod(list.front());
+  list.pop_front();
+  double outputVoltageMin = std::stod(list.front());
+  list.pop_front();
+  double outputVoltageMax = std::stod(list.front());
+  list.pop_front();
+  int AOIndex = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeldingSetCurrentRelation(currentMin,currentMax,outputVoltageMin,outputVoltageMax,AOIndex);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeldingSetCurrentRelation(
+    currentMin, currentMax, outputVoltageMin, outputVoltageMax, AOIndex);
+  return std::string(std::to_string(res));
 }
-
 
 /**
  * @brief 设置焊接电压与输出模拟量对应关系
@@ -3519,18 +3855,25 @@ std::string robot_command_thread::WeldingSetCurrentRelation(std::string para){
  * @param [in] AOIndex 焊接电压模拟量输出端口
  * @return 错误码
  */
-std::string robot_command_thread::WeldingSetVoltageRelation(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeldingSetVoltageRelation(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double weldVoltageMin = std::stod(list.front());list.pop_front();
-    double weldVoltageMax = std::stod(list.front());list.pop_front();
-    double outputVoltageMin = std::stod(list.front());list.pop_front();
-    double outputVoltageMax = std::stod(list.front());list.pop_front();
-    int AOIndex = std::stoi(list.front());list.pop_front();
+  double weldVoltageMin = std::stod(list.front());
+  list.pop_front();
+  double weldVoltageMax = std::stod(list.front());
+  list.pop_front();
+  double outputVoltageMin = std::stod(list.front());
+  list.pop_front();
+  double outputVoltageMax = std::stod(list.front());
+  list.pop_front();
+  int AOIndex = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeldingSetVoltageRelation(weldVoltageMin,weldVoltageMax,outputVoltageMin,outputVoltageMax,AOIndex);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeldingSetVoltageRelation(
+    weldVoltageMin, weldVoltageMax, outputVoltageMin, outputVoltageMax, AOIndex);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3540,16 +3883,20 @@ std::string robot_command_thread::WeldingSetVoltageRelation(std::string para){
  * @param [in] timeout 起弧超时时间
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ARCStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ARCStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int ioType = std::stoi(list.front());list.pop_front();
-    int arcNum = std::stoi(list.front());list.pop_front();
-    int timeout = std::stoi(list.front());list.pop_front();
+  int ioType = std::stoi(list.front());
+  list.pop_front();
+  int arcNum = std::stoi(list.front());
+  list.pop_front();
+  int timeout = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ARCStart(ioType,arcNum,timeout);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ARCStart(ioType, arcNum, timeout);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3559,16 +3906,20 @@ std::string robot_command_thread::ARCStart(std::string para){
  * @param [in] timeout 起弧超时时间
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ARCEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ARCEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int ioType = std::stoi(list.front());list.pop_front();
-    int arcNum = std::stoi(list.front());list.pop_front();
-    int timeout = std::stoi(list.front());list.pop_front();
+  int ioType = std::stoi(list.front());
+  list.pop_front();
+  int arcNum = std::stoi(list.front());
+  list.pop_front();
+  int timeout = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ARCEnd(ioType,arcNum,timeout);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ARCEnd(ioType, arcNum, timeout);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3577,15 +3928,18 @@ std::string robot_command_thread::ARCEnd(std::string para){
  * @param [in] wireFeed 送丝控制  0-停止送丝；1-送丝
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetForwardWireFeed(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetForwardWireFeed(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int ioType = std::stoi(list.front());list.pop_front();
-    int wireFeed = std::stoi(list.front());list.pop_front();
+  int ioType = std::stoi(list.front());
+  list.pop_front();
+  int wireFeed = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetForwardWireFeed(ioType,wireFeed);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetForwardWireFeed(ioType, wireFeed);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3594,15 +3948,18 @@ std::string robot_command_thread::SetForwardWireFeed(std::string para){
  * @param [in] wireFeed 送丝控制  0-停止送丝；1-送丝
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetReverseWireFeed(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetReverseWireFeed(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int ioType = std::stoi(list.front());list.pop_front();
-    int wireFeed = std::stoi(list.front());list.pop_front();
+  int ioType = std::stoi(list.front());
+  list.pop_front();
+  int wireFeed = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetReverseWireFeed(ioType,wireFeed);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetReverseWireFeed(ioType, wireFeed);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3610,14 +3967,16 @@ std::string robot_command_thread::SetReverseWireFeed(std::string para){
  * @param [in]  channel 通道；0-扩展AI0；1-扩展AI1；2-扩展AI2；3-扩展AI3；4-控制箱AI0；5-控制箱AI1
  * @return 错误码
  */
-std::string robot_command_thread::ArcWeldTraceAIChannelCurrent(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ArcWeldTraceAIChannelCurrent(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int channel = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->ArcWeldTraceAIChannelCurrent(channel);
-    return std::string(std::to_string(res));
+  int channel = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->ArcWeldTraceAIChannelCurrent(channel);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3625,14 +3984,16 @@ std::string robot_command_thread::ArcWeldTraceAIChannelCurrent(std::string para)
  * @param [in]  channel 通道；0-扩展AI0；1-扩展AI1；2-扩展AI2；3-扩展AI3；4-控制箱AI0；5-控制箱AI1
  * @return 错误码
  */
-std::string robot_command_thread::ArcWeldTraceAIChannelVoltage(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ArcWeldTraceAIChannelVoltage(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int channel = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->ArcWeldTraceAIChannelVoltage(channel);
-    return std::string(std::to_string(res));
+  int channel = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->ArcWeldTraceAIChannelVoltage(channel);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3643,17 +4004,22 @@ std::string robot_command_thread::ArcWeldTraceAIChannelVoltage(std::string para)
  * @param [in] currentHigh AI通道上限对应焊机电流值，默认值100V，范围[0-200V]
  * @return 错误码
  */
-std::string robot_command_thread::ArcWeldTraceCurrentPara(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ArcWeldTraceCurrentPara(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    float AILow = std::stod(list.front());list.pop_front();
-    float AIHigh = std::stod(list.front());list.pop_front();
-    float currentLow = std::stod(list.front());list.pop_front();
-    float currentHigh = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->ArcWeldTraceCurrentPara(AILow, AIHigh, currentLow, currentHigh);
-    return std::string(std::to_string(res));
+  float AILow = std::stod(list.front());
+  list.pop_front();
+  float AIHigh = std::stod(list.front());
+  list.pop_front();
+  float currentLow = std::stod(list.front());
+  list.pop_front();
+  float currentHigh = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->ArcWeldTraceCurrentPara(AILow, AIHigh, currentLow, currentHigh);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3664,17 +4030,22 @@ std::string robot_command_thread::ArcWeldTraceCurrentPara(std::string para){
  * @param [in] voltageHigh AI通道上限对应焊机电压值，默认值100V，范围[0-200V]
  * @return 错误码
  */
-std::string robot_command_thread::ArcWeldTraceVoltagePara(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ArcWeldTraceVoltagePara(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    float AILow = std::stod(list.front());list.pop_front();
-    float AIHigh = std::stod(list.front());list.pop_front();
-    float voltageLow = std::stod(list.front());list.pop_front();
-    float voltageHigh = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->ArcWeldTraceVoltagePara(AILow, AIHigh, voltageLow, voltageHigh);
-    return std::string(std::to_string(res));
+  float AILow = std::stod(list.front());
+  list.pop_front();
+  float AIHigh = std::stod(list.front());
+  list.pop_front();
+  float voltageLow = std::stod(list.front());
+  list.pop_front();
+  float voltageHigh = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->ArcWeldTraceVoltagePara(AILow, AIHigh, voltageLow, voltageHigh);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3682,14 +4053,16 @@ std::string robot_command_thread::ArcWeldTraceVoltagePara(std::string para){
  * @param  [in] DINum  起弧成功信号扩展DI编号
  * @return  错误码
  */
-std::string robot_command_thread::SetArcDoneExtDiNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetArcDoneExtDiNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int DINum = std::stoi(list.front());list.pop_front();
+  int DINum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetArcDoneExtDiNum(DINum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetArcDoneExtDiNum(DINum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3697,14 +4070,16 @@ std::string robot_command_thread::SetArcDoneExtDiNum(std::string para){
  * @param  [in] DINum  焊机准备信号扩展DI编号
  * @return  错误码
  */
-std::string robot_command_thread::SetWeldReadyExtDiNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWeldReadyExtDiNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int DINum = std::stoi(list.front());list.pop_front();
+  int DINum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetWeldReadyExtDiNum(DINum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetWeldReadyExtDiNum(DINum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3713,31 +4088,35 @@ std::string robot_command_thread::SetWeldReadyExtDiNum(std::string para){
  * @param  [in] abortWeldDINum  焊接中断后退出焊接信号扩展DI编号
  * @return  错误码
  */
-std::string robot_command_thread::SetExtDIWeldBreakOffRecover(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetExtDIWeldBreakOffRecover(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int reWeldDINum = std::stoi(list.front());list.pop_front();
-    int abortWeldDINum = std::stoi(list.front());list.pop_front();
+  int reWeldDINum = std::stoi(list.front());
+  list.pop_front();
+  int abortWeldDINum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetExtDIWeldBreakOffRecover(reWeldDINum,abortWeldDINum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetExtDIWeldBreakOffRecover(reWeldDINum, abortWeldDINum);
+  return std::string(std::to_string(res));
 }
-
 
 /**
  * @brief 扩展IO-配置焊机气体检测信号
  * @param  [in] DONum  气体检测信号扩展DO编号
  * @return  错误码
  */
-std::string robot_command_thread::SetAirControlExtDoNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAirControlExtDoNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int DONum = std::stoi(list.front());list.pop_front();
+  int DONum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetAirControlExtDoNum(DONum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetAirControlExtDoNum(DONum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3745,14 +4124,16 @@ std::string robot_command_thread::SetAirControlExtDoNum(std::string para){
  * @param  [in] DONum  气体检测信号扩展DO编号
  * @return  错误码
  */
-std::string robot_command_thread::SetArcStartExtDoNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetArcStartExtDoNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int DONum = std::stoi(list.front());list.pop_front();
+  int DONum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetArcStartExtDoNum(DONum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetArcStartExtDoNum(DONum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3760,14 +4141,16 @@ std::string robot_command_thread::SetArcStartExtDoNum(std::string para){
  * @param  [in] DONum  气体检测信号扩展DO编号
  * @return  错误码
  */
-std::string robot_command_thread::SetWireReverseFeedExtDoNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWireReverseFeedExtDoNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int DONum = std::stoi(list.front());list.pop_front();
+  int DONum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetWireReverseFeedExtDoNum(DONum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetWireReverseFeedExtDoNum(DONum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3775,14 +4158,16 @@ std::string robot_command_thread::SetWireReverseFeedExtDoNum(std::string para){
  * @param  [in] DONum  气体检测信号扩展DO编号
  * @return  错误码
  */
-std::string robot_command_thread::SetWireForwardFeedExtDoNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWireForwardFeedExtDoNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int DONum = std::stoi(list.front());list.pop_front();
+  int DONum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetWireForwardFeedExtDoNum(DONum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetWireForwardFeedExtDoNum(DONum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3791,18 +4176,19 @@ std::string robot_command_thread::SetWireForwardFeedExtDoNum(std::string para){
  * @param searchStartDONum 焊丝寻位启停控制DO端口(0-127)
  * @return  错误码
  */
-std::string robot_command_thread::SetWireSearchExtDIONum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWireSearchExtDIONum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int searchDoneDINum = std::stoi(list.front());list.pop_front();
-    int searchStartDONum = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetWireSearchExtDIONum(searchDoneDINum,searchStartDONum);
-    return std::string(std::to_string(res));
+  int searchDoneDINum = std::stoi(list.front());
+  list.pop_front();
+  int searchStartDONum = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetWireSearchExtDIONum(searchDoneDINum, searchStartDONum);
+  return std::string(std::to_string(res));
 }
-
-
 
 /**
  * @brief 设置控制器外设协议LUA文件名
@@ -3810,15 +4196,18 @@ std::string robot_command_thread::SetWireSearchExtDIONum(std::string para){
  * @param name lua文件名称 “CTRL_LUA_test.lua”
  * @return  错误码
  */
-std::string robot_command_thread::SetCtrlOpenLUAName(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetCtrlOpenLUAName(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    std::string name = list.front();list.pop_front();
-    
-    int res = _ptr_robot->SetCtrlOpenLUAName(id,name);
-    return std::string(std::to_string(res));
+  int id = std::stoi(list.front());
+  list.pop_front();
+  std::string name = list.front();
+  list.pop_front();
+
+  int res = _ptr_robot->SetCtrlOpenLUAName(id, name);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3826,14 +4215,16 @@ std::string robot_command_thread::SetCtrlOpenLUAName(std::string para){
  * @param [in] filePath 本地lua文件路径名
  * @return 错误码
  */
-std::string robot_command_thread::OpenLuaUpload(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::OpenLuaUpload(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string filePath = list.front();list.pop_front();
+  std::string filePath = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->OpenLuaUpload(filePath);
-    return std::string(std::to_string(res));            
+  int res = _ptr_robot->OpenLuaUpload(filePath);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3841,14 +4232,16 @@ std::string robot_command_thread::OpenLuaUpload(std::string para){
  * @param [in] protocol 机器人外设协议号 4096-扩展轴控制卡；4097-ModbusSlave；4098-ModbusMaster
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetExDevProtocol(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetExDevProtocol(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int protocol = std::stoi(list.front());list.pop_front();
+  int protocol = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetExDevProtocol(protocol);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetExDevProtocol(protocol);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3856,14 +4249,16 @@ std::string robot_command_thread::SetExDevProtocol(std::string para){
  * @param id 控制器LUA协议编号
  * @return  错误码
  */
-std::string robot_command_thread::LoadCtrlOpenLUA(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LoadCtrlOpenLUA(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LoadCtrlOpenLUA(id);
-    return std::string(std::to_string(res));
+  int id = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LoadCtrlOpenLUA(id);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3871,14 +4266,16 @@ std::string robot_command_thread::LoadCtrlOpenLUA(std::string para){
  * @param id 控制器LUA协议编号
  * @return  错误码
  */
-std::string robot_command_thread::UnloadCtrlOpenLUA(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::UnloadCtrlOpenLUA(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->UnloadCtrlOpenLUA(id);
-    return std::string(std::to_string(res));
+  int id = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->UnloadCtrlOpenLUA(id);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3887,15 +4284,18 @@ std::string robot_command_thread::UnloadCtrlOpenLUA(std::string para){
  * @param [in] dec 485扩展轴运动减速度
  * @return  错误码
  */
-std::string robot_command_thread::AuxServoSetAcc(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AuxServoSetAcc(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double acc = std::stod(list.front());list.pop_front();
-    double dec = std::stod(list.front());list.pop_front();
+  double acc = std::stod(list.front());
+  list.pop_front();
+  double dec = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->AuxServoSetAcc(acc,dec);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->AuxServoSetAcc(acc, dec);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3904,15 +4304,18 @@ std::string robot_command_thread::AuxServoSetAcc(std::string para){
  * @param [in] dec 485扩展轴急停减速度
  * @return  错误码
  */
-std::string robot_command_thread::AuxServoSetEmergencyStopAcc(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AuxServoSetEmergencyStopAcc(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double acc = std::stod(list.front());list.pop_front();
-    double dec = std::stod(list.front());list.pop_front();
+  double acc = std::stod(list.front());
+  list.pop_front();
+  double dec = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->AuxServoSetEmergencyStopAcc(acc,dec);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->AuxServoSetEmergencyStopAcc(acc, dec);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -3924,17 +4327,20 @@ std::string robot_command_thread::AuxServoSetEmergencyStopAcc(std::string para){
  * @param [out] AOIndex 焊接电流模拟量输出端口
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WeldingGetCurrentRelation(std::string para){
-    double currentMin;
-    double currentMax;
-    double outputVoltageMin;
-    double outputVoltageMax;
-    int AOIndex;
+std::string robot_command_thread::WeldingGetCurrentRelation(std::string para)
+{
+  double currentMin;
+  double currentMax;
+  double outputVoltageMin;
+  double outputVoltageMax;
+  int AOIndex;
 
-    int res = _ptr_robot->WeldingGetCurrentRelation(&currentMin,&currentMax,&outputVoltageMin,&outputVoltageMax,&AOIndex);
-    return std::string(std::to_string(res) + "," + std::to_string(currentMin) + "," +\
-            std::to_string(currentMax) + "," + std::to_string(outputVoltageMin) + "," +\
-            std::to_string(outputVoltageMax) + "," + std::to_string(AOIndex));
+  int res = _ptr_robot->WeldingGetCurrentRelation(
+    &currentMin, &currentMax, &outputVoltageMin, &outputVoltageMax, &AOIndex);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(currentMin) + "," + std::to_string(currentMax) +
+    "," + std::to_string(outputVoltageMin) + "," + std::to_string(outputVoltageMax) + "," +
+    std::to_string(AOIndex));
 }
 
 /**
@@ -3946,17 +4352,20 @@ std::string robot_command_thread::WeldingGetCurrentRelation(std::string para){
  * @param [out] AOIndex 焊接电压模拟量输出端口
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WeldingGetVoltageRelation(std::string para){
-    double weldVoltageMin;
-    double weldVoltageMax;
-    double outputVoltageMin;
-    double outputVoltageMax;
-    int AOIndex;
+std::string robot_command_thread::WeldingGetVoltageRelation(std::string para)
+{
+  double weldVoltageMin;
+  double weldVoltageMax;
+  double outputVoltageMin;
+  double outputVoltageMax;
+  int AOIndex;
 
-    int res = _ptr_robot->WeldingGetVoltageRelation(&weldVoltageMin,&weldVoltageMax,&outputVoltageMin,&outputVoltageMax,&AOIndex);
-    return std::string(std::to_string(res) + "," + std::to_string(weldVoltageMin) + "," +\
-            std::to_string(weldVoltageMax) + "," + std::to_string(outputVoltageMin) + "," +\
-            std::to_string(outputVoltageMax) + "," + std::to_string(AOIndex));
+  int res = _ptr_robot->WeldingGetVoltageRelation(
+    &weldVoltageMin, &weldVoltageMax, &outputVoltageMin, &outputVoltageMax, &AOIndex);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(weldVoltageMin) + "," +
+    std::to_string(weldVoltageMax) + "," + std::to_string(outputVoltageMin) + "," +
+    std::to_string(outputVoltageMax) + "," + std::to_string(AOIndex));
 }
 
 /**
@@ -3964,11 +4373,12 @@ std::string robot_command_thread::WeldingGetVoltageRelation(std::string para){
  * @param [out] protocol 机器人外设协议号 4096-扩展轴控制卡；4097-ModbusSlave；4098-ModbusMaster
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetExDevProtocol(std::string para){
-    int protocol;
+std::string robot_command_thread::GetExDevProtocol(std::string para)
+{
+  int protocol;
 
-    int res = _ptr_robot->GetExDevProtocol(&protocol);
-    return std::string(std::to_string(res) + "," + std::to_string(protocol));
+  int res = _ptr_robot->GetExDevProtocol(&protocol);
+  return std::string(std::to_string(res) + "," + std::to_string(protocol));
 }
 
 /**
@@ -3981,22 +4391,26 @@ std::string robot_command_thread::GetExDevProtocol(std::string para){
  * @param [out] axisMechTransRatio 机械传动比
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoGetParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AuxServoGetParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int servoId = std::stoi(list.front());list.pop_front();
+  int servoId = std::stoi(list.front());
+  list.pop_front();
 
-    int servoCompany;
-    int servoModel;
-    int servoSoftVersion;
-    int servoResolution;
-    double axisMechTransRatio;
+  int servoCompany;
+  int servoModel;
+  int servoSoftVersion;
+  int servoResolution;
+  double axisMechTransRatio;
 
-    int res = _ptr_robot->AuxServoGetParam(servoId,&servoCompany,&servoModel,&servoSoftVersion,&servoResolution,&axisMechTransRatio);
-    return std::string(std::to_string(res) + "," + std::to_string(servoCompany) + "," +\
-            std::to_string(servoModel) + "," + std::to_string(servoSoftVersion) + "," +\
-            std::to_string(servoResolution) + "," + std::to_string(axisMechTransRatio));
+  int res = _ptr_robot->AuxServoGetParam(
+    servoId, &servoCompany, &servoModel, &servoSoftVersion, &servoResolution, &axisMechTransRatio);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(servoCompany) + "," + std::to_string(servoModel) +
+    "," + std::to_string(servoSoftVersion) + "," + std::to_string(servoResolution) + "," +
+    std::to_string(axisMechTransRatio));
 }
 /**
  * @brief 获取485扩展轴运动加减速度
@@ -4004,13 +4418,13 @@ std::string robot_command_thread::AuxServoGetParam(std::string para){
  * @param [out] dec 485扩展轴运动减速度
  * @return  错误码
  */
-std::string robot_command_thread::AuxServoGetAcc(std::string para){
-    double acc;
-    double dec;
+std::string robot_command_thread::AuxServoGetAcc(std::string para)
+{
+  double acc;
+  double dec;
 
-    int res = _ptr_robot->AuxServoGetAcc(acc,dec);
-    return std::string(std::to_string(res) + "," + std::to_string(acc) + "," + \
-            std::to_string(dec));
+  int res = _ptr_robot->AuxServoGetAcc(acc, dec);
+  return std::string(std::to_string(res) + "," + std::to_string(acc) + "," + std::to_string(dec));
 }
 
 /**
@@ -4019,13 +4433,13 @@ std::string robot_command_thread::AuxServoGetAcc(std::string para){
  * @param [out] dec 485扩展轴急停减速度
  * @return  错误码
  */
-std::string robot_command_thread::AuxServoGetEmergencyStopAcc(std::string para){
-    double acc;
-    double dec;
+std::string robot_command_thread::AuxServoGetEmergencyStopAcc(std::string para)
+{
+  double acc;
+  double dec;
 
-    int res = _ptr_robot->AuxServoGetEmergencyStopAcc(acc,dec);
-    return std::string(std::to_string(res) + "," + std::to_string(acc) + "," + \
-            std::to_string(dec));
+  int res = _ptr_robot->AuxServoGetEmergencyStopAcc(acc, dec);
+  return std::string(std::to_string(res) + "," + std::to_string(acc) + "," + std::to_string(dec));
 }
 
 /**
@@ -4034,15 +4448,18 @@ std::string robot_command_thread::AuxServoGetEmergencyStopAcc(std::string para){
  * @param [in] airControl 送气控制  0-停止送气；1-送气
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetAspirated(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAspirated(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int ioType = std::stoi(list.front());list.pop_front();
-    int airControl = std::stoi(list.front());list.pop_front();
+  int ioType = std::stoi(list.front());
+  list.pop_front();
+  int airControl = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetAspirated(ioType,airControl);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetAspirated(ioType, airControl);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4050,9 +4467,10 @@ std::string robot_command_thread::SetAspirated(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ExtDevUDPClientComReset(std::string para){
-    //empty
-    return std::to_string(_ptr_robot->ExtDevUDPClientComReset());
+std::string robot_command_thread::ExtDevUDPClientComReset(std::string para)
+{
+  //empty
+  return std::to_string(_ptr_robot->ExtDevUDPClientComReset());
 }
 
 /**
@@ -4060,9 +4478,10 @@ std::string robot_command_thread::ExtDevUDPClientComReset(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ExtDevUDPClientComClose(std::string para){
-    //empty
-    return std::to_string(_ptr_robot->ExtDevUDPClientComClose());
+std::string robot_command_thread::ExtDevUDPClientComClose(std::string para)
+{
+  //empty
+  return std::to_string(_ptr_robot->ExtDevUDPClientComClose());
 }
 
 /**
@@ -4070,13 +4489,14 @@ std::string robot_command_thread::ExtDevUDPClientComClose(std::string para){
  * @param name 4个lua文件名称 “CTRL_LUA_test.lua”
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetCtrlOpenLUAName(std::string para){
-    std::string name[4];
-    
-    int res = _ptr_robot->GetCtrlOpenLUAName(name);
-    return std::string(std::to_string(res) + "," + std::string(name[0]) + "," + \
-            std::string(name[1]) + "," + std::string(name[2]) + "," + \
-            std::string(name[3]));
+std::string robot_command_thread::GetCtrlOpenLUAName(std::string para)
+{
+  std::string name[4];
+
+  int res = _ptr_robot->GetCtrlOpenLUAName(name);
+  return std::string(
+    std::to_string(res) + "," + std::string(name[0]) + "," + std::string(name[1]) + "," +
+    std::string(name[2]) + "," + std::string(name[3]));
 }
 
 /**
@@ -4084,49 +4504,38 @@ std::string robot_command_thread::GetCtrlOpenLUAName(std::string para){
  * @param [in] fileName 要删除的开放协议lua文件名“CtrlDev_XXX.lua”
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::OpenLuaDelete(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::OpenLuaDelete(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string fileName = list.front();list.pop_front();
+  std::string fileName = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->OpenLuaDelete(fileName);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->OpenLuaDelete(fileName);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 删除所有开放协议Lua文件
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AllOpenLuaDelete(std::string para){
-    int res = _ptr_robot->AllOpenLuaDelete();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::AllOpenLuaDelete(std::string para)
+{
+  int res = _ptr_robot->AllOpenLuaDelete();
+  return std::string(std::to_string(res));
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * @brief 查询SDK版本号
  * @return SDK版本号
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetSDKVersion(std::string para){
-    char version;
-    int res = _ptr_robot->GetSDKVersion(&version);
-    return std::string(std::to_string(res) + ",SDKVersion:" + std::to_string(version));
+std::string robot_command_thread::GetSDKVersion(std::string para)
+{
+  char version;
+  int res = _ptr_robot->GetSDKVersion(&version);
+  return std::string(std::to_string(res) + ",SDKVersion:" + std::to_string(version));
 }
 
 /**
@@ -4134,10 +4543,11 @@ std::string robot_command_thread::GetSDKVersion(std::string para){
  * @return 控制器IP
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetControllerIP(std::string para){
-    char ip;
-    int res = _ptr_robot->GetControllerIP(&ip);
-    return std::string(std::to_string(res) + ",ControllerIP:" + std::to_string(ip));
+std::string robot_command_thread::GetControllerIP(std::string para)
+{
+  char ip;
+  int res = _ptr_robot->GetControllerIP(&ip);
+  return std::string(std::to_string(res) + ",ControllerIP:" + std::to_string(ip));
 }
 
 /**
@@ -4145,10 +4555,11 @@ std::string robot_command_thread::GetControllerIP(std::string para){
  * @return 0-非拖动示教模式，1-拖动示教模式
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::IsInDragTeach(std::string para){
-    uint8_t state;
-    int res = _ptr_robot->IsInDragTeach(&state);
-    return std::string(std::to_string(res) + "," + std::to_string(state));
+std::string robot_command_thread::IsInDragTeach(std::string para)
+{
+  uint8_t state;
+  int res = _ptr_robot->IsInDragTeach(&state);
+  return std::string(std::to_string(res) + "," + std::to_string(state));
 }
 /**
  * @brief 获取控制箱数字量输入
@@ -4157,15 +4568,18 @@ std::string robot_command_thread::IsInDragTeach(std::string para){
  * @param  [out] result  0-低电平，1-高电平
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetDI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetDI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    uint8_t block = std::stoi(list.front().c_str());list.pop_front();
-    uint8_t result;
-    int res = _ptr_robot->GetDI(id,block,&result);
-    return std::string(std::to_string(res) + "," + std::to_string(result));
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  uint8_t block = std::stoi(list.front().c_str());
+  list.pop_front();
+  uint8_t result;
+  int res = _ptr_robot->GetDI(id, block, &result);
+  return std::string(std::to_string(res) + "," + std::to_string(result));
 }
 
 /**
@@ -4175,15 +4589,18 @@ std::string robot_command_thread::GetDI(std::string para){
  * @param  [out] result  0-低电平，1-高电平
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetToolDI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetToolDI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    uint8_t block = std::stoi(list.front().c_str());list.pop_front();
-    uint8_t result;
-    int res = _ptr_robot->GetToolDI(id,block,&result);
-    return std::string(std::to_string(res) + "," + std::to_string(result));
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  uint8_t block = std::stoi(list.front().c_str());
+  list.pop_front();
+  uint8_t result;
+  int res = _ptr_robot->GetToolDI(id, block, &result);
+  return std::string(std::to_string(res) + "," + std::to_string(result));
 }
 
 /**
@@ -4194,16 +4611,21 @@ std::string robot_command_thread::GetToolDI(std::string para){
  * @param  [in]  opt  超时后策略，0-程序停止并提示超时，1-忽略超时提示程序继续执行，2-一直等待
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WaitDI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WaitDI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    uint8_t status = std::stoi(list.front().c_str());list.pop_front();
-    int max_time = std::stoi(list.front().c_str());list.pop_front();
-    int opt = std::stoi(list.front().c_str());list.pop_front();
-    int res = _ptr_robot->WaitDI(id,status,max_time,opt);
-    return std::string(std::to_string(res));
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  uint8_t status = std::stoi(list.front().c_str());
+  list.pop_front();
+  int max_time = std::stoi(list.front().c_str());
+  list.pop_front();
+  int opt = std::stoi(list.front().c_str());
+  list.pop_front();
+  int res = _ptr_robot->WaitDI(id, status, max_time, opt);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4215,17 +4637,23 @@ std::string robot_command_thread::WaitDI(std::string para){
  * @param  [in]  opt  超时后策略，0-程序停止并提示超时，1-忽略超时提示程序继续执行，2-一直等待
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WaitMultiDI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WaitMultiDI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int mode = std::stoi(list.front().c_str());list.pop_front();
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    uint8_t status = std::stoi(list.front().c_str());list.pop_front();
-    int max_time = std::stoi(list.front().c_str());list.pop_front();
-    int opt = std::stoi(list.front().c_str());list.pop_front();
-    int res = _ptr_robot->WaitMultiDI(mode,id,status,max_time,opt);
-    return std::string(std::to_string(res));
+  int mode = std::stoi(list.front().c_str());
+  list.pop_front();
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  uint8_t status = std::stoi(list.front().c_str());
+  list.pop_front();
+  int max_time = std::stoi(list.front().c_str());
+  list.pop_front();
+  int opt = std::stoi(list.front().c_str());
+  list.pop_front();
+  int res = _ptr_robot->WaitMultiDI(mode, id, status, max_time, opt);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4236,17 +4664,22 @@ std::string robot_command_thread::WaitMultiDI(std::string para){
  * @param  [in]  opt  超时后策略，0-程序停止并提示超时，1-忽略超时提示程序继续执行，2-一直等待
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WaitToolDI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WaitToolDI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    uint8_t status = std::stoi(list.front().c_str());list.pop_front();
-    int max_time = std::stoi(list.front().c_str());list.pop_front();
-    int opt = std::stoi(list.front().c_str());list.pop_front();
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  uint8_t status = std::stoi(list.front().c_str());
+  list.pop_front();
+  int max_time = std::stoi(list.front().c_str());
+  list.pop_front();
+  int opt = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->WaitToolDI(id,status,max_time,opt);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WaitToolDI(id, status, max_time, opt);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4256,16 +4689,19 @@ std::string robot_command_thread::WaitToolDI(std::string para){
  * @param  [out] result  输入电流或电压值百分比，范围[0~100]对应电流值[0~20mS]或电压[0~10V]
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetAI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetAI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    uint8_t block = std::stoi(list.front().c_str());list.pop_front();
-    float result;
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  uint8_t block = std::stoi(list.front().c_str());
+  list.pop_front();
+  float result;
 
-    int res = _ptr_robot->GetAI(id,block,&result);
-    return std::string(std::to_string(res) + "," + std::to_string(result));
+  int res = _ptr_robot->GetAI(id, block, &result);
+  return std::string(std::to_string(res) + "," + std::to_string(result));
 }
 
 /**
@@ -4275,18 +4711,20 @@ std::string robot_command_thread::GetAI(std::string para){
  * @param  [out] result  输入电流或电压值百分比，范围[0~100]对应电压[0~10V]
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetToolAI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetToolAI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    uint8_t block = std::stoi(list.front().c_str());list.pop_front();
-    float result;
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  uint8_t block = std::stoi(list.front().c_str());
+  list.pop_front();
+  float result;
 
-    int res = _ptr_robot->GetToolAI(id,block,&result);
-    return std::string(std::to_string(res) + "," + std::to_string(result));
+  int res = _ptr_robot->GetToolAI(id, block, &result);
+  return std::string(std::to_string(res) + "," + std::to_string(result));
 }
-
 
 /**
  * @brief 笛卡尔空间螺旋线运动
@@ -4304,43 +4742,66 @@ std::string robot_command_thread::GetToolAI(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::NewSpiral(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::NewSpiral(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    JointPos pos;
-    _fillJointPose(list,pos);
-    DescPose cartpose;
-    _fillDescPose(list,cartpose);
-    int tool = std::stoi(list.front().c_str());list.pop_front();
-    int user = std::stoi(list.front().c_str());list.pop_front();
-    float vel = std::stod(list.front().c_str());list.pop_front();
-    float acc = std::stod(list.front().c_str());list.pop_front();
-    ExaxisPos eaxispos;
-    eaxispos.ePos[0] = std::stod(list.front().c_str());list.pop_front();
-    eaxispos.ePos[1] = std::stod(list.front().c_str());list.pop_front();
-    eaxispos.ePos[2] = std::stod(list.front().c_str());list.pop_front();
-    eaxispos.ePos[3] = std::stod(list.front().c_str());list.pop_front();
-    float ovl = std::stod(list.front().c_str());list.pop_front();
-    uint8_t offset_flag = std::stod(list.front().c_str());list.pop_front();
-    DescPose offsetpos;
-    offsetpos.tran.x = std::stof(list.front());list.pop_front();
-    offsetpos.tran.y = std::stof(list.front());list.pop_front();
-    offsetpos.tran.z = std::stof(list.front());list.pop_front();
-    offsetpos.rpy.rx = std::stof(list.front());list.pop_front();
-    offsetpos.rpy.ry = std::stof(list.front());list.pop_front();
-    offsetpos.rpy.rz = std::stof(list.front());
-    SpiralParam spiral_param;
-    spiral_param.circle_num = std::stoi(list.front().c_str());list.pop_front();
-	spiral_param.circle_angle = std::stod(list.front().c_str());list.pop_front();
-	spiral_param.rad_init = std::stod(list.front().c_str());list.pop_front();
-	spiral_param.rad_add = std::stod(list.front().c_str());list.pop_front();
-	spiral_param.rotaxis_add = std::stod(list.front().c_str());list.pop_front();
-	spiral_param.rot_direction = std::stoi(list.front().c_str());list.pop_front();
-	spiral_param.velAccMode = std::stoi(list.front().c_str());list.pop_front();
-    
-    return std::to_string(_ptr_robot->NewSpiral(&pos,&cartpose,tool,user,vel,acc,\
-        &eaxispos,ovl,offset_flag,&offsetpos,spiral_param));
+  JointPos pos;
+  _fillJointPose(list, pos);
+  DescPose cartpose;
+  _fillDescPose(list, cartpose);
+  int tool = std::stoi(list.front().c_str());
+  list.pop_front();
+  int user = std::stoi(list.front().c_str());
+  list.pop_front();
+  float vel = std::stod(list.front().c_str());
+  list.pop_front();
+  float acc = std::stod(list.front().c_str());
+  list.pop_front();
+  ExaxisPos eaxispos;
+  eaxispos.ePos[0] = std::stod(list.front().c_str());
+  list.pop_front();
+  eaxispos.ePos[1] = std::stod(list.front().c_str());
+  list.pop_front();
+  eaxispos.ePos[2] = std::stod(list.front().c_str());
+  list.pop_front();
+  eaxispos.ePos[3] = std::stod(list.front().c_str());
+  list.pop_front();
+  float ovl = std::stod(list.front().c_str());
+  list.pop_front();
+  uint8_t offset_flag = std::stod(list.front().c_str());
+  list.pop_front();
+  DescPose offsetpos;
+  offsetpos.tran.x = std::stof(list.front());
+  list.pop_front();
+  offsetpos.tran.y = std::stof(list.front());
+  list.pop_front();
+  offsetpos.tran.z = std::stof(list.front());
+  list.pop_front();
+  offsetpos.rpy.rx = std::stof(list.front());
+  list.pop_front();
+  offsetpos.rpy.ry = std::stof(list.front());
+  list.pop_front();
+  offsetpos.rpy.rz = std::stof(list.front());
+  SpiralParam spiral_param;
+  spiral_param.circle_num = std::stoi(list.front().c_str());
+  list.pop_front();
+  spiral_param.circle_angle = std::stod(list.front().c_str());
+  list.pop_front();
+  spiral_param.rad_init = std::stod(list.front().c_str());
+  list.pop_front();
+  spiral_param.rad_add = std::stod(list.front().c_str());
+  list.pop_front();
+  spiral_param.rotaxis_add = std::stod(list.front().c_str());
+  list.pop_front();
+  spiral_param.rot_direction = std::stoi(list.front().c_str());
+  list.pop_front();
+  spiral_param.velAccMode = std::stoi(list.front().c_str());
+  list.pop_front();
+
+  return std::to_string(_ptr_robot->NewSpiral(
+    &pos, &cartpose, tool, user, vel, acc, &eaxispos, ovl, offset_flag, &offsetpos, spiral_param));
 }
 
 /**
@@ -4348,14 +4809,16 @@ std::string robot_command_thread::NewSpiral(std::string para){
  * @param [in] comType 指令下发类型；0-xmlrpc；1-UDP(对应机器人20007端口)
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ServoMoveStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ServoMoveStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int comType = std::stoi(list.front().c_str());list.pop_front();
+  int comType = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->ServoMoveStart(comType);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ServoMoveStart(comType);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4363,14 +4826,16 @@ std::string robot_command_thread::ServoMoveStart(std::string para){
  * @param [in] comType 指令下发类型；0-xmlrpc；1-UDP(对应机器人20007端口)
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ServoMoveEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ServoMoveEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int comType = std::stoi(list.front().c_str());list.pop_front();
+  int comType = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->ServoMoveEnd(comType);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ServoMoveEnd(comType);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4386,32 +4851,50 @@ std::string robot_command_thread::ServoMoveEnd(std::string para){
  * @param [in] gain 目标位置的比例放大器，暂不开放，默认为0
  * @return 错误码
  */
-std::string robot_command_thread::ServoCart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ServoCart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int mode = std::stoi(list.front().c_str());list.pop_front();
-    DescPose desc_pose;
-    _fillDescPose(list,desc_pose);
-    ExaxisPos exaxis;
-    exaxis.ePos[0] = std::stod(list.front().c_str());list.pop_front();
-    exaxis.ePos[1] = std::stod(list.front().c_str());list.pop_front();
-    exaxis.ePos[2] = std::stod(list.front().c_str());list.pop_front();
-    exaxis.ePos[3] = std::stod(list.front().c_str());list.pop_front();
-    float pos_gain[6];
-    pos_gain[0] = std::stod(list.front().c_str());list.pop_front();
-    pos_gain[1] = std::stod(list.front().c_str());list.pop_front();
-    pos_gain[2] = std::stod(list.front().c_str());list.pop_front();
-    pos_gain[3] = std::stod(list.front().c_str());list.pop_front();
-    pos_gain[4] = std::stod(list.front().c_str());list.pop_front();
-    pos_gain[5] = std::stod(list.front().c_str());list.pop_front();
-    float acc = std::stod(list.front().c_str());list.pop_front();
-    float vel = std::stod(list.front().c_str());list.pop_front();
-    float cmdT = std::stod(list.front().c_str());list.pop_front();
-    float filterT = std::stod(list.front().c_str());list.pop_front();
-    float gain = std::stod(list.front().c_str());list.pop_front();
-    
-    return std::to_string(_ptr_robot->ServoCart(mode,&desc_pose,exaxis,pos_gain,acc,vel,cmdT,filterT,gain));
+  int mode = std::stoi(list.front().c_str());
+  list.pop_front();
+  DescPose desc_pose;
+  _fillDescPose(list, desc_pose);
+  ExaxisPos exaxis;
+  exaxis.ePos[0] = std::stod(list.front().c_str());
+  list.pop_front();
+  exaxis.ePos[1] = std::stod(list.front().c_str());
+  list.pop_front();
+  exaxis.ePos[2] = std::stod(list.front().c_str());
+  list.pop_front();
+  exaxis.ePos[3] = std::stod(list.front().c_str());
+  list.pop_front();
+  float pos_gain[6];
+  pos_gain[0] = std::stod(list.front().c_str());
+  list.pop_front();
+  pos_gain[1] = std::stod(list.front().c_str());
+  list.pop_front();
+  pos_gain[2] = std::stod(list.front().c_str());
+  list.pop_front();
+  pos_gain[3] = std::stod(list.front().c_str());
+  list.pop_front();
+  pos_gain[4] = std::stod(list.front().c_str());
+  list.pop_front();
+  pos_gain[5] = std::stod(list.front().c_str());
+  list.pop_front();
+  float acc = std::stod(list.front().c_str());
+  list.pop_front();
+  float vel = std::stod(list.front().c_str());
+  list.pop_front();
+  float cmdT = std::stod(list.front().c_str());
+  list.pop_front();
+  float filterT = std::stod(list.front().c_str());
+  list.pop_front();
+  float gain = std::stod(list.front().c_str());
+  list.pop_front();
+
+  return std::to_string(
+    _ptr_robot->ServoCart(mode, &desc_pose, exaxis, pos_gain, acc, vel, cmdT, filterT, gain));
 }
 
 /**
@@ -4427,41 +4910,51 @@ std::string robot_command_thread::ServoCart(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveCart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MoveCart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    DescPose desc_pose;
-    _fillDescPose(list,desc_pose);
-    int tool = std::stoi(list.front().c_str());list.pop_front();
-    int user = std::stoi(list.front().c_str());list.pop_front();
-    
-    float vel = std::stod(list.front().c_str());list.pop_front();
-    float acc = std::stod(list.front().c_str());list.pop_front();
-    float ovl = std::stod(list.front().c_str());list.pop_front();
-    float blendT = std::stod(list.front().c_str());list.pop_front();
-    int config = std::stoi(list.front().c_str());list.pop_front();
-    
-    return std::to_string(_ptr_robot->MoveCart(&desc_pose,tool,user,vel,acc,\
-        ovl,blendT,config));
+  DescPose desc_pose;
+  _fillDescPose(list, desc_pose);
+  int tool = std::stoi(list.front().c_str());
+  list.pop_front();
+  int user = std::stoi(list.front().c_str());
+  list.pop_front();
+
+  float vel = std::stod(list.front().c_str());
+  list.pop_front();
+  float acc = std::stod(list.front().c_str());
+  list.pop_front();
+  float ovl = std::stod(list.front().c_str());
+  list.pop_front();
+  float blendT = std::stod(list.front().c_str());
+  list.pop_front();
+  int config = std::stoi(list.front().c_str());
+  list.pop_front();
+
+  return std::to_string(
+    _ptr_robot->MoveCart(&desc_pose, tool, user, vel, acc, ovl, blendT, config));
 }
 
 /**
  * @brief 暂停运动
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::PauseMotion(std::string para){
-    int res = _ptr_robot->PauseMotion();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::PauseMotion(std::string para)
+{
+  int res = _ptr_robot->PauseMotion();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 恢复运动
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ResumeMotion(std::string para){
-    int res = _ptr_robot->ResumeMotion();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ResumeMotion(std::string para)
+{
+  int res = _ptr_robot->ResumeMotion();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4469,11 +4962,12 @@ std::string robot_command_thread::ResumeMotion(std::string para){
  * @param [out] state 按钮状态，0-按下，1-松开
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetAxlePointRecordBtnState(std::string para){
-    uint8_t state;
+std::string robot_command_thread::GetAxlePointRecordBtnState(std::string para)
+{
+  uint8_t state;
 
-    int res = _ptr_robot->GetAxlePointRecordBtnState(&state);
-    return std::string(std::to_string(res) + "," + std::to_string(state));
+  int res = _ptr_robot->GetAxlePointRecordBtnState(&state);
+  return std::string(std::to_string(res) + "," + std::to_string(state));
 }
 
 /**
@@ -4481,11 +4975,12 @@ std::string robot_command_thread::GetAxlePointRecordBtnState(std::string para){
  * @param [out] do_state DO输出状态，do0~do1对应bit1~bit2,从bit0开始
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetToolDO(std::string para){
-    uint8_t do_state;
+std::string robot_command_thread::GetToolDO(std::string para)
+{
+  uint8_t do_state;
 
-    int res = _ptr_robot->GetToolDO(&do_state);
-    return std::string(std::to_string(res) + "," + std::to_string(do_state));
+  int res = _ptr_robot->GetToolDO(&do_state);
+  return std::string(std::to_string(res) + "," + std::to_string(do_state));
 }
 
 /**
@@ -4494,12 +4989,14 @@ std::string robot_command_thread::GetToolDO(std::string para){
  * @param [out] do_state_l DO输出状态，do0~do7对应bit0~bit7
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetDO(std::string para){
-    uint8_t do_state_h;
-    uint8_t do_state_l;
+std::string robot_command_thread::GetDO(std::string para)
+{
+  uint8_t do_state_h;
+  uint8_t do_state_l;
 
-    int res = _ptr_robot->GetDO(&do_state_h,&do_state_l);
-    return std::string(std::to_string(res) + "," + std::to_string(do_state_h) + "," + std::to_string(do_state_l));
+  int res = _ptr_robot->GetDO(&do_state_h, &do_state_l);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(do_state_h) + "," + std::to_string(do_state_l));
 }
 
 /**
@@ -4511,18 +5008,24 @@ std::string robot_command_thread::GetDO(std::string para){
  * @param  [in]  opt  超时后策略，0-程序停止并提示超时，1-忽略超时提示程序继续执行，2-一直等待
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WaitAI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WaitAI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    int sign = std::stoi(list.front().c_str());list.pop_front();
-    float value = std::stof(list.front().c_str());list.pop_front();
-    int max_time = std::stoi(list.front().c_str());list.pop_front();
-    int opt = std::stoi(list.front().c_str());list.pop_front();
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  int sign = std::stoi(list.front().c_str());
+  list.pop_front();
+  float value = std::stof(list.front().c_str());
+  list.pop_front();
+  int max_time = std::stoi(list.front().c_str());
+  list.pop_front();
+  int opt = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->WaitAI(id,sign,value,max_time,opt);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WaitAI(id, sign, value, max_time, opt);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4534,18 +5037,24 @@ std::string robot_command_thread::WaitAI(std::string para){
  * @param  [in]  opt  超时后策略，0-程序停止并提示超时，1-忽略超时提示程序继续执行，2-一直等待
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WaitToolAI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WaitToolAI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    int sign = std::stoi(list.front().c_str());list.pop_front();
-    float value = std::stof(list.front().c_str());list.pop_front();
-    int max_time = std::stoi(list.front().c_str());list.pop_front();
-    int opt = std::stoi(list.front().c_str());list.pop_front();
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  int sign = std::stoi(list.front().c_str());
+  list.pop_front();
+  float value = std::stof(list.front().c_str());
+  list.pop_front();
+  int max_time = std::stoi(list.front().c_str());
+  list.pop_front();
+  int opt = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->WaitToolAI(id,sign,value,max_time,opt);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WaitToolAI(id, sign, value, max_time, opt);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4554,15 +5063,18 @@ std::string robot_command_thread::WaitToolAI(std::string para){
  * @param  [in]  value 变量值
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetSysVarValue(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetSysVarValue(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
-    float value = std::stof(list.front().c_str());list.pop_front();
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
+  float value = std::stof(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->SetSysVarValue(id,value);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetSysVarValue(id, value);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4570,14 +5082,16 @@ std::string robot_command_thread::SetSysVarValue(std::string para){
  * @param [in] point_num 点编号,范围[1~4]
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetExTCPPoint(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetExTCPPoint(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int point_num = std::stoi(list.front().c_str());list.pop_front();
+  int point_num = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->SetExTCPPoint(point_num);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetExTCPPoint(point_num);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4585,13 +5099,15 @@ std::string robot_command_thread::SetExTCPPoint(std::string para){
  * @param [out] tcp_pose 外部工具坐标系
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ComputeExTCF(std::string para){
-    DescPose tcp_pose;
-    int res = _ptr_robot->ComputeExTCF(&tcp_pose);
-    return std::string(std::to_string(res) + "," + std::to_string(tcp_pose.tran.x) + "," + \
-            std::to_string(tcp_pose.tran.y) + "," + std::to_string(tcp_pose.tran.z) + "," + \
-            std::to_string(tcp_pose.rpy.rx) + "," + std::to_string(tcp_pose.rpy.ry) + "," + \
-            std::to_string(tcp_pose.rpy.rz));
+std::string robot_command_thread::ComputeExTCF(std::string para)
+{
+  DescPose tcp_pose;
+  int res = _ptr_robot->ComputeExTCF(&tcp_pose);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(tcp_pose.tran.x) + "," +
+    std::to_string(tcp_pose.tran.y) + "," + std::to_string(tcp_pose.tran.z) + "," +
+    std::to_string(tcp_pose.rpy.rx) + "," + std::to_string(tcp_pose.rpy.ry) + "," +
+    std::to_string(tcp_pose.rpy.rz));
 }
 
 /**
@@ -4599,14 +5115,16 @@ std::string robot_command_thread::ComputeExTCF(std::string para){
  * @param [in] point_num 点编号,范围[1~3]
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetWObjCoordPoint(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWObjCoordPoint(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int point_num = std::stoi(list.front().c_str());list.pop_front();
+  int point_num = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->SetWObjCoordPoint(point_num);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetWObjCoordPoint(point_num);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4616,19 +5134,23 @@ std::string robot_command_thread::SetWObjCoordPoint(std::string para){
  * @param [out] wobj_pose 工件坐标系
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ComputeWObjCoord(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ComputeWObjCoord(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int method = std::stoi(list.front().c_str());list.pop_front();
-    int refFrame = std::stoi(list.front().c_str());list.pop_front();
+  int method = std::stoi(list.front().c_str());
+  list.pop_front();
+  int refFrame = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    DescPose wobj_pose;
-    int res = _ptr_robot->ComputeWObjCoord(method,refFrame,&wobj_pose);
-    return std::string(std::to_string(res) + "," + std::to_string(wobj_pose.tran.x) + "," + \
-            std::to_string(wobj_pose.tran.y) + "," + std::to_string(wobj_pose.tran.z) + "," + \
-            std::to_string(wobj_pose.rpy.rx) + "," + std::to_string(wobj_pose.rpy.ry) + "," + \
-            std::to_string(wobj_pose.rpy.rz));
+  DescPose wobj_pose;
+  int res = _ptr_robot->ComputeWObjCoord(method, refFrame, &wobj_pose);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(wobj_pose.tran.x) + "," +
+    std::to_string(wobj_pose.tran.y) + "," + std::to_string(wobj_pose.tran.z) + "," +
+    std::to_string(wobj_pose.rpy.rx) + "," + std::to_string(wobj_pose.rpy.ry) + "," +
+    std::to_string(wobj_pose.rpy.rz));
 }
 
 /**
@@ -4636,14 +5158,16 @@ std::string robot_command_thread::ComputeWObjCoord(std::string para){
  * @param  [in]  t_ms  单位ms
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WaitMs(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WaitMs(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int t_ms = std::stoi(list.front().c_str());list.pop_front();
+  int t_ms = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->WaitMs(t_ms);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WaitMs(t_ms);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4651,21 +5175,27 @@ std::string robot_command_thread::WaitMs(std::string para){
  * @param  [in] limit 六个关节位置，单位deg
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetLimitNegative(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLimitNegative(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    float limit[6];
-    limit[0] = std::stod(list.front().c_str());list.pop_front();
-    limit[1] = std::stod(list.front().c_str());list.pop_front();
-    limit[2] = std::stod(list.front().c_str());list.pop_front();
-    limit[3] = std::stod(list.front().c_str());list.pop_front();
-    limit[4] = std::stod(list.front().c_str());list.pop_front();
-    limit[5] = std::stod(list.front().c_str());list.pop_front();
+  float limit[6];
+  limit[0] = std::stod(list.front().c_str());
+  list.pop_front();
+  limit[1] = std::stod(list.front().c_str());
+  list.pop_front();
+  limit[2] = std::stod(list.front().c_str());
+  list.pop_front();
+  limit[3] = std::stod(list.front().c_str());
+  list.pop_front();
+  limit[4] = std::stod(list.front().c_str());
+  list.pop_front();
+  limit[5] = std::stod(list.front().c_str());
+  list.pop_front();
 
-
-    int res = _ptr_robot->SetLimitNegative(limit);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetLimitNegative(limit);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -4674,12 +5204,14 @@ std::string robot_command_thread::SetLimitNegative(std::string para){
  * @param  [out] zangle 旋转角
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetRobotInstallAngle(std::string para){
-    float yangle;
-    float zangle;
+std::string robot_command_thread::GetRobotInstallAngle(std::string para)
+{
+  float yangle;
+  float zangle;
 
-    int res = _ptr_robot->GetRobotInstallAngle(&yangle,&zangle);
-    return std::string(std::to_string(res) + "," + std::to_string(yangle) + "," + std::to_string(zangle));
+  int res = _ptr_robot->GetRobotInstallAngle(&yangle, &zangle);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(yangle) + "," + std::to_string(zangle));
 }
 
 /**
@@ -4688,16 +5220,18 @@ std::string robot_command_thread::GetRobotInstallAngle(std::string para){
  * @param  [out] value  系统变量值
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetSysVarValue(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetSysVarValue(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front().c_str());list.pop_front();
+  int id = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    float value;
+  float value;
 
-    int res = _ptr_robot->GetSysVarValue(id,&value);
-    return std::string(std::to_string(res) + "," + std::to_string(value));
+  int res = _ptr_robot->GetSysVarValue(id, &value);
+  return std::string(std::to_string(res) + "," + std::to_string(value));
 }
 
 /**
@@ -4706,19 +5240,21 @@ std::string robot_command_thread::GetSysVarValue(std::string para){
  * @param  [out] jPos 六个关节位置，单位deg
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetActualJointPosDegree(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetActualJointPosDegree(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    JointPos jPos;
+  JointPos jPos;
 
-    int res = _ptr_robot->GetActualJointPosDegree(flag,&jPos);
-    return std::string(std::to_string(res) + "," + std::to_string(jPos.jPos[0]) + "," +\
-            std::to_string(jPos.jPos[1]) + "," + std::to_string(jPos.jPos[2]) + "," +\
-            std::to_string(jPos.jPos[3]) + "," + std::to_string(jPos.jPos[4]) + "," +\
-            std::to_string(jPos.jPos[5]));
+  int res = _ptr_robot->GetActualJointPosDegree(flag, &jPos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(jPos.jPos[0]) + "," + std::to_string(jPos.jPos[1]) +
+    "," + std::to_string(jPos.jPos[2]) + "," + std::to_string(jPos.jPos[3]) + "," +
+    std::to_string(jPos.jPos[4]) + "," + std::to_string(jPos.jPos[5]));
 }
 
 /**
@@ -4727,19 +5263,21 @@ std::string robot_command_thread::GetActualJointPosDegree(std::string para){
  * @param  [out] speed [x,y,z,rx,ry,rz]速度
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetActualJointSpeedsDegree(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetActualJointSpeedsDegree(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    float speed[6];
+  float speed[6];
 
-    int res = _ptr_robot->GetActualJointSpeedsDegree(flag,speed);
-    return std::string(std::to_string(res) + "," + std::to_string(speed[0]) + "," +\
-            std::to_string(speed[1]) + "," + std::to_string(speed[2]) + "," +\
-            std::to_string(speed[3]) + "," + std::to_string(speed[4]) + "," +\
-            std::to_string(speed[5]));
+  int res = _ptr_robot->GetActualJointSpeedsDegree(flag, speed);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(speed[0]) + "," + std::to_string(speed[1]) + "," +
+    std::to_string(speed[2]) + "," + std::to_string(speed[3]) + "," + std::to_string(speed[4]) +
+    "," + std::to_string(speed[5]));
 }
 
 /**
@@ -4748,19 +5286,21 @@ std::string robot_command_thread::GetActualJointSpeedsDegree(std::string para){
  * @param  [out] acc 六个关节加速度
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetActualJointAccDegree(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetActualJointAccDegree(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    float acc[6];
+  float acc[6];
 
-    int res = _ptr_robot->GetActualJointAccDegree(flag,acc);
-    return std::string(std::to_string(res) + "," + std::to_string(acc[0]) + "," +\
-            std::to_string(acc[1]) + "," + std::to_string(acc[2]) + "," +\
-            std::to_string(acc[3]) + "," + std::to_string(acc[4]) + "," +\
-            std::to_string(acc[5]));
+  int res = _ptr_robot->GetActualJointAccDegree(flag, acc);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(acc[0]) + "," + std::to_string(acc[1]) + "," +
+    std::to_string(acc[2]) + "," + std::to_string(acc[3]) + "," + std::to_string(acc[4]) + "," +
+    std::to_string(acc[5]));
 }
 
 /**
@@ -4770,18 +5310,20 @@ std::string robot_command_thread::GetActualJointAccDegree(std::string para){
  * @param  [out] ori_speed 姿态速度
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetTargetTCPCompositeSpeed(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetTargetTCPCompositeSpeed(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    float tcp_speed;
-    float ori_speed;
+  float tcp_speed;
+  float ori_speed;
 
-    int res = _ptr_robot->GetTargetTCPCompositeSpeed(flag,&tcp_speed,&ori_speed);
-    return std::string(std::to_string(res) + "," + std::to_string(tcp_speed) + "," +\
-            std::to_string(ori_speed));
+  int res = _ptr_robot->GetTargetTCPCompositeSpeed(flag, &tcp_speed, &ori_speed);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(tcp_speed) + "," + std::to_string(ori_speed));
 }
 
 /**
@@ -4791,18 +5333,20 @@ std::string robot_command_thread::GetTargetTCPCompositeSpeed(std::string para){
  * @param  [out] ori_speed 姿态速度
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetActualTCPCompositeSpeed(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetActualTCPCompositeSpeed(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    float tcp_speed;
-    float ori_speed;
+  float tcp_speed;
+  float ori_speed;
 
-    int res = _ptr_robot->GetActualTCPCompositeSpeed(flag,&tcp_speed,&ori_speed);
-    return std::string(std::to_string(res) + "," + std::to_string(tcp_speed) + "," +\
-            std::to_string(ori_speed));
+  int res = _ptr_robot->GetActualTCPCompositeSpeed(flag, &tcp_speed, &ori_speed);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(tcp_speed) + "," + std::to_string(ori_speed));
 }
 
 /**
@@ -4811,19 +5355,21 @@ std::string robot_command_thread::GetActualTCPCompositeSpeed(std::string para){
  * @param  [out] speed [x,y,z,rx,ry,rz]速度
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetTargetTCPSpeed(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetTargetTCPSpeed(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    float speed[6];
+  float speed[6];
 
-    int res = _ptr_robot->GetTargetTCPSpeed(flag,speed);
-    return std::string(std::to_string(res) + "," + std::to_string(speed[0]) + "," +\
-            std::to_string(speed[1]) + "," + std::to_string(speed[2]) + "," +\
-            std::to_string(speed[3]) + "," + std::to_string(speed[4]) + "," +\
-            std::to_string(speed[5]));
+  int res = _ptr_robot->GetTargetTCPSpeed(flag, speed);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(speed[0]) + "," + std::to_string(speed[1]) + "," +
+    std::to_string(speed[2]) + "," + std::to_string(speed[3]) + "," + std::to_string(speed[4]) +
+    "," + std::to_string(speed[5]));
 }
 
 /**
@@ -4832,19 +5378,21 @@ std::string robot_command_thread::GetTargetTCPSpeed(std::string para){
  * @param  [out] speed [x,y,z,rx,ry,rz]速度
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetActualTCPSpeed(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetActualTCPSpeed(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    float speed[6];
+  float speed[6];
 
-    int res = _ptr_robot->GetActualTCPSpeed(flag,speed);
-    return std::string(std::to_string(res) + "," + std::to_string(speed[0]) + "," +\
-            std::to_string(speed[1]) + "," + std::to_string(speed[2]) + "," +\
-            std::to_string(speed[3]) + "," + std::to_string(speed[4]) + "," +\
-            std::to_string(speed[5]));
+  int res = _ptr_robot->GetActualTCPSpeed(flag, speed);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(speed[0]) + "," + std::to_string(speed[1]) + "," +
+    std::to_string(speed[2]) + "," + std::to_string(speed[3]) + "," + std::to_string(speed[4]) +
+    "," + std::to_string(speed[5]));
 }
 
 /**
@@ -4853,18 +5401,21 @@ std::string robot_command_thread::GetActualTCPSpeed(std::string para){
  * @param  [out] desc_pos  工具位姿
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetActualTCPPose(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetActualTCPPose(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    DescPose desc_pos;
-    int res = _ptr_robot->GetActualTCPPose(flag,&desc_pos);
-    return std::string(std::to_string(res) + "," + std::to_string(desc_pos.tran.x) + "," + \
-            std::to_string(desc_pos.tran.y) + "," + std::to_string(desc_pos.tran.z) + "," + \
-            std::to_string(desc_pos.rpy.rx) + "," + std::to_string(desc_pos.rpy.ry) + "," + \
-            std::to_string(desc_pos.rpy.rz));
+  DescPose desc_pos;
+  int res = _ptr_robot->GetActualTCPPose(flag, &desc_pos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(desc_pos.tran.x) + "," +
+    std::to_string(desc_pos.tran.y) + "," + std::to_string(desc_pos.tran.z) + "," +
+    std::to_string(desc_pos.rpy.rx) + "," + std::to_string(desc_pos.rpy.ry) + "," +
+    std::to_string(desc_pos.rpy.rz));
 }
 
 /**
@@ -4873,15 +5424,17 @@ std::string robot_command_thread::GetActualTCPPose(std::string para){
  * @param  [out] id  工具坐标系编号
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetActualTCPNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetActualTCPNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int id;
-    int res = _ptr_robot->GetActualTCPNum(flag,&id);
-    return std::string(std::to_string(res) + "," + std::to_string(id));
+  int id;
+  int res = _ptr_robot->GetActualTCPNum(flag, &id);
+  return std::string(std::to_string(res) + "," + std::to_string(id));
 }
 
 /**
@@ -4890,15 +5443,17 @@ std::string robot_command_thread::GetActualTCPNum(std::string para){
  * @param  [out] id  工件坐标系编号
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetActualWObjNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetActualWObjNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int id;
-    int res = _ptr_robot->GetActualWObjNum(flag,&id);
-    return std::string(std::to_string(res) + "," + std::to_string(id));
+  int id;
+  int res = _ptr_robot->GetActualWObjNum(flag, &id);
+  return std::string(std::to_string(res) + "," + std::to_string(id));
 }
 
 /**
@@ -4907,18 +5462,21 @@ std::string robot_command_thread::GetActualWObjNum(std::string para){
  * @param  [out] desc_pos  法兰位姿
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetActualToolFlangePose(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetActualToolFlangePose(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front().c_str());list.pop_front();
+  uint8_t flag = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    DescPose desc_pos;
-    int res = _ptr_robot->GetActualToolFlangePose(flag,&desc_pos);
-    return std::string(std::to_string(res) + "," + std::to_string(desc_pos.tran.x) + "," + \
-            std::to_string(desc_pos.tran.y) + "," + std::to_string(desc_pos.tran.z) + "," + \
-            std::to_string(desc_pos.rpy.rx) + "," + std::to_string(desc_pos.rpy.ry) + "," + \
-            std::to_string(desc_pos.rpy.rz));
+  DescPose desc_pos;
+  int res = _ptr_robot->GetActualToolFlangePose(flag, &desc_pos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(desc_pos.tran.x) + "," +
+    std::to_string(desc_pos.tran.y) + "," + std::to_string(desc_pos.tran.z) + "," +
+    std::to_string(desc_pos.rpy.rx) + "," + std::to_string(desc_pos.rpy.ry) + "," +
+    std::to_string(desc_pos.rpy.rz));
 }
 
 /**
@@ -4929,22 +5487,25 @@ std::string robot_command_thread::GetActualToolFlangePose(std::string para){
  * @param  [out] joint_pos 关节位置
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetInverseKinRef(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetInverseKinRef(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front());list.pop_front();
-    DescPose desc_pos;
-    _fillDescPose(list,desc_pos);
-    JointPos joint_pos_ref;
-    _fillJointPose(list,joint_pos_ref);
+  int type = std::stoi(list.front());
+  list.pop_front();
+  DescPose desc_pos;
+  _fillDescPose(list, desc_pos);
+  JointPos joint_pos_ref;
+  _fillJointPose(list, joint_pos_ref);
 
-    JointPos jntpose;
-    int res = _ptr_robot->GetInverseKinRef(type,&desc_pos,&joint_pos_ref,&jntpose);
-    return std::string(std::to_string(res) + "," + std::to_string(jntpose.jPos[0]) + "," +\
-            std::to_string(jntpose.jPos[1]) + "," + std::to_string(jntpose.jPos[2]) + "," +\
-            std::to_string(jntpose.jPos[3]) + "," + std::to_string(jntpose.jPos[4]) + "," +\
-            std::to_string(jntpose.jPos[5]));
+  JointPos jntpose;
+  int res = _ptr_robot->GetInverseKinRef(type, &desc_pos, &joint_pos_ref, &jntpose);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(jntpose.jPos[0]) + "," +
+    std::to_string(jntpose.jPos[1]) + "," + std::to_string(jntpose.jPos[2]) + "," +
+    std::to_string(jntpose.jPos[3]) + "," + std::to_string(jntpose.jPos[4]) + "," +
+    std::to_string(jntpose.jPos[5]));
 }
 
 /**
@@ -4955,19 +5516,21 @@ std::string robot_command_thread::GetInverseKinRef(std::string para){
  * @param  [out] result 0-无解，1-有解
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetInverseKinHasSolution(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetInverseKinHasSolution(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front());list.pop_front();
-    DescPose desc_pos;
-    _fillDescPose(list,desc_pos);
-    JointPos joint_pos_ref;
-    _fillJointPose(list,joint_pos_ref);
+  int type = std::stoi(list.front());
+  list.pop_front();
+  DescPose desc_pos;
+  _fillDescPose(list, desc_pos);
+  JointPos joint_pos_ref;
+  _fillJointPose(list, joint_pos_ref);
 
-    uint8_t result;
-    int res = _ptr_robot->GetInverseKinHasSolution(type,&desc_pos,&joint_pos_ref,&result);
-    return std::string(std::to_string(res) + "," + std::to_string(result));
+  uint8_t result;
+  int res = _ptr_robot->GetInverseKinHasSolution(type, &desc_pos, &joint_pos_ref, &result);
+  return std::string(std::to_string(res) + "," + std::to_string(result));
 }
 
 /**
@@ -4981,31 +5544,42 @@ std::string robot_command_thread::GetInverseKinHasSolution(std::string para){
  * @param [in] config 关节空间配置，[-1]-参考当前关节位置解算，[0~7]-依据特定关节空间配置求解
  * @return 错误码
  */
-std::string robot_command_thread::GetInverseKinExaxis(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetInverseKinExaxis(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front());list.pop_front();
-    DescPose desc_pos;
-    _fillDescPose(list,desc_pos);
-    ExaxisPos exaxis;
-    exaxis.ePos[0] = std::stod(list.front().c_str());list.pop_front();
-    exaxis.ePos[1] = std::stod(list.front().c_str());list.pop_front();
-    exaxis.ePos[2] = std::stod(list.front().c_str());list.pop_front();
-    exaxis.ePos[3] = std::stod(list.front().c_str());list.pop_front();
-    int tool = std::stoi(list.front());list.pop_front();
-    int workPiece = std::stoi(list.front());list.pop_front();
-    int config = -1;
-    if(!list.empty()){
-        config = std::stoi(list.front());list.pop_front();
-    }
+  int type = std::stoi(list.front());
+  list.pop_front();
+  DescPose desc_pos;
+  _fillDescPose(list, desc_pos);
+  ExaxisPos exaxis;
+  exaxis.ePos[0] = std::stod(list.front().c_str());
+  list.pop_front();
+  exaxis.ePos[1] = std::stod(list.front().c_str());
+  list.pop_front();
+  exaxis.ePos[2] = std::stod(list.front().c_str());
+  list.pop_front();
+  exaxis.ePos[3] = std::stod(list.front().c_str());
+  list.pop_front();
+  int tool = std::stoi(list.front());
+  list.pop_front();
+  int workPiece = std::stoi(list.front());
+  list.pop_front();
+  int config = -1;
+  if (!list.empty()) {
+    config = std::stoi(list.front());
+    list.pop_front();
+  }
 
-    JointPos joint_pos;
-    int res = _ptr_robot->GetInverseKinExaxis(type,desc_pos,exaxis,tool,workPiece,joint_pos,config);
-    return std::string(std::to_string(res) + "," + std::to_string(joint_pos.jPos[0]) + "," +\
-            std::to_string(joint_pos.jPos[1]) + "," + std::to_string(joint_pos.jPos[2]) + "," +\
-            std::to_string(joint_pos.jPos[3]) + "," + std::to_string(joint_pos.jPos[4]) + "," +\
-            std::to_string(joint_pos.jPos[5]));
+  JointPos joint_pos;
+  int res =
+    _ptr_robot->GetInverseKinExaxis(type, desc_pos, exaxis, tool, workPiece, joint_pos, config);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(joint_pos.jPos[0]) + "," +
+    std::to_string(joint_pos.jPos[1]) + "," + std::to_string(joint_pos.jPos[2]) + "," +
+    std::to_string(joint_pos.jPos[3]) + "," + std::to_string(joint_pos.jPos[4]) + "," +
+    std::to_string(joint_pos.jPos[5]));
 }
 
 /**
@@ -5014,19 +5588,21 @@ std::string robot_command_thread::GetInverseKinExaxis(std::string para){
  * @param  [out] desc_pos 笛卡尔位姿
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetForwardKin(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetForwardKin(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    JointPos joint_pos;
-    _fillJointPose(list,joint_pos);
+  JointPos joint_pos;
+  _fillJointPose(list, joint_pos);
 
-    DescPose desc_pos;
-    int res = _ptr_robot->GetForwardKin(&joint_pos,&desc_pos);
-    return std::string(std::to_string(res) + "," + std::to_string(desc_pos.tran.x) + "," + \
-            std::to_string(desc_pos.tran.y) + "," + std::to_string(desc_pos.tran.z) + "," + \
-            std::to_string(desc_pos.rpy.rx) + "," + std::to_string(desc_pos.rpy.ry) + "," + \
-            std::to_string(desc_pos.rpy.rz));
+  DescPose desc_pos;
+  int res = _ptr_robot->GetForwardKin(&joint_pos, &desc_pos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(desc_pos.tran.x) + "," +
+    std::to_string(desc_pos.tran.y) + "," + std::to_string(desc_pos.tran.z) + "," +
+    std::to_string(desc_pos.rpy.rx) + "," + std::to_string(desc_pos.rpy.ry) + "," +
+    std::to_string(desc_pos.rpy.rz));
 }
 
 /**
@@ -5035,18 +5611,20 @@ std::string robot_command_thread::GetForwardKin(std::string para){
  * @param  [out] torques 关节转矩
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetJointTorques(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetJointTorques(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front());list.pop_front();
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
 
-    float torques[6];
-    int res = _ptr_robot->GetJointTorques(flag,torques);
-    return std::string(std::to_string(res) + "," + std::to_string(torques[0]) + "," +\
-            std::to_string(torques[1]) + "," + std::to_string(torques[2]) + "," +\
-            std::to_string(torques[3]) + "," + std::to_string(torques[4]) + "," +\
-            std::to_string(torques[5]));
+  float torques[6];
+  int res = _ptr_robot->GetJointTorques(flag, torques);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(torques[0]) + "," + std::to_string(torques[1]) +
+    "," + std::to_string(torques[2]) + "," + std::to_string(torques[3]) + "," +
+    std::to_string(torques[4]) + "," + std::to_string(torques[5]));
 }
 
 /**
@@ -5055,15 +5633,17 @@ std::string robot_command_thread::GetJointTorques(std::string para){
  * @param  [out] weight 负载重量，单位kg
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetTargetPayload(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetTargetPayload(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front());list.pop_front();
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
 
-    float weight;
-    int res = _ptr_robot->GetTargetPayload(flag,&weight);
-    return std::string(std::to_string(res) + "," + std::to_string(weight));
+  float weight;
+  int res = _ptr_robot->GetTargetPayload(flag, &weight);
+  return std::string(std::to_string(res) + "," + std::to_string(weight));
 }
 
 /**
@@ -5072,16 +5652,19 @@ std::string robot_command_thread::GetTargetPayload(std::string para){
  * @param  [out] cog 负载质心，单位mm
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetTargetPayloadCog(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetTargetPayloadCog(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front());list.pop_front();
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
 
-    DescTran cog;
-    int res = _ptr_robot->GetTargetPayloadCog(flag,&cog);
-    return std::string(std::to_string(res) + "," + std::to_string(cog.x) + "," +\
-            std::to_string(cog.y) + "," + std::to_string(cog.z));
+  DescTran cog;
+  int res = _ptr_robot->GetTargetPayloadCog(flag, &cog);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(cog.x) + "," + std::to_string(cog.y) + "," +
+    std::to_string(cog.z));
 }
 
 /**
@@ -5090,18 +5673,21 @@ std::string robot_command_thread::GetTargetPayloadCog(std::string para){
  * @param  [out] desc_pos 工件坐标系位姿
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetWObjOffset(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetWObjOffset(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front());list.pop_front();
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
 
-    DescPose desc_pos;
-    int res = _ptr_robot->GetWObjOffset(flag,&desc_pos);
-    return std::string(std::to_string(res) + "," + std::to_string(desc_pos.tran.x) + "," + \
-            std::to_string(desc_pos.tran.y) + "," + std::to_string(desc_pos.tran.z) + "," + \
-            std::to_string(desc_pos.rpy.rx) + "," + std::to_string(desc_pos.rpy.ry) + "," + \
-            std::to_string(desc_pos.rpy.rz));
+  DescPose desc_pos;
+  int res = _ptr_robot->GetWObjOffset(flag, &desc_pos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(desc_pos.tran.x) + "," +
+    std::to_string(desc_pos.tran.y) + "," + std::to_string(desc_pos.tran.z) + "," +
+    std::to_string(desc_pos.rpy.rx) + "," + std::to_string(desc_pos.rpy.ry) + "," +
+    std::to_string(desc_pos.rpy.rz));
 }
 
 /**
@@ -5111,22 +5697,24 @@ std::string robot_command_thread::GetWObjOffset(std::string para){
  * @param  [out] positive  正限位角度，单位deg
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetJointSoftLimitDeg(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetJointSoftLimitDeg(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front());list.pop_front();
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
 
-    float negative[6];
-    float positive[6];
-    int res = _ptr_robot->GetJointSoftLimitDeg(flag,negative,positive);
-    return std::string(std::to_string(res) + "," + std::to_string(negative[0]) + "," +\
-            std::to_string(negative[1]) + "," + std::to_string(negative[2]) + "," +\
-            std::to_string(negative[3]) + "," + std::to_string(negative[4]) + "," +\
-            std::to_string(negative[5]) + "," + std::to_string(positive[0]) + "," +\
-            std::to_string(positive[1]) + "," + std::to_string(positive[2]) + "," +\
-            std::to_string(positive[3]) + "," + std::to_string(positive[4]) + "," +\
-            std::to_string(positive[5]));
+  float negative[6];
+  float positive[6];
+  int res = _ptr_robot->GetJointSoftLimitDeg(flag, negative, positive);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(negative[0]) + "," + std::to_string(negative[1]) +
+    "," + std::to_string(negative[2]) + "," + std::to_string(negative[3]) + "," +
+    std::to_string(negative[4]) + "," + std::to_string(negative[5]) + "," +
+    std::to_string(positive[0]) + "," + std::to_string(positive[1]) + "," +
+    std::to_string(positive[2]) + "," + std::to_string(positive[3]) + "," +
+    std::to_string(positive[4]) + "," + std::to_string(positive[5]));
 }
 
 /**
@@ -5134,10 +5722,11 @@ std::string robot_command_thread::GetJointSoftLimitDeg(std::string para){
  * @param  [out] t_ms 单位ms
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetSystemClock(std::string para){
-    float t_ms;
-    int res = _ptr_robot->GetSystemClock(&t_ms);
-    return std::string(std::to_string(res) + "," + std::to_string(t_ms));
+std::string robot_command_thread::GetSystemClock(std::string para)
+{
+  float t_ms;
+  int res = _ptr_robot->GetSystemClock(&t_ms);
+  return std::string(std::to_string(res) + "," + std::to_string(t_ms));
 }
 
 /**
@@ -5145,10 +5734,11 @@ std::string robot_command_thread::GetSystemClock(std::string para){
  * @param  [out]  config  关节空间配置，范围[0~7]
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetRobotCurJointsConfig(std::string para){
-    int config;
-    int res = _ptr_robot->GetRobotCurJointsConfig(&config);
-    return std::string(std::to_string(res) + "," + std::to_string(config));
+std::string robot_command_thread::GetRobotCurJointsConfig(std::string para)
+{
+  int config;
+  int res = _ptr_robot->GetRobotCurJointsConfig(&config);
+  return std::string(std::to_string(res) + "," + std::to_string(config));
 }
 
 /**
@@ -5156,10 +5746,11 @@ std::string robot_command_thread::GetRobotCurJointsConfig(std::string para){
  * @param  [out]  vel  速度，单位mm/s
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetDefaultTransVel(std::string para){
-    float vel;
-    int res = _ptr_robot->GetDefaultTransVel(&vel);
-    return std::string(std::to_string(res) + "," + std::to_string(vel));
+std::string robot_command_thread::GetDefaultTransVel(std::string para)
+{
+  float vel;
+  int res = _ptr_robot->GetDefaultTransVel(&vel);
+  return std::string(std::to_string(res) + "," + std::to_string(vel));
 }
 
 /**
@@ -5167,10 +5758,11 @@ std::string robot_command_thread::GetDefaultTransVel(std::string para){
  * @param  [out]  state  0-未完成，1-完成
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetRobotMotionDone(std::string para){
-    uint8_t state;
-    int res = _ptr_robot->GetRobotMotionDone(&state);
-    return std::string(std::to_string(res) + "," + std::to_string(state));
+std::string robot_command_thread::GetRobotMotionDone(std::string para)
+{
+  uint8_t state;
+  int res = _ptr_robot->GetRobotMotionDone(&state);
+  return std::string(std::to_string(res) + "," + std::to_string(state));
 }
 
 /**
@@ -5179,11 +5771,13 @@ std::string robot_command_thread::GetRobotMotionDone(std::string para){
  * @param  [out]  subcode   子错误码
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetRobotErrorCode(std::string para){
-    int maincode;
-    int subcode;
-    int res = _ptr_robot->GetRobotErrorCode(&maincode,&subcode);
-    return std::string(std::to_string(res) + "," + std::to_string(maincode) + "," + std::to_string(subcode));
+std::string robot_command_thread::GetRobotErrorCode(std::string para)
+{
+  int maincode;
+  int subcode;
+  int res = _ptr_robot->GetRobotErrorCode(&maincode, &subcode);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(maincode) + "," + std::to_string(subcode));
 }
 
 /**
@@ -5192,26 +5786,26 @@ std::string robot_command_thread::GetRobotErrorCode(std::string para){
  * @param  [out]  data   点位数据
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetRobotTeachingPoint(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetRobotTeachingPoint(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    char name[64];
-    list.front().copy(name,list.front().size());list.pop_front();
+  char name[64];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
 
-    float data[20];
-    int res = _ptr_robot->GetRobotTeachingPoint(name,data);
-    return std::string(std::to_string(res) + "," + std::to_string(data[0]) + "," +\
-            std::to_string(data[1]) + "," + std::to_string(data[2]) + "," +\
-            std::to_string(data[3]) + "," + std::to_string(data[4]) + "," +\
-            std::to_string(data[5]) + "," + std::to_string(data[6]) + "," +\
-            std::to_string(data[7]) + "," + std::to_string(data[8]) + "," +\
-            std::to_string(data[9]) + "," + std::to_string(data[10]) + "," +\
-            std::to_string(data[11]) + "," + std::to_string(data[12]) + "," +\
-            std::to_string(data[13]) + "," + std::to_string(data[14]) + "," +\
-            std::to_string(data[15]) + "," + std::to_string(data[16]) + "," +\
-            std::to_string(data[17]) + "," + std::to_string(data[18]) + "," +\
-            std::to_string(data[19]));
+  float data[20];
+  int res = _ptr_robot->GetRobotTeachingPoint(name, data);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(data[0]) + "," + std::to_string(data[1]) + "," +
+    std::to_string(data[2]) + "," + std::to_string(data[3]) + "," + std::to_string(data[4]) + "," +
+    std::to_string(data[5]) + "," + std::to_string(data[6]) + "," + std::to_string(data[7]) + "," +
+    std::to_string(data[8]) + "," + std::to_string(data[9]) + "," + std::to_string(data[10]) + "," +
+    std::to_string(data[11]) + "," + std::to_string(data[12]) + "," + std::to_string(data[13]) +
+    "," + std::to_string(data[14]) + "," + std::to_string(data[15]) + "," +
+    std::to_string(data[16]) + "," + std::to_string(data[17]) + "," + std::to_string(data[18]) +
+    "," + std::to_string(data[19]));
 }
 
 /**
@@ -5219,10 +5813,11 @@ std::string robot_command_thread::GetRobotTeachingPoint(std::string para){
  * @param  [out]  len  缓存长度
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetMotionQueueLength(std::string para){
-    int len;
-    int res = _ptr_robot->GetMotionQueueLength(&len);
-    return std::string(std::to_string(res) + "," + std::to_string(len));
+std::string robot_command_thread::GetMotionQueueLength(std::string para)
+{
+  int len;
+  int res = _ptr_robot->GetMotionQueueLength(&len);
+  return std::string(std::to_string(res) + "," + std::to_string(len));
 }
 
 /**
@@ -5234,20 +5829,26 @@ std::string robot_command_thread::GetMotionQueueLength(std::string para){
  * @param  [in] do_choose  DO选择,bit0~bit7对应控制箱DO0~DO7，bit8~bit9对应末端DO0~DO1，0-不选择，1-选择
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTPDParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetTPDParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front());list.pop_front();
-    char name[30];
-    list.front().copy(name,list.front().size());list.pop_front();
-    int period_ms = std::stoi(list.front());list.pop_front();
-    uint16_t di_choose = std::stoi(list.front());list.pop_front();
-    uint16_t do_choose = std::stoi(list.front());list.pop_front();
+  int type = std::stoi(list.front());
+  list.pop_front();
+  char name[30];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
+  int period_ms = std::stoi(list.front());
+  list.pop_front();
+  uint16_t di_choose = std::stoi(list.front());
+  list.pop_front();
+  uint16_t do_choose = std::stoi(list.front());
+  list.pop_front();
 
-    float data[20];
-    int res = _ptr_robot->SetTPDParam(type,name,period_ms,di_choose,do_choose);
-    return std::string(std::to_string(res));
+  float data[20];
+  int res = _ptr_robot->SetTPDParam(type, name, period_ms, di_choose, do_choose);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5259,29 +5860,36 @@ std::string robot_command_thread::SetTPDParam(std::string para){
  * @param  [in] do_choose  DO选择,bit0~bit7对应控制箱DO0~DO7，bit8~bit9对应末端DO0~DO1，0-不选择，1-选择
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTPDStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetTPDStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front());list.pop_front();
-    char name[30];
-    list.front().copy(name,list.front().size());list.pop_front();
-    int period_ms = std::stoi(list.front());list.pop_front();
-    uint16_t di_choose = std::stoi(list.front());list.pop_front();
-    uint16_t do_choose = std::stoi(list.front());list.pop_front();
+  int type = std::stoi(list.front());
+  list.pop_front();
+  char name[30];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
+  int period_ms = std::stoi(list.front());
+  list.pop_front();
+  uint16_t di_choose = std::stoi(list.front());
+  list.pop_front();
+  uint16_t do_choose = std::stoi(list.front());
+  list.pop_front();
 
-    float data[20];
-    int res = _ptr_robot->SetTPDStart(type,name,period_ms,di_choose,do_choose);
-    return std::string(std::to_string(res));
+  float data[20];
+  int res = _ptr_robot->SetTPDStart(type, name, period_ms, di_choose, do_choose);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief  停止轨迹记录
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetWebTPDStop(std::string para){
-    int res = _ptr_robot->SetWebTPDStop();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetWebTPDStop(std::string para)
+{
+  int res = _ptr_robot->SetWebTPDStop();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5289,15 +5897,17 @@ std::string robot_command_thread::SetWebTPDStop(std::string para){
  * @param  [in] name  轨迹文件名
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTPDDelete(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    
-    char name[30];
-    list.front().copy(name,list.front().size());list.pop_front();
+std::string robot_command_thread::SetTPDDelete(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int res = _ptr_robot->SetTPDDelete(name);
-    return std::string(std::to_string(res));
+  char name[30];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
+
+  int res = _ptr_robot->SetTPDDelete(name);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5305,15 +5915,17 @@ std::string robot_command_thread::SetTPDDelete(std::string para){
  * @param  [in] name  轨迹文件名
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LoadTPD(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LoadTPD(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    char name[30];
-    list.front().copy(name,list.front().size());list.pop_front();
-    
-    int res = _ptr_robot->LoadTPD(name);
-    return std::string(std::to_string(res));
+  char name[30];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
+
+  int res = _ptr_robot->LoadTPD(name);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5321,19 +5933,22 @@ std::string robot_command_thread::LoadTPD(std::string para){
  * @param  [in] name 轨迹文件名
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetTPDStartPose(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetTPDStartPose(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    char name[30];
-    list.front().copy(name,list.front().size());list.pop_front();
-    
-    DescPose desc_pose;
-    int res = _ptr_robot->GetTPDStartPose(name,&desc_pose);
-    return std::string(std::to_string(res) + "," + std::to_string(desc_pose.tran.x) + "," + \
-            std::to_string(desc_pose.tran.y) + "," + std::to_string(desc_pose.tran.z) + "," + \
-            std::to_string(desc_pose.rpy.rx) + "," + std::to_string(desc_pose.rpy.ry) + "," + \
-            std::to_string(desc_pose.rpy.rz));
+  char name[30];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
+
+  DescPose desc_pose;
+  int res = _ptr_robot->GetTPDStartPose(name, &desc_pose);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(desc_pose.tran.x) + "," +
+    std::to_string(desc_pose.tran.y) + "," + std::to_string(desc_pose.tran.z) + "," +
+    std::to_string(desc_pose.rpy.rx) + "," + std::to_string(desc_pose.rpy.ry) + "," +
+    std::to_string(desc_pose.rpy.rz));
 }
 
 /**
@@ -5343,17 +5958,21 @@ std::string robot_command_thread::GetTPDStartPose(std::string para){
  * @param  [in] ovl  速度缩放百分比，范围[0~100]
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveTPD(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MoveTPD(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    char name[30];
-    list.front().copy(name,list.front().size());list.pop_front();
-    uint8_t blend = std::stoi(list.front());list.pop_front();
-    float ovl = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->MoveTPD(name,blend,ovl);
-    return std::string(std::to_string(res));
+  char name[30];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
+  uint8_t blend = std::stoi(list.front());
+  list.pop_front();
+  float ovl = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->MoveTPD(name, blend, ovl);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5361,19 +5980,26 @@ std::string robot_command_thread::MoveTPD(std::string para){
  * @param  [in] ft 三个方向的力和扭矩，单位N和Nm
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTrajectoryJForceTorque(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    ForceTorque ft;
-    ft.fx = std::stod(list.front());list.pop_front();
-    ft.fy = std::stod(list.front());list.pop_front();
-    ft.fz = std::stod(list.front());list.pop_front();
-    ft.tx = std::stod(list.front());list.pop_front();
-    ft.ty = std::stod(list.front());list.pop_front();
-    ft.tz = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetTrajectoryJForceTorque(&ft);
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetTrajectoryJForceTorque(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  ForceTorque ft;
+  ft.fx = std::stod(list.front());
+  list.pop_front();
+  ft.fy = std::stod(list.front());
+  list.pop_front();
+  ft.fz = std::stod(list.front());
+  list.pop_front();
+  ft.tx = std::stod(list.front());
+  list.pop_front();
+  ft.ty = std::stod(list.front());
+  list.pop_front();
+  ft.tz = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetTrajectoryJForceTorque(&ft);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5381,13 +6007,15 @@ std::string robot_command_thread::SetTrajectoryJForceTorque(std::string para){
  * @param  [in] fx 沿x方向的力，单位N
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTrajectoryJForceFx(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    double fx = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetTrajectoryJForceFx(fx);
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetTrajectoryJForceFx(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  double fx = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetTrajectoryJForceFx(fx);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5395,13 +6023,15 @@ std::string robot_command_thread::SetTrajectoryJForceFx(std::string para){
  * @param  [in] fy 沿y方向的力，单位N
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTrajectoryJForceFy(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    double fy = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetTrajectoryJForceFy(fy);
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetTrajectoryJForceFy(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  double fy = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetTrajectoryJForceFy(fy);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5409,13 +6039,15 @@ std::string robot_command_thread::SetTrajectoryJForceFy(std::string para){
  * @param  [in] fz 沿x方向的力，单位N
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTrajectoryJForceFz(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    double fz = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetTrajectoryJForceFz(fz);
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetTrajectoryJForceFz(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  double fz = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetTrajectoryJForceFz(fz);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5423,13 +6055,15 @@ std::string robot_command_thread::SetTrajectoryJForceFz(std::string para){
  * @param  [in] tx 绕x轴的扭矩，单位Nm
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTrajectoryJTorqueTx(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    double tx = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetTrajectoryJTorqueTx(tx);
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetTrajectoryJTorqueTx(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  double tx = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetTrajectoryJTorqueTx(tx);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5437,13 +6071,15 @@ std::string robot_command_thread::SetTrajectoryJTorqueTx(std::string para){
  * @param  [in] ty 绕y轴的扭矩，单位Nm
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTrajectoryJTorqueTy(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    double ty = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetTrajectoryJTorqueTy(ty);
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetTrajectoryJTorqueTy(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  double ty = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetTrajectoryJTorqueTy(ty);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5451,13 +6087,15 @@ std::string robot_command_thread::SetTrajectoryJTorqueTy(std::string para){
  * @param  [in] tz 绕z轴的扭矩，单位Nm
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetTrajectoryJTorqueTz(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    double tz = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetTrajectoryJTorqueTz(tz);
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetTrajectoryJTorqueTz(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  double tz = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetTrajectoryJTorqueTz(tz);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5466,16 +6104,19 @@ std::string robot_command_thread::SetTrajectoryJTorqueTz(std::string para){
  * @param  [in] program_name 作业程序名及路径，如"/fruser/movej.lua"，其中"/fruser/"为固定路径
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LoadDefaultProgConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LoadDefaultProgConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front());list.pop_front();
-    char program_name[64];
-    list.front().copy(program_name,list.front().size());list.pop_front();
-    
-    int res = _ptr_robot->LoadDefaultProgConfig(flag,program_name);
-    return std::string(std::to_string(res));
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
+  char program_name[64];
+  list.front().copy(program_name, list.front().size());
+  list.pop_front();
+
+  int res = _ptr_robot->LoadDefaultProgConfig(flag, program_name);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5483,15 +6124,17 @@ std::string robot_command_thread::LoadDefaultProgConfig(std::string para){
  * @param  [in] program_name 作业程序名及路径，如"/fruser/movej.lua"，其中"/fruser/"为固定路径
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ProgramLoad(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ProgramLoad(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    char program_name[64];
-    list.front().copy(program_name,list.front().size());list.pop_front();
-    
-    int res = _ptr_robot->ProgramLoad(program_name);
-    return std::string(std::to_string(res));
+  char program_name[64];
+  list.front().copy(program_name, list.front().size());
+  list.pop_front();
+
+  int res = _ptr_robot->ProgramLoad(program_name);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5499,15 +6142,17 @@ std::string robot_command_thread::ProgramLoad(std::string para){
  * @param  [out] program_name 作业程序名及路径，如"/fruser/movej.lua"，其中"/fruser/"为固定路径
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetLoadedProgram(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetLoadedProgram(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    char program_name[64];
-    list.front().copy(program_name,list.front().size());list.pop_front();
-    
-    int res = _ptr_robot->GetLoadedProgram(program_name);
-    return std::string(std::to_string(res));
+  char program_name[64];
+  list.front().copy(program_name, list.front().size());
+  list.pop_front();
+
+  int res = _ptr_robot->GetLoadedProgram(program_name);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5515,46 +6160,51 @@ std::string robot_command_thread::GetLoadedProgram(std::string para){
  * @param  [out] line  行号
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetCurrentLine(std::string para){
-    int line;     
-    int res = _ptr_robot->GetCurrentLine(&line);
-    return std::string(std::to_string(res) + "," + std::to_string(line));
+std::string robot_command_thread::GetCurrentLine(std::string para)
+{
+  int line;
+  int res = _ptr_robot->GetCurrentLine(&line);
+  return std::string(std::to_string(res) + "," + std::to_string(line));
 }
 
 /**
  * @brief  运行当前加载的作业程序
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ProgramRun(std::string para){
-    int res = _ptr_robot->ProgramRun();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ProgramRun(std::string para)
+{
+  int res = _ptr_robot->ProgramRun();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief  暂停当前运行的作业程序
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ProgramPause(std::string para){
-    int res = _ptr_robot->ProgramPause();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ProgramPause(std::string para)
+{
+  int res = _ptr_robot->ProgramPause();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief  恢复当前暂停的作业程序
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ProgramResume(std::string para){
-    int res = _ptr_robot->ProgramResume();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ProgramResume(std::string para)
+{
+  int res = _ptr_robot->ProgramResume();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief  终止当前运行的作业程序
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ProgramStop(std::string para){
-    int res = _ptr_robot->ProgramStop();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ProgramStop(std::string para)
+{
+  int res = _ptr_robot->ProgramStop();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5562,10 +6212,11 @@ std::string robot_command_thread::ProgramStop(std::string para){
  * @param  [out]  state 1-程序停止或无程序运行，2-程序运行中，3-程序暂停
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetProgramState(std::string para){
-    uint8_t state;
-    int res = _ptr_robot->GetProgramState(&state);
-    return std::string(std::to_string(res) + "," + std::to_string(state));
+std::string robot_command_thread::GetProgramState(std::string para)
+{
+  uint8_t state;
+  int res = _ptr_robot->GetProgramState(&state);
+  return std::string(std::to_string(res) + "," + std::to_string(state));
 }
 
 /**
@@ -5576,18 +6227,22 @@ std::string robot_command_thread::GetProgramState(std::string para){
  * @param  [in] bus 设备挂在末端总线位置，暂不使用，默认为0
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetGripperConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetGripperConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int company = std::stoi(list.front());list.pop_front();
-    int device = std::stoi(list.front());list.pop_front();
-    int softvesion = std::stoi(list.front());list.pop_front();
-    int bus = std::stoi(list.front());list.pop_front();
+  int company = std::stoi(list.front());
+  list.pop_front();
+  int device = std::stoi(list.front());
+  list.pop_front();
+  int softvesion = std::stoi(list.front());
+  list.pop_front();
+  int bus = std::stoi(list.front());
+  list.pop_front();
 
-
-    int res = _ptr_robot->SetGripperConfig(company,device,softvesion,bus);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetGripperConfig(company, device, softvesion, bus);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5598,16 +6253,17 @@ std::string robot_command_thread::SetGripperConfig(std::string para){
  *@param  [out] bus 设备挂在末端总线位置，暂不使用，默认为0
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetGripperConfig(std::string para){
-    int company;
-    int device;
-    int softvesion;
-    int bus;
+std::string robot_command_thread::GetGripperConfig(std::string para)
+{
+  int company;
+  int device;
+  int softvesion;
+  int bus;
 
-    int res = _ptr_robot->GetGripperConfig(&company,&device,&softvesion,&bus);
-    return std::string(std::to_string(res) + "," + std::to_string(company) + "," + \
-            std::to_string(device) + "," + std::to_string(softvesion) + "," + \
-            std::to_string(bus));
+  int res = _ptr_robot->GetGripperConfig(&company, &device, &softvesion, &bus);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(company) + "," + std::to_string(device) + "," +
+    std::to_string(softvesion) + "," + std::to_string(bus));
 }
 
 /**
@@ -5616,13 +6272,14 @@ std::string robot_command_thread::GetGripperConfig(std::string para){
  * @param  [out] status  0-运动未完成，1-运动完成未检测到物体，2-运动完成检测到物体
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::GetGripperMotionDone(std::string para){
-    uint16_t fault;
-    uint8_t status;
+std::string robot_command_thread::GetGripperMotionDone(std::string para)
+{
+  uint16_t fault;
+  uint8_t status;
 
-    int res = _ptr_robot->GetGripperMotionDone(&fault,&status);
-    return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + \
-            std::to_string(status));
+  int res = _ptr_robot->GetGripperMotionDone(&fault, &status);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(fault) + "," + std::to_string(status));
 }
 
 /**
@@ -5631,13 +6288,14 @@ std::string robot_command_thread::GetGripperMotionDone(std::string para){
  * @param  [out] status  bit0~bit15对应夹爪编号0~15，bit=0为未激活，bit=1为激活
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetGripperActivateStatus(std::string para){
-    uint16_t fault;
-    uint16_t status;
+std::string robot_command_thread::GetGripperActivateStatus(std::string para)
+{
+  uint16_t fault;
+  uint16_t status;
 
-    int res = _ptr_robot->GetGripperActivateStatus(&fault,&status);
-    return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + \
-            std::to_string(status));
+  int res = _ptr_robot->GetGripperActivateStatus(&fault, &status);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(fault) + "," + std::to_string(status));
 }
 
 /**
@@ -5646,13 +6304,14 @@ std::string robot_command_thread::GetGripperActivateStatus(std::string para){
  * @param  [out] position  位置百分比，范围0~100%
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetGripperCurPosition(std::string para){
-    uint16_t fault;
-    uint8_t position;
+std::string robot_command_thread::GetGripperCurPosition(std::string para)
+{
+  uint16_t fault;
+  uint8_t position;
 
-    int res = _ptr_robot->GetGripperCurPosition(&fault,&position);
-    return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + \
-            std::to_string(position));
+  int res = _ptr_robot->GetGripperCurPosition(&fault, &position);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(fault) + "," + std::to_string(position));
 }
 
 /**
@@ -5661,13 +6320,14 @@ std::string robot_command_thread::GetGripperCurPosition(std::string para){
  * @param  [out] speed  速度百分比，范围0~100%
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetGripperCurSpeed(std::string para){
-    uint16_t fault;
-    int8_t speed;
+std::string robot_command_thread::GetGripperCurSpeed(std::string para)
+{
+  uint16_t fault;
+  int8_t speed;
 
-    int res = _ptr_robot->GetGripperCurSpeed(&fault,&speed);
-    return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + \
-            std::to_string(speed));
+  int res = _ptr_robot->GetGripperCurSpeed(&fault, &speed);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(fault) + "," + std::to_string(speed));
 }
 
 /**
@@ -5676,13 +6336,14 @@ std::string robot_command_thread::GetGripperCurSpeed(std::string para){
  * @param  [out] current  电流百分比，范围0~100%
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetGripperCurCurrent(std::string para){
-    uint16_t fault;
-    int8_t current;
+std::string robot_command_thread::GetGripperCurCurrent(std::string para)
+{
+  uint16_t fault;
+  int8_t current;
 
-    int res = _ptr_robot->GetGripperCurCurrent(&fault,&current);
-    return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + \
-            std::to_string(current));
+  int res = _ptr_robot->GetGripperCurCurrent(&fault, &current);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(fault) + "," + std::to_string(current));
 }
 
 /**
@@ -5691,13 +6352,14 @@ std::string robot_command_thread::GetGripperCurCurrent(std::string para){
  * @param  [out] voltage  电压,单位0.1V
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetGripperVoltage(std::string para){
-    uint16_t fault;
-    int voltage;
+std::string robot_command_thread::GetGripperVoltage(std::string para)
+{
+  uint16_t fault;
+  int voltage;
 
-    int res = _ptr_robot->GetGripperVoltage(&fault,&voltage);
-    return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + \
-            std::to_string(voltage));
+  int res = _ptr_robot->GetGripperVoltage(&fault, &voltage);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(fault) + "," + std::to_string(voltage));
 }
 
 /**
@@ -5706,13 +6368,14 @@ std::string robot_command_thread::GetGripperVoltage(std::string para){
  * @param  [out] temp  温度，单位℃
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetGripperTemp(std::string para){
-    uint16_t fault;
-    int temp;
+std::string robot_command_thread::GetGripperTemp(std::string para)
+{
+  uint16_t fault;
+  int temp;
 
-    int res = _ptr_robot->GetGripperTemp(&fault,&temp);
-    return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + \
-            std::to_string(temp));
+  int res = _ptr_robot->GetGripperTemp(&fault, &temp);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(fault) + "," + std::to_string(temp));
 }
 
 /**
@@ -5721,13 +6384,13 @@ std::string robot_command_thread::GetGripperTemp(std::string para){
  * @param  [out] num  旋转圈数
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetGripperRotNum(std::string para){
-    uint16_t fault;
-    double num;
+std::string robot_command_thread::GetGripperRotNum(std::string para)
+{
+  uint16_t fault;
+  double num;
 
-    int res = _ptr_robot->GetGripperRotNum(&fault,&num);
-    return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + \
-            std::to_string(num));
+  int res = _ptr_robot->GetGripperRotNum(&fault, &num);
+  return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + std::to_string(num));
 }
 
 /**
@@ -5736,13 +6399,14 @@ std::string robot_command_thread::GetGripperRotNum(std::string para){
  * @param  [out] speed  旋转速度百分比
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetGripperRotSpeed(std::string para){
-    uint16_t fault;
-    int speed;
+std::string robot_command_thread::GetGripperRotSpeed(std::string para)
+{
+  uint16_t fault;
+  int speed;
 
-    int res = _ptr_robot->GetGripperRotSpeed(&fault,&speed);
-    return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + \
-            std::to_string(speed));
+  int res = _ptr_robot->GetGripperRotSpeed(&fault, &speed);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(fault) + "," + std::to_string(speed));
 }
 
 /**
@@ -5751,13 +6415,14 @@ std::string robot_command_thread::GetGripperRotSpeed(std::string para){
  * @param  [out] torque  旋转力矩百分比
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetGripperRotTorque(std::string para){
-    uint16_t fault;
-    int torque;
+std::string robot_command_thread::GetGripperRotTorque(std::string para)
+{
+  uint16_t fault;
+  int torque;
 
-    int res = _ptr_robot->GetGripperRotTorque(&fault,&torque);
-    return std::string(std::to_string(res) + "," + std::to_string(fault) + "," + \
-            std::to_string(torque));
+  int res = _ptr_robot->GetGripperRotTorque(&fault, &torque);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(fault) + "," + std::to_string(torque));
 }
 
 /**
@@ -5768,22 +6433,26 @@ std::string robot_command_thread::GetGripperRotTorque(std::string para){
  * @param  [out] pre_pos  预抓取点
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ComputePrePick(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ComputePrePick(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    DescPose desc_pos;
-    _fillDescPose(list,desc_pos);
-    double zlength = std::stod(list.front());list.pop_front();
-    double zangle = std::stod(list.front());list.pop_front();
+  DescPose desc_pos;
+  _fillDescPose(list, desc_pos);
+  double zlength = std::stod(list.front());
+  list.pop_front();
+  double zangle = std::stod(list.front());
+  list.pop_front();
 
-    DescPose pre_pos;
+  DescPose pre_pos;
 
-    int res = _ptr_robot->ComputePrePick(&desc_pos,zlength,zangle,&pre_pos);
-    return std::string(std::to_string(res) + "," + std::to_string(pre_pos.tran.x) + "," + \
-            std::to_string(pre_pos.tran.y) + "," + std::to_string(pre_pos.tran.z) + "," + \
-            std::to_string(pre_pos.rpy.rx) + "," + std::to_string(pre_pos.rpy.ry) + "," + \
-            std::to_string(pre_pos.rpy.rz));
+  int res = _ptr_robot->ComputePrePick(&desc_pos, zlength, zangle, &pre_pos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(pre_pos.tran.x) + "," +
+    std::to_string(pre_pos.tran.y) + "," + std::to_string(pre_pos.tran.z) + "," +
+    std::to_string(pre_pos.rpy.rx) + "," + std::to_string(pre_pos.rpy.ry) + "," +
+    std::to_string(pre_pos.rpy.rz));
 }
 
 /**
@@ -5794,22 +6463,26 @@ std::string robot_command_thread::ComputePrePick(std::string para){
  * @param  [out] post_pos 撤退点
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ComputePostPick(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ComputePostPick(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    DescPose desc_pos;
-    _fillDescPose(list,desc_pos);
-    double zlength = std::stod(list.front());list.pop_front();
-    double zangle = std::stod(list.front());list.pop_front();
+  DescPose desc_pos;
+  _fillDescPose(list, desc_pos);
+  double zlength = std::stod(list.front());
+  list.pop_front();
+  double zangle = std::stod(list.front());
+  list.pop_front();
 
-    DescPose post_pos;
+  DescPose post_pos;
 
-    int res = _ptr_robot->ComputePostPick(&desc_pos,zlength,zangle,&post_pos);
-    return std::string(std::to_string(res) + "," + std::to_string(post_pos.tran.x) + "," + \
-            std::to_string(post_pos.tran.y) + "," + std::to_string(post_pos.tran.z) + "," + \
-            std::to_string(post_pos.rpy.rx) + "," + std::to_string(post_pos.rpy.ry) + "," + \
-            std::to_string(post_pos.rpy.rz));
+  int res = _ptr_robot->ComputePostPick(&desc_pos, zlength, zangle, &post_pos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(post_pos.tran.x) + "," +
+    std::to_string(post_pos.tran.y) + "," + std::to_string(post_pos.tran.z) + "," +
+    std::to_string(post_pos.rpy.rx) + "," + std::to_string(post_pos.rpy.ry) + "," +
+    std::to_string(post_pos.rpy.rz));
 }
 
 /**
@@ -5820,17 +6493,22 @@ std::string robot_command_thread::ComputePostPick(std::string para){
  * @param  [in] bus 设备挂在末端总线位置，暂不使用，默认为0
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_SetConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_SetConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int company = std::stoi(list.front());list.pop_front();
-    int device = std::stoi(list.front());list.pop_front();
-    int softvesion = std::stoi(list.front());list.pop_front();
-    int bus = std::stoi(list.front());list.pop_front();
+  int company = std::stoi(list.front());
+  list.pop_front();
+  int device = std::stoi(list.front());
+  list.pop_front();
+  int softvesion = std::stoi(list.front());
+  list.pop_front();
+  int bus = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FT_SetConfig(company,device,softvesion,bus);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_SetConfig(company, device, softvesion, bus);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5841,16 +6519,17 @@ std::string robot_command_thread::FT_SetConfig(std::string para){
  * @param  [out] bus 设备挂在末端总线位置，暂不使用，默认为0
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_GetConfig(std::string para){
-    int company;
-    int device;
-    int softvesion;
-    int bus;
+std::string robot_command_thread::FT_GetConfig(std::string para)
+{
+  int company;
+  int device;
+  int softvesion;
+  int bus;
 
-    int res = _ptr_robot->FT_GetConfig(&company,&device,&softvesion,&bus);
-    return std::string(std::to_string(res) + "," + std::to_string(company) + "," + \
-            std::to_string(device) + "," + std::to_string(softvesion) + "," + \
-            std::to_string(bus));
+  int res = _ptr_robot->FT_GetConfig(&company, &device, &softvesion, &bus);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(company) + "," + std::to_string(device) + "," +
+    std::to_string(softvesion) + "," + std::to_string(bus));
 }
 
 /**
@@ -5858,14 +6537,16 @@ std::string robot_command_thread::FT_GetConfig(std::string para){
  * @param  [in] act  0-复位，1-激活
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_Activate(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_Activate(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t act = std::stoi(list.front());list.pop_front();
+  uint8_t act = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FT_Activate(act);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_Activate(act);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5873,14 +6554,16 @@ std::string robot_command_thread::FT_Activate(std::string para){
  * @param  [in] act  0-去除零点，1-零点矫正
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_SetZero(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_SetZero(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t act = std::stoi(list.front());list.pop_front();
+  uint8_t act = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FT_SetZero(act);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_SetZero(act);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5889,16 +6572,18 @@ std::string robot_command_thread::FT_SetZero(std::string para){
  * @param  [in] coord  自定义坐标系值
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_SetRCS(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_SetRCS(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t ref = std::stoi(list.front());list.pop_front();
-    DescPose coord;
-    _fillDescPose(list,coord);
+  uint8_t ref = std::stoi(list.front());
+  list.pop_front();
+  DescPose coord;
+  _fillDescPose(list, coord);
 
-    int res = _ptr_robot->FT_SetRCS(ref,coord);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_SetRCS(ref, coord);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5906,14 +6591,16 @@ std::string robot_command_thread::FT_SetRCS(std::string para){
  * @param  [in] id  传感器坐标系编号，范围[1~14]
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_PdIdenRecord(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_PdIdenRecord(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t id = std::stoi(list.front());list.pop_front();
+  uint8_t id = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FT_PdIdenRecord(id);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_PdIdenRecord(id);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5921,11 +6608,12 @@ std::string robot_command_thread::FT_PdIdenRecord(std::string para){
  * @param  [out] weight  负载重量，单位kg
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_PdIdenCompute(std::string para){
-    float weight;
+std::string robot_command_thread::FT_PdIdenCompute(std::string para)
+{
+  float weight;
 
-    int res = _ptr_robot->FT_PdIdenCompute(&weight);
-    return std::string(std::to_string(res) + "," + std::to_string(weight));
+  int res = _ptr_robot->FT_PdIdenCompute(&weight);
+  return std::string(std::to_string(res) + "," + std::to_string(weight));
 }
 
 /**
@@ -5934,15 +6622,18 @@ std::string robot_command_thread::FT_PdIdenCompute(std::string para){
  * @param  [in] index 点编号，范围[1~3]
  * @return  错误码
  */
-std::string robot_command_thread::FT_PdCogIdenRecord(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_PdCogIdenRecord(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    int index = std::stoi(list.front());list.pop_front();
+  int id = std::stoi(list.front());
+  list.pop_front();
+  int index = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FT_PdCogIdenRecord(id,index);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_PdCogIdenRecord(id, index);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -5950,12 +6641,14 @@ std::string robot_command_thread::FT_PdCogIdenRecord(std::string para){
  * @param  [out] cog  负载质心，单位mm
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_PdCogIdenCompute(std::string para){
-    DescTran cog;
+std::string robot_command_thread::FT_PdCogIdenCompute(std::string para)
+{
+  DescTran cog;
 
-    int res = _ptr_robot->FT_PdCogIdenCompute(&cog);
-    return std::string(std::to_string(res) + "," + std::to_string(cog.x) + "," +\
-            std::to_string(cog.y) + "," + std::to_string(cog.z));
+  int res = _ptr_robot->FT_PdCogIdenCompute(&cog);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(cog.x) + "," + std::to_string(cog.y) + "," +
+    std::to_string(cog.z));
 }
 
 /**
@@ -5964,19 +6657,21 @@ std::string robot_command_thread::FT_PdCogIdenCompute(std::string para){
  * @param  [out] ft  力/扭矩，fx,fy,fz,tx,ty,tz
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_GetForceTorqueRCS(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_GetForceTorqueRCS(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front());list.pop_front();
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
 
-    ForceTorque ft;
+  ForceTorque ft;
 
-    int res = _ptr_robot->FT_GetForceTorqueRCS(flag,&ft);
-    return std::string(std::to_string(res) + "," + std::to_string(ft.fx) + "," +\
-            std::to_string(ft.fy) + "," + std::to_string(ft.fz) + "," + \
-            std::to_string(ft.tx) + "," + std::to_string(ft.ty) + "," + \
-            std::to_string(ft.tz));
+  int res = _ptr_robot->FT_GetForceTorqueRCS(flag, &ft);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(ft.fx) + "," + std::to_string(ft.fy) + "," +
+    std::to_string(ft.fz) + "," + std::to_string(ft.tx) + "," + std::to_string(ft.ty) + "," +
+    std::to_string(ft.tz));
 }
 
 /**
@@ -5985,19 +6680,21 @@ std::string robot_command_thread::FT_GetForceTorqueRCS(std::string para){
  * @param  [out] ft  力/扭矩，fx,fy,fz,tx,ty,tz
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_GetForceTorqueOrigin(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_GetForceTorqueOrigin(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front());list.pop_front();
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
 
-    ForceTorque ft;
+  ForceTorque ft;
 
-    int res = _ptr_robot->FT_GetForceTorqueOrigin(flag,&ft);
-    return std::string(std::to_string(res) + "," + std::to_string(ft.fx) + "," +\
-            std::to_string(ft.fy) + "," + std::to_string(ft.fz) + "," + \
-            std::to_string(ft.tx) + "," + std::to_string(ft.ty) + "," + \
-            std::to_string(ft.tz));
+  int res = _ptr_robot->FT_GetForceTorqueOrigin(flag, &ft);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(ft.fx) + "," + std::to_string(ft.fy) + "," +
+    std::to_string(ft.fz) + "," + std::to_string(ft.tx) + "," + std::to_string(ft.ty) + "," +
+    std::to_string(ft.tz));
 }
 
 /**
@@ -6011,43 +6708,70 @@ std::string robot_command_thread::FT_GetForceTorqueOrigin(std::string para){
  * @note   力/扭矩检测范围：(ft-min_threshold, ft+max_threshold)
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_Guard(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_Guard(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front());list.pop_front();
-    int sensor_id = std::stoi(list.front());list.pop_front();
-    uint8_t select[6];
-    select[0] = std::stoi(list.front());list.pop_front();
-    select[1] = std::stoi(list.front());list.pop_front();
-    select[2] = std::stoi(list.front());list.pop_front();
-    select[3] = std::stoi(list.front());list.pop_front();
-    select[4] = std::stoi(list.front());list.pop_front();
-    select[5] = std::stoi(list.front());list.pop_front();
-    ForceTorque ft;
-    ft.fx = std::stod(list.front());list.pop_front();
-    ft.fy = std::stod(list.front());list.pop_front();
-    ft.fz = std::stod(list.front());list.pop_front();
-    ft.tx = std::stod(list.front());list.pop_front();
-    ft.ty = std::stod(list.front());list.pop_front();
-    ft.tz = std::stod(list.front());list.pop_front();
-    float max_threshold[6];
-    max_threshold[0] = std::stod(list.front());list.pop_front();
-    max_threshold[1] = std::stod(list.front());list.pop_front();
-    max_threshold[2] = std::stod(list.front());list.pop_front();
-    max_threshold[3] = std::stod(list.front());list.pop_front();
-    max_threshold[4] = std::stod(list.front());list.pop_front();
-    max_threshold[5] = std::stod(list.front());list.pop_front();
-    float min_threshold[6];
-    min_threshold[0] = std::stod(list.front());list.pop_front();
-    min_threshold[1] = std::stod(list.front());list.pop_front();
-    min_threshold[2] = std::stod(list.front());list.pop_front();
-    min_threshold[3] = std::stod(list.front());list.pop_front();
-    min_threshold[4] = std::stod(list.front());list.pop_front();
-    min_threshold[5] = std::stod(list.front());list.pop_front();
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
+  int sensor_id = std::stoi(list.front());
+  list.pop_front();
+  uint8_t select[6];
+  select[0] = std::stoi(list.front());
+  list.pop_front();
+  select[1] = std::stoi(list.front());
+  list.pop_front();
+  select[2] = std::stoi(list.front());
+  list.pop_front();
+  select[3] = std::stoi(list.front());
+  list.pop_front();
+  select[4] = std::stoi(list.front());
+  list.pop_front();
+  select[5] = std::stoi(list.front());
+  list.pop_front();
+  ForceTorque ft;
+  ft.fx = std::stod(list.front());
+  list.pop_front();
+  ft.fy = std::stod(list.front());
+  list.pop_front();
+  ft.fz = std::stod(list.front());
+  list.pop_front();
+  ft.tx = std::stod(list.front());
+  list.pop_front();
+  ft.ty = std::stod(list.front());
+  list.pop_front();
+  ft.tz = std::stod(list.front());
+  list.pop_front();
+  float max_threshold[6];
+  max_threshold[0] = std::stod(list.front());
+  list.pop_front();
+  max_threshold[1] = std::stod(list.front());
+  list.pop_front();
+  max_threshold[2] = std::stod(list.front());
+  list.pop_front();
+  max_threshold[3] = std::stod(list.front());
+  list.pop_front();
+  max_threshold[4] = std::stod(list.front());
+  list.pop_front();
+  max_threshold[5] = std::stod(list.front());
+  list.pop_front();
+  float min_threshold[6];
+  min_threshold[0] = std::stod(list.front());
+  list.pop_front();
+  min_threshold[1] = std::stod(list.front());
+  list.pop_front();
+  min_threshold[2] = std::stod(list.front());
+  list.pop_front();
+  min_threshold[3] = std::stod(list.front());
+  list.pop_front();
+  min_threshold[4] = std::stod(list.front());
+  list.pop_front();
+  min_threshold[5] = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FT_Guard(flag,sensor_id,select,&ft,max_threshold,min_threshold);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_Guard(flag, sensor_id, select, &ft, max_threshold, min_threshold);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6069,103 +6793,173 @@ std::string robot_command_thread::FT_Guard(std::string para){
  * @param  [in] isNoBlock 阻塞标志，0-阻塞；1-非阻塞
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_Control(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    int parameters_count = list.size();
-    if(parameters_count == 36)
-    {
-        uint8_t flag = std::stoi(list.front());list.pop_front();
-        int sensor_id = std::stoi(list.front());list.pop_front();
-        uint8_t select[6];
-        select[0] = std::stoi(list.front());list.pop_front();
-        select[1] = std::stoi(list.front());list.pop_front();
-        select[2] = std::stoi(list.front());list.pop_front();
-        select[3] = std::stoi(list.front());list.pop_front();
-        select[4] = std::stoi(list.front());list.pop_front();
-        select[5] = std::stoi(list.front());list.pop_front();
-        ForceTorque ft;
-        ft.fx = std::stod(list.front());list.pop_front();
-        ft.fy = std::stod(list.front());list.pop_front();
-        ft.fz = std::stod(list.front());list.pop_front();
-        ft.tx = std::stod(list.front());list.pop_front();
-        ft.ty = std::stod(list.front());list.pop_front();
-        ft.tz = std::stod(list.front());list.pop_front();
-        float ft_pid[6];
-        ft_pid[0] = std::stod(list.front());list.pop_front();
-        ft_pid[1] = std::stod(list.front());list.pop_front();
-        ft_pid[2] = std::stod(list.front());list.pop_front();
-        ft_pid[3] = std::stod(list.front());list.pop_front();
-        ft_pid[4] = std::stod(list.front());list.pop_front();
-        ft_pid[5] = std::stod(list.front());list.pop_front();
-        uint8_t adj_sign = std::stoi(list.front());list.pop_front();
-        uint8_t ILC_sign = std::stoi(list.front());list.pop_front();
-        float max_dis = std::stod(list.front());list.pop_front();
-        float max_ang = std::stod(list.front());list.pop_front();
-        double M[2];
-        M[0] = std::stod(list.front());list.pop_front();
-        M[1] = std::stod(list.front());list.pop_front();
-        double B[2];
-        B[0] = std::stod(list.front());list.pop_front();
-        B[1] = std::stod(list.front());list.pop_front();
-        double threshold[2];
-        threshold[0] = std::stod(list.front());list.pop_front();
-        threshold[1] = std::stod(list.front());list.pop_front();
-        double adjustCoeff[2];
-        adjustCoeff[0] = std::stod(list.front());list.pop_front();
-        adjustCoeff[1] = std::stod(list.front());list.pop_front();
-        double polishRadio = std::stod(list.front());list.pop_front();
-        int filter_Sign = std::stoi(list.front());list.pop_front();
-        int posAdapt_sign = std::stoi(list.front());list.pop_front();
-        int isNoBlock = std::stoi(list.front());list.pop_front();
+std::string robot_command_thread::FT_Control(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  int parameters_count = list.size();
+  if (parameters_count == 36) {
+    uint8_t flag = std::stoi(list.front());
+    list.pop_front();
+    int sensor_id = std::stoi(list.front());
+    list.pop_front();
+    uint8_t select[6];
+    select[0] = std::stoi(list.front());
+    list.pop_front();
+    select[1] = std::stoi(list.front());
+    list.pop_front();
+    select[2] = std::stoi(list.front());
+    list.pop_front();
+    select[3] = std::stoi(list.front());
+    list.pop_front();
+    select[4] = std::stoi(list.front());
+    list.pop_front();
+    select[5] = std::stoi(list.front());
+    list.pop_front();
+    ForceTorque ft;
+    ft.fx = std::stod(list.front());
+    list.pop_front();
+    ft.fy = std::stod(list.front());
+    list.pop_front();
+    ft.fz = std::stod(list.front());
+    list.pop_front();
+    ft.tx = std::stod(list.front());
+    list.pop_front();
+    ft.ty = std::stod(list.front());
+    list.pop_front();
+    ft.tz = std::stod(list.front());
+    list.pop_front();
+    float ft_pid[6];
+    ft_pid[0] = std::stod(list.front());
+    list.pop_front();
+    ft_pid[1] = std::stod(list.front());
+    list.pop_front();
+    ft_pid[2] = std::stod(list.front());
+    list.pop_front();
+    ft_pid[3] = std::stod(list.front());
+    list.pop_front();
+    ft_pid[4] = std::stod(list.front());
+    list.pop_front();
+    ft_pid[5] = std::stod(list.front());
+    list.pop_front();
+    uint8_t adj_sign = std::stoi(list.front());
+    list.pop_front();
+    uint8_t ILC_sign = std::stoi(list.front());
+    list.pop_front();
+    float max_dis = std::stod(list.front());
+    list.pop_front();
+    float max_ang = std::stod(list.front());
+    list.pop_front();
+    double M[2];
+    M[0] = std::stod(list.front());
+    list.pop_front();
+    M[1] = std::stod(list.front());
+    list.pop_front();
+    double B[2];
+    B[0] = std::stod(list.front());
+    list.pop_front();
+    B[1] = std::stod(list.front());
+    list.pop_front();
+    double threshold[2];
+    threshold[0] = std::stod(list.front());
+    list.pop_front();
+    threshold[1] = std::stod(list.front());
+    list.pop_front();
+    double adjustCoeff[2];
+    adjustCoeff[0] = std::stod(list.front());
+    list.pop_front();
+    adjustCoeff[1] = std::stod(list.front());
+    list.pop_front();
+    double polishRadio = std::stod(list.front());
+    list.pop_front();
+    int filter_Sign = std::stoi(list.front());
+    list.pop_front();
+    int posAdapt_sign = std::stoi(list.front());
+    list.pop_front();
+    int isNoBlock = std::stoi(list.front());
+    list.pop_front();
 
-        int res = _ptr_robot->FT_Control(flag,sensor_id,select,&ft,ft_pid,adj_sign,ILC_sign,max_dis,max_ang,M,B,threshold,adjustCoeff,polishRadio,filter_Sign,posAdapt_sign,isNoBlock);
+    int res = _ptr_robot->FT_Control(
+      flag, sensor_id, select, &ft, ft_pid, adj_sign, ILC_sign, max_dis, max_ang, M, B, threshold,
+      adjustCoeff, polishRadio, filter_Sign, posAdapt_sign, isNoBlock);
 
-        return std::string(std::to_string(res));
-    }
-    else
-    {
-        uint8_t flag = std::stoi(list.front());list.pop_front();
-        int sensor_id = std::stoi(list.front());list.pop_front();
-        uint8_t select[6];
-        select[0] = std::stoi(list.front());list.pop_front();
-        select[1] = std::stoi(list.front());list.pop_front();
-        select[2] = std::stoi(list.front());list.pop_front();
-        select[3] = std::stoi(list.front());list.pop_front();
-        select[4] = std::stoi(list.front());list.pop_front();
-        select[5] = std::stoi(list.front());list.pop_front();
-        ForceTorque ft;
-        ft.fx = std::stod(list.front());list.pop_front();
-        ft.fy = std::stod(list.front());list.pop_front();
-        ft.fz = std::stod(list.front());list.pop_front();
-        ft.tx = std::stod(list.front());list.pop_front();
-        ft.ty = std::stod(list.front());list.pop_front();
-        ft.tz = std::stod(list.front());list.pop_front();
-        float ft_pid[6];
-        ft_pid[0] = std::stod(list.front());list.pop_front();
-        ft_pid[1] = std::stod(list.front());list.pop_front();
-        ft_pid[2] = std::stod(list.front());list.pop_front();
-        ft_pid[3] = std::stod(list.front());list.pop_front();
-        ft_pid[4] = std::stod(list.front());list.pop_front();
-        ft_pid[5] = std::stod(list.front());list.pop_front();
-        uint8_t adj_sign = std::stoi(list.front());list.pop_front();
-        uint8_t ILC_sign = std::stoi(list.front());list.pop_front();
-        float max_dis = std::stod(list.front());list.pop_front();
-        float max_ang = std::stod(list.front());list.pop_front();
-        double M[2];
-        M[0] = std::stod(list.front());list.pop_front();
-        M[1] = std::stod(list.front());list.pop_front();
-        double B[2];
-        B[0] = std::stod(list.front());list.pop_front();
-        B[1] = std::stod(list.front());list.pop_front();
-        double polishRadio = std::stod(list.front());list.pop_front();
-        int filter_Sign = std::stoi(list.front());list.pop_front();
-        int posAdapt_sign = std::stoi(list.front());list.pop_front();
-        int isNoBlock = std::stoi(list.front());list.pop_front();
+    return std::string(std::to_string(res));
+  } else {
+    uint8_t flag = std::stoi(list.front());
+    list.pop_front();
+    int sensor_id = std::stoi(list.front());
+    list.pop_front();
+    uint8_t select[6];
+    select[0] = std::stoi(list.front());
+    list.pop_front();
+    select[1] = std::stoi(list.front());
+    list.pop_front();
+    select[2] = std::stoi(list.front());
+    list.pop_front();
+    select[3] = std::stoi(list.front());
+    list.pop_front();
+    select[4] = std::stoi(list.front());
+    list.pop_front();
+    select[5] = std::stoi(list.front());
+    list.pop_front();
+    ForceTorque ft;
+    ft.fx = std::stod(list.front());
+    list.pop_front();
+    ft.fy = std::stod(list.front());
+    list.pop_front();
+    ft.fz = std::stod(list.front());
+    list.pop_front();
+    ft.tx = std::stod(list.front());
+    list.pop_front();
+    ft.ty = std::stod(list.front());
+    list.pop_front();
+    ft.tz = std::stod(list.front());
+    list.pop_front();
+    float ft_pid[6];
+    ft_pid[0] = std::stod(list.front());
+    list.pop_front();
+    ft_pid[1] = std::stod(list.front());
+    list.pop_front();
+    ft_pid[2] = std::stod(list.front());
+    list.pop_front();
+    ft_pid[3] = std::stod(list.front());
+    list.pop_front();
+    ft_pid[4] = std::stod(list.front());
+    list.pop_front();
+    ft_pid[5] = std::stod(list.front());
+    list.pop_front();
+    uint8_t adj_sign = std::stoi(list.front());
+    list.pop_front();
+    uint8_t ILC_sign = std::stoi(list.front());
+    list.pop_front();
+    float max_dis = std::stod(list.front());
+    list.pop_front();
+    float max_ang = std::stod(list.front());
+    list.pop_front();
+    double M[2];
+    M[0] = std::stod(list.front());
+    list.pop_front();
+    M[1] = std::stod(list.front());
+    list.pop_front();
+    double B[2];
+    B[0] = std::stod(list.front());
+    list.pop_front();
+    B[1] = std::stod(list.front());
+    list.pop_front();
+    double polishRadio = std::stod(list.front());
+    list.pop_front();
+    int filter_Sign = std::stoi(list.front());
+    list.pop_front();
+    int posAdapt_sign = std::stoi(list.front());
+    list.pop_front();
+    int isNoBlock = std::stoi(list.front());
+    list.pop_front();
 
-        int res = _ptr_robot->FT_Control(flag,sensor_id,select,&ft,ft_pid,adj_sign,ILC_sign,max_dis,max_ang,M,B,polishRadio,filter_Sign,posAdapt_sign,isNoBlock);
-        return std::string(std::to_string(res));
-    }
+    int res = _ptr_robot->FT_Control(
+      flag, sensor_id, select, &ft, ft_pid, adj_sign, ILC_sign, max_dis, max_ang, M, B, polishRadio,
+      filter_Sign, posAdapt_sign, isNoBlock);
+    return std::string(std::to_string(res));
+  }
 }
 
 /**
@@ -6178,22 +6972,29 @@ std::string robot_command_thread::FT_Control(std::string para){
  * @param  [in] strategy 未检测到力/力矩的处理策略，0-报错；1-警告，继续运动
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::FT_SpiralSearch(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_SpiralSearch(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int rcs = std::stoi(list.front());list.pop_front();
-    float dr = std::stod(list.front());list.pop_front();
-    float ft = std::stod(list.front());list.pop_front();
-    float max_t_ms = std::stod(list.front());list.pop_front();
-    float max_vel = std::stod(list.front());list.pop_front();
-    int strategy = 0;
-    if(!list.empty()){
-        strategy = std::stoi(list.front());list.pop_front();
-    }
+  int rcs = std::stoi(list.front());
+  list.pop_front();
+  float dr = std::stod(list.front());
+  list.pop_front();
+  float ft = std::stod(list.front());
+  list.pop_front();
+  float max_t_ms = std::stod(list.front());
+  list.pop_front();
+  float max_vel = std::stod(list.front());
+  list.pop_front();
+  int strategy = 0;
+  if (!list.empty()) {
+    strategy = std::stoi(list.front());
+    list.pop_front();
+  }
 
-    int res = _ptr_robot->FT_SpiralSearch(rcs,dr,ft,max_t_ms,max_vel,strategy);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_SpiralSearch(rcs, dr, ft, max_t_ms, max_vel, strategy);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6208,21 +7009,31 @@ std::string robot_command_thread::FT_SpiralSearch(std::string para){
  * @param  [in] strategy 未检测到力/力矩的处理策略，0-报错；1-警告，继续运动
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_RotInsertion(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_RotInsertion(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int rcs = std::stoi(list.front());list.pop_front();
-    float angVelRot = std::stod(list.front());list.pop_front();
-    float ft = std::stod(list.front());list.pop_front();
-    float max_angle = std::stod(list.front());list.pop_front();
-    uint8_t orn = std::stoi(list.front());list.pop_front();
-    float max_angAcc = std::stod(list.front());list.pop_front();
-    uint8_t rotorn = std::stoi(list.front());list.pop_front();
-    int strategy = std::stoi(list.front());list.pop_front();
+  int rcs = std::stoi(list.front());
+  list.pop_front();
+  float angVelRot = std::stod(list.front());
+  list.pop_front();
+  float ft = std::stod(list.front());
+  list.pop_front();
+  float max_angle = std::stod(list.front());
+  list.pop_front();
+  uint8_t orn = std::stoi(list.front());
+  list.pop_front();
+  float max_angAcc = std::stod(list.front());
+  list.pop_front();
+  uint8_t rotorn = std::stoi(list.front());
+  list.pop_front();
+  int strategy = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FT_RotInsertion(rcs,angVelRot,ft,max_angle,orn,max_angAcc,rotorn,strategy);
-    return std::string(std::to_string(res));
+  int res =
+    _ptr_robot->FT_RotInsertion(rcs, angVelRot, ft, max_angle, orn, max_angAcc, rotorn, strategy);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6236,23 +7047,31 @@ std::string robot_command_thread::FT_RotInsertion(std::string para){
  * @param  [in] strategy 未检测到力/力矩的处理策略，0-报错；1-警告，继续运动
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::FT_LinInsertion(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_LinInsertion(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int rcs = std::stoi(list.front());list.pop_front();
-    float ft = std::stod(list.front());list.pop_front();
-    float lin_v = std::stod(list.front());list.pop_front();
-    float lin_a = std::stod(list.front());list.pop_front();
-    float max_dis = std::stod(list.front());list.pop_front();
-    uint8_t linorn = std::stoi(list.front());list.pop_front();
-    int strategy = 0;
-    if(!list.empty()){
-        strategy = std::stoi(list.front());list.pop_front();
-    }
+  int rcs = std::stoi(list.front());
+  list.pop_front();
+  float ft = std::stod(list.front());
+  list.pop_front();
+  float lin_v = std::stod(list.front());
+  list.pop_front();
+  float lin_a = std::stod(list.front());
+  list.pop_front();
+  float max_dis = std::stod(list.front());
+  list.pop_front();
+  uint8_t linorn = std::stoi(list.front());
+  list.pop_front();
+  int strategy = 0;
+  if (!list.empty()) {
+    strategy = std::stoi(list.front());
+    list.pop_front();
+  }
 
-    int res = _ptr_robot->FT_LinInsertion(rcs,ft,lin_v,lin_a,max_dis,linorn,strategy);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_LinInsertion(rcs, ft, lin_v, lin_a, max_dis, linorn, strategy);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6267,33 +7086,43 @@ std::string robot_command_thread::FT_LinInsertion(std::string para){
  * @param  [in] strategy 未检测到力/力矩的处理策略，0-报错；1-警告，继续运动
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::FT_FindSurface(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_FindSurface(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int rcs = std::stoi(list.front());list.pop_front();
-    uint8_t dir = std::stoi(list.front());list.pop_front();
-    uint8_t axis = std::stoi(list.front());list.pop_front();
-    float lin_v = std::stod(list.front());list.pop_front();
-    float lin_a = std::stod(list.front());list.pop_front();
-    float max_dis = std::stod(list.front());list.pop_front();
-    float ft = std::stod(list.front());list.pop_front();
-    int strategy = 0;
-    if(!list.empty()){
-        strategy = std::stoi(list.front());list.pop_front();
-    }
+  int rcs = std::stoi(list.front());
+  list.pop_front();
+  uint8_t dir = std::stoi(list.front());
+  list.pop_front();
+  uint8_t axis = std::stoi(list.front());
+  list.pop_front();
+  float lin_v = std::stod(list.front());
+  list.pop_front();
+  float lin_a = std::stod(list.front());
+  list.pop_front();
+  float max_dis = std::stod(list.front());
+  list.pop_front();
+  float ft = std::stod(list.front());
+  list.pop_front();
+  int strategy = 0;
+  if (!list.empty()) {
+    strategy = std::stoi(list.front());
+    list.pop_front();
+  }
 
-    int res = _ptr_robot->FT_FindSurface(rcs,dir,axis,lin_v,lin_a,max_dis,ft,strategy);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_FindSurface(rcs, dir, axis, lin_v, lin_a, max_dis, ft, strategy);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief  计算中间平面位置开始
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_CalCenterStart(std::string para){
-    int res = _ptr_robot->FT_CalCenterStart();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::FT_CalCenterStart(std::string para)
+{
+  int res = _ptr_robot->FT_CalCenterStart();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6301,14 +7130,15 @@ std::string robot_command_thread::FT_CalCenterStart(std::string para){
  * @param  [out] pos 中间平面位姿
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_CalCenterEnd(std::string para){
-    DescPose pos;
+std::string robot_command_thread::FT_CalCenterEnd(std::string para)
+{
+  DescPose pos;
 
-    int res = _ptr_robot->FT_CalCenterEnd(&pos);
-    return std::string(std::to_string(res) + "," + std::to_string(pos.tran.x) + "," + \
-            std::to_string(pos.tran.y) + "," + std::to_string(pos.tran.z) + "," + \
-            std::to_string(pos.rpy.rx) + "," + std::to_string(pos.rpy.ry) + "," + \
-            std::to_string(pos.rpy.rz));
+  int res = _ptr_robot->FT_CalCenterEnd(&pos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(pos.tran.x) + "," + std::to_string(pos.tran.y) +
+    "," + std::to_string(pos.tran.z) + "," + std::to_string(pos.rpy.rx) + "," +
+    std::to_string(pos.rpy.ry) + "," + std::to_string(pos.rpy.rz));
 }
 
 /**
@@ -6317,42 +7147,48 @@ std::string robot_command_thread::FT_CalCenterEnd(std::string para){
  * @param  [in] force 柔顺开启力阈值，单位N
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_ComplianceStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FT_ComplianceStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    float p = std::stod(list.front());list.pop_front();
-    float force = std::stod(list.front());list.pop_front();
+  float p = std::stod(list.front());
+  list.pop_front();
+  float force = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FT_ComplianceStart(p,force);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FT_ComplianceStart(p, force);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief  柔顺控制关闭
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::FT_ComplianceStop(std::string para){
-    int res = _ptr_robot->FT_ComplianceStop();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::FT_ComplianceStop(std::string para)
+{
+  int res = _ptr_robot->FT_ComplianceStop();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief  负载辨识初始化
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LoadIdentifyDynFilterInit(std::string para){
-    int res = _ptr_robot->LoadIdentifyDynFilterInit();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::LoadIdentifyDynFilterInit(std::string para)
+{
+  int res = _ptr_robot->LoadIdentifyDynFilterInit();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief  负载辨识初始化
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LoadIdentifyDynVarInit(std::string para){
-    int res = _ptr_robot->LoadIdentifyDynVarInit();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::LoadIdentifyDynVarInit(std::string para)
+{
+  int res = _ptr_robot->LoadIdentifyDynVarInit();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6362,28 +7198,42 @@ std::string robot_command_thread::LoadIdentifyDynVarInit(std::string para){
  * @param [in] t 采样周期
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LoadIdentifyMain(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LoadIdentifyMain(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double joint_torque[6];
-    joint_torque[0] = std::stod(list.front());list.pop_front();
-    joint_torque[1] = std::stod(list.front());list.pop_front();
-    joint_torque[2] = std::stod(list.front());list.pop_front();
-    joint_torque[3] = std::stod(list.front());list.pop_front();
-    joint_torque[4] = std::stod(list.front());list.pop_front();
-    joint_torque[5] = std::stod(list.front());list.pop_front();
-    double joint_pos[6];
-    joint_pos[0] = std::stod(list.front());list.pop_front();
-    joint_pos[1] = std::stod(list.front());list.pop_front();
-    joint_pos[2] = std::stod(list.front());list.pop_front();
-    joint_pos[3] = std::stod(list.front());list.pop_front();
-    joint_pos[4] = std::stod(list.front());list.pop_front();
-    joint_pos[5] = std::stod(list.front());list.pop_front();
-    double t = std::stod(list.front());list.pop_front();
+  double joint_torque[6];
+  joint_torque[0] = std::stod(list.front());
+  list.pop_front();
+  joint_torque[1] = std::stod(list.front());
+  list.pop_front();
+  joint_torque[2] = std::stod(list.front());
+  list.pop_front();
+  joint_torque[3] = std::stod(list.front());
+  list.pop_front();
+  joint_torque[4] = std::stod(list.front());
+  list.pop_front();
+  joint_torque[5] = std::stod(list.front());
+  list.pop_front();
+  double joint_pos[6];
+  joint_pos[0] = std::stod(list.front());
+  list.pop_front();
+  joint_pos[1] = std::stod(list.front());
+  list.pop_front();
+  joint_pos[2] = std::stod(list.front());
+  list.pop_front();
+  joint_pos[3] = std::stod(list.front());
+  list.pop_front();
+  joint_pos[4] = std::stod(list.front());
+  list.pop_front();
+  joint_pos[5] = std::stod(list.front());
+  list.pop_front();
+  double t = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->LoadIdentifyMain(joint_torque,joint_pos,t);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->LoadIdentifyMain(joint_torque, joint_pos, t);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6393,21 +7243,23 @@ std::string robot_command_thread::LoadIdentifyMain(std::string para){
  * @param [out] cog 负载质心
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LoadIdentifyGetResult(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LoadIdentifyGetResult(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double gain[12];
-    for(int i = 0;i < 12; i++){
-        gain[i] = std::stod(list.front());list.pop_front();
-    }
-    double weight;
-    DescTran cog;
+  double gain[12];
+  for (int i = 0; i < 12; i++) {
+    gain[i] = std::stod(list.front());
+    list.pop_front();
+  }
+  double weight;
+  DescTran cog;
 
-    int res = _ptr_robot->LoadIdentifyGetResult(gain,&weight,&cog);
-    return std::string(std::to_string(res) + "," + std::to_string(weight) + "," +\
-            std::to_string(cog.x) + "," + std::to_string(cog.y) + "," +\
-            std::to_string(cog.z));
+  int res = _ptr_robot->LoadIdentifyGetResult(gain, &weight, &cog);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(weight) + "," + std::to_string(cog.x) + "," +
+    std::to_string(cog.y) + "," + std::to_string(cog.z));
 }
 
 /**
@@ -6415,50 +7267,56 @@ std::string robot_command_thread::LoadIdentifyGetResult(std::string para){
  * @param [in] status 状态，1-启动，0-停止
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorStartEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ConveyorStartEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t status = std::stoi(list.front());list.pop_front();
+  uint8_t status = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ConveyorStartEnd(status);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ConveyorStartEnd(status);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 记录IO检测点
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorPointIORecord(std::string para){
-    int res = _ptr_robot->ConveyorPointIORecord();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ConveyorPointIORecord(std::string para)
+{
+  int res = _ptr_robot->ConveyorPointIORecord();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 记录A点
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorPointARecord(std::string para){
-    int res = _ptr_robot->ConveyorPointARecord();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ConveyorPointARecord(std::string para)
+{
+  int res = _ptr_robot->ConveyorPointARecord();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 记录参考点
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorRefPointRecord(std::string para){
-    int res = _ptr_robot->ConveyorRefPointRecord();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ConveyorRefPointRecord(std::string para)
+{
+  int res = _ptr_robot->ConveyorRefPointRecord();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 记录B点
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorPointBRecord(std::string para){
-    int res = _ptr_robot->ConveyorPointBRecord();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ConveyorPointBRecord(std::string para)
+{
+  int res = _ptr_robot->ConveyorPointBRecord();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6466,14 +7324,16 @@ std::string robot_command_thread::ConveyorPointBRecord(std::string para){
  * @param [in] max_t 最大检测时间，单位ms
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorIODetect(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ConveyorIODetect(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int max_t = std::stoi(list.front());list.pop_front();
+  int max_t = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ConveyorIODetect(max_t);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ConveyorIODetect(max_t);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6481,14 +7341,16 @@ std::string robot_command_thread::ConveyorIODetect(std::string para){
  * @param [in] mode
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorGetTrackData(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ConveyorGetTrackData(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int mode = std::stoi(list.front());list.pop_front();
+  int mode = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ConveyorGetTrackData(mode);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ConveyorGetTrackData(mode);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6496,23 +7358,26 @@ std::string robot_command_thread::ConveyorGetTrackData(std::string para){
  * @param [in] status 状态，1-启动，0-停止
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorTrackStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ConveyorTrackStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t status = std::stoi(list.front());list.pop_front();
+  uint8_t status = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ConveyorTrackStart(status);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ConveyorTrackStart(status);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 传动带跟踪停止
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorTrackEnd(std::string para){
-    int res = _ptr_robot->ConveyorTrackEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ConveyorTrackEnd(std::string para)
+{
+  int res = _ptr_robot->ConveyorTrackEnd();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6528,23 +7393,33 @@ std::string robot_command_thread::ConveyorTrackEnd(std::string para){
  * @param [in] endDis 追检抓取需要设置，跟踪终止距离， 单位mm， 默认值100
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorSetParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ConveyorSetParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    float param[6];
-    param[0] = std::stod(list.front());list.pop_front();
-    param[1] = std::stod(list.front());list.pop_front();
-    param[2] = std::stod(list.front());list.pop_front();
-    param[3] = std::stod(list.front());list.pop_front();
-    param[4] = std::stod(list.front());list.pop_front();
-    param[5] = std::stod(list.front());list.pop_front();
-    int followType = std::stoi(list.front());list.pop_front();
-    int startDis = std::stoi(list.front());list.pop_front();
-    int endDis = std::stoi(list.front());list.pop_front();
+  float param[6];
+  param[0] = std::stod(list.front());
+  list.pop_front();
+  param[1] = std::stod(list.front());
+  list.pop_front();
+  param[2] = std::stod(list.front());
+  list.pop_front();
+  param[3] = std::stod(list.front());
+  list.pop_front();
+  param[4] = std::stod(list.front());
+  list.pop_front();
+  param[5] = std::stod(list.front());
+  list.pop_front();
+  int followType = std::stoi(list.front());
+  list.pop_front();
+  int startDis = std::stoi(list.front());
+  list.pop_front();
+  int endDis = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ConveyorSetParam(param,followType,startDis,endDis);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ConveyorSetParam(param, followType, startDis, endDis);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6554,16 +7429,20 @@ std::string robot_command_thread::ConveyorSetParam(std::string para){
  * @param [in] trackDis 跟踪距离
  * @return 错误码
  */
-std::string robot_command_thread::SetStationaryTrackPara(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetStationaryTrackPara(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int trackMode = std::stoi(list.front());list.pop_front();
-    double trackTime = std::stod(list.front());list.pop_front();
-    int trackDis = std::stoi(list.front());list.pop_front();
+  int trackMode = std::stoi(list.front());
+  list.pop_front();
+  double trackTime = std::stod(list.front());
+  list.pop_front();
+  int trackDis = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetStationaryTrackPara(trackMode,trackTime,trackDis);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetStationaryTrackPara(trackMode, trackTime, trackDis);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6571,17 +7450,21 @@ std::string robot_command_thread::SetStationaryTrackPara(std::string para){
  * @param [in] cmp 补偿位置 double[3]{x, y, z}
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ConveyorCatchPointComp(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ConveyorCatchPointComp(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double cmp[3];
-    cmp[0] = std::stod(list.front());list.pop_front();
-    cmp[1] = std::stod(list.front());list.pop_front();
-    cmp[2] = std::stod(list.front());list.pop_front();
+  double cmp[3];
+  cmp[0] = std::stod(list.front());
+  list.pop_front();
+  cmp[1] = std::stod(list.front());
+  list.pop_front();
+  cmp[2] = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ConveyorCatchPointComp(cmp);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ConveyorCatchPointComp(cmp);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6589,23 +7472,33 @@ std::string robot_command_thread::ConveyorCatchPointComp(std::string para){
  * @param [in] status 状态，1-启动，0-停止
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::TrackMoveL(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::TrackMoveL(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    char name[32];
-    list.front().copy(name,list.front().size());list.pop_front();
-    int tool = std::stoi(list.front());list.pop_front();
-    int wobj = std::stoi(list.front());list.pop_front();
-    float vel = std::stod(list.front());list.pop_front();
-    float acc = std::stod(list.front());list.pop_front();
-    float ovl = std::stod(list.front());list.pop_front();
-    float blendR = std::stod(list.front());list.pop_front();
-    uint8_t flag = std::stoi(list.front());list.pop_front();
-    uint8_t type = std::stoi(list.front());list.pop_front();
+  char name[32];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
+  int tool = std::stoi(list.front());
+  list.pop_front();
+  int wobj = std::stoi(list.front());
+  list.pop_front();
+  float vel = std::stod(list.front());
+  list.pop_front();
+  float acc = std::stod(list.front());
+  list.pop_front();
+  float ovl = std::stod(list.front());
+  list.pop_front();
+  float blendR = std::stod(list.front());
+  list.pop_front();
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
+  uint8_t type = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->TrackMoveL(name,tool,wobj,vel,acc,ovl,blendR,flag,type);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->TrackMoveL(name, tool, wobj, vel, acc, ovl, blendR, flag, type);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6613,10 +7506,11 @@ std::string robot_command_thread::TrackMoveL(std::string para){
  * @param [out] keygen 公钥
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetSSHKeygen(std::string para){
-    char keygen[1024];
-    int res = _ptr_robot->GetSSHKeygen(keygen);
-    return std::string(std::to_string(res) + "," + std::string(keygen));
+std::string robot_command_thread::GetSSHKeygen(std::string para)
+{
+  char keygen[1024];
+  int res = _ptr_robot->GetSSHKeygen(keygen);
+  return std::string(std::to_string(res) + "," + std::string(keygen));
 }
 
 /**
@@ -6628,22 +7522,28 @@ std::string robot_command_thread::GetSSHKeygen(std::string para){
  * @param [in] robot_file_url 机器人控制器文件路径
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetSSHScpCmd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetSSHScpCmd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int mode = std::stoi(list.front());list.pop_front();
-    char sshname[32];
-    list.front().copy(sshname,list.front().size());list.pop_front();
-    char sship[32];
-    list.front().copy(sship,list.front().size());list.pop_front();
-    char usr_file_url[128];
-    list.front().copy(usr_file_url,list.front().size());list.pop_front();
-    char robot_file_url[128];
-    list.front().copy(robot_file_url,list.front().size());list.pop_front();
+  int mode = std::stoi(list.front());
+  list.pop_front();
+  char sshname[32];
+  list.front().copy(sshname, list.front().size());
+  list.pop_front();
+  char sship[32];
+  list.front().copy(sship, list.front().size());
+  list.pop_front();
+  char usr_file_url[128];
+  list.front().copy(usr_file_url, list.front().size());
+  list.pop_front();
+  char robot_file_url[128];
+  list.front().copy(robot_file_url, list.front().size());
+  list.pop_front();
 
-    int res = _ptr_robot->SetSSHScpCmd(mode,sshname,sship,usr_file_url,robot_file_url);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetSSHScpCmd(mode, sshname, sship, usr_file_url, robot_file_url);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6652,17 +7552,19 @@ std::string robot_command_thread::SetSSHScpCmd(std::string para){
  * @param [out] md5 文件MD5值
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ComputeFileMD5(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ComputeFileMD5(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    char file_path[256];
-    list.front().copy(file_path,list.front().size());list.pop_front();
+  char file_path[256];
+  list.front().copy(file_path, list.front().size());
+  list.pop_front();
 
-    char md5[256];
+  char md5[256];
 
-    int res = _ptr_robot->ComputeFileMD5(file_path,md5);
-    return std::string(std::to_string(res) + "," + std::string(md5));
+  int res = _ptr_robot->ComputeFileMD5(file_path, md5);
+  return std::string(std::to_string(res) + "," + std::string(md5));
 }
 
 /**
@@ -6670,11 +7572,12 @@ std::string robot_command_thread::ComputeFileMD5(std::string para){
  * @param [out] state 急停状态，0-非急停，1-急停
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetRobotEmergencyStopState(std::string para){
-    uint8_t state;
+std::string robot_command_thread::GetRobotEmergencyStopState(std::string para)
+{
+  uint8_t state;
 
-    int res = _ptr_robot->GetRobotEmergencyStopState(&state);
-    return std::string(std::to_string(res) + "," + std::to_string(state));
+  int res = _ptr_robot->GetRobotEmergencyStopState(&state);
+  return std::string(std::to_string(res) + "," + std::to_string(state));
 }
 
 /**
@@ -6682,11 +7585,12 @@ std::string robot_command_thread::GetRobotEmergencyStopState(std::string para){
  * @param [out]  state 通讯状态，0-通讯正常，1-通讯异常
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetSDKComState(std::string para){
-    int state;
+std::string robot_command_thread::GetSDKComState(std::string para)
+{
+  int state;
 
-    int res = _ptr_robot->GetSDKComState(&state);
-    return std::string(std::to_string(res) + "," + std::to_string(state));
+  int res = _ptr_robot->GetSDKComState(&state);
+  return std::string(std::to_string(res) + "," + std::to_string(state));
 }
 
 /**
@@ -6695,13 +7599,14 @@ std::string robot_command_thread::GetSDKComState(std::string para){
  * @param [out]  si1_state 安全停止信号SI1
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetSafetyStopState(std::string para){
-    uint8_t si0_state;
-    uint8_t si1_state;
+std::string robot_command_thread::GetSafetyStopState(std::string para)
+{
+  uint8_t si0_state;
+  uint8_t si1_state;
 
-    int res = _ptr_robot->GetSafetyStopState(&si0_state,&si1_state);
-    return std::string(std::to_string(res) + "," + std::to_string(si0_state) + "," +\
-            std::to_string(si1_state));
+  int res = _ptr_robot->GetSafetyStopState(&si0_state, &si1_state);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(si0_state) + "," + std::to_string(si1_state));
 }
 
 /**
@@ -6710,12 +7615,14 @@ std::string robot_command_thread::GetSafetyStopState(std::string para){
  * @param [out] checksum 校验和 8位16进制
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetSafetyParamsCheckSum(std::string para){
-    int status;
-    uint32_t checksum;
+std::string robot_command_thread::GetSafetyParamsCheckSum(std::string para)
+{
+  int status;
+  uint32_t checksum;
 
-    int res = _ptr_robot->GetSafetyParamsCheckSum(status, checksum);
-    return std::string(std::to_string(res) + "," + std::to_string(status) + "," + std::to_string(checksum));
+  int res = _ptr_robot->GetSafetyParamsCheckSum(status, checksum);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(status) + "," + std::to_string(checksum));
 }
 
 /**
@@ -6724,16 +7631,17 @@ std::string robot_command_thread::GetSafetyParamsCheckSum(std::string para){
  * @param [in] password 密码
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SafetyOPPasswordCheck(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para, list);
-    int status = std::stoi(list.front().c_str()); list.pop_front();
-    std::string password = list.front();
+std::string robot_command_thread::SafetyOPPasswordCheck(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  int status = std::stoi(list.front().c_str());
+  list.pop_front();
+  std::string password = list.front();
 
-    int res = _ptr_robot->SafetyOPPasswordCheck(status, password);
-    return std::to_string(res);
+  int res = _ptr_robot->SafetyOPPasswordCheck(status, password);
+  return std::to_string(res);
 }
-
 
 /**
  * @brief 获取机器人硬件版本
@@ -6747,22 +7655,26 @@ std::string robot_command_thread::SafetyOPPasswordCheck(std::string para){
  * @param[out] endBoardversion 未端版硬件版本
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetHardwareVersion(std::string para){
-    char ctrlBoxBoardversion[128];
-    char driver1version[128];
-    char driver2version[128];
-    char driver3version[128];
-    char driver4version[128];
-    char driver5version[128];
-    char driver6version[128];
-    char endBoardversion[128];
+std::string robot_command_thread::GetHardwareVersion(std::string para)
+{
+  char ctrlBoxBoardversion[128];
+  char driver1version[128];
+  char driver2version[128];
+  char driver3version[128];
+  char driver4version[128];
+  char driver5version[128];
+  char driver6version[128];
+  char endBoardversion[128];
 
-    int res = _ptr_robot->GetHardwareVersion(ctrlBoxBoardversion,driver1version,driver2version,driver3version,driver4version,driver5version,driver6version,endBoardversion);
-    return std::string(std::to_string(res) + "," + std::string(ctrlBoxBoardversion) + "," +\
-            std::string(driver1version) + "," + std::string(driver2version) + "," +\
-            std::string(driver3version) + "," + std::string(driver4version) + "," +\
-            std::string(driver5version) + "," + std::string(driver6version) + "," +\
-            std::string(endBoardversion));
+  int res = _ptr_robot->GetHardwareVersion(
+    ctrlBoxBoardversion, driver1version, driver2version, driver3version, driver4version,
+    driver5version, driver6version, endBoardversion);
+  return std::string(
+    std::to_string(res) + "," + std::string(ctrlBoxBoardversion) + "," +
+    std::string(driver1version) + "," + std::string(driver2version) + "," +
+    std::string(driver3version) + "," + std::string(driver4version) + "," +
+    std::string(driver5version) + "," + std::string(driver6version) + "," +
+    std::string(endBoardversion));
 }
 
 /**
@@ -6777,38 +7689,43 @@ std::string robot_command_thread::GetHardwareVersion(std::string para){
  * @param[out] endBoardversion 未端版固件版本
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetFirmwareVersion(std::string para){
-    char ctrlBoxBoardversion[128];
-    char driver1version[128];
-    char driver2version[128];
-    char driver3version[128];
-    char driver4version[128];
-    char driver5version[128];
-    char driver6version[128];
-    char endBoardversion[128];
+std::string robot_command_thread::GetFirmwareVersion(std::string para)
+{
+  char ctrlBoxBoardversion[128];
+  char driver1version[128];
+  char driver2version[128];
+  char driver3version[128];
+  char driver4version[128];
+  char driver5version[128];
+  char driver6version[128];
+  char endBoardversion[128];
 
-    int res = _ptr_robot->GetFirmwareVersion(ctrlBoxBoardversion,driver1version,driver2version,driver3version,driver4version,driver5version,driver6version,endBoardversion);
-    return std::string(std::to_string(res) + "," + std::string(ctrlBoxBoardversion) + "," +\
-            std::string(driver1version) + "," + std::string(driver2version) + "," +\
-            std::string(driver3version) + "," + std::string(driver4version) + "," +\
-            std::string(driver5version) + "," + std::string(driver6version) + "," +\
-            std::string(endBoardversion));
+  int res = _ptr_robot->GetFirmwareVersion(
+    ctrlBoxBoardversion, driver1version, driver2version, driver3version, driver4version,
+    driver5version, driver6version, endBoardversion);
+  return std::string(
+    std::to_string(res) + "," + std::string(ctrlBoxBoardversion) + "," +
+    std::string(driver1version) + "," + std::string(driver2version) + "," +
+    std::string(driver3version) + "," + std::string(driver4version) + "," +
+    std::string(driver5version) + "," + std::string(driver6version) + "," +
+    std::string(endBoardversion));
 }
-
 
 /**
  * @brief 点位表切换
  * @param [in] pointTableName 要切换的点位表名称    pointTable1.db
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::PointTableSwitch(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::PointTableSwitch(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string pointTableName = list.front();list.pop_front();
+  std::string pointTableName = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->PointTableSwitch(pointTableName);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->PointTableSwitch(pointTableName);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6817,15 +7734,18 @@ std::string robot_command_thread::PointTableSwitch(std::string para){
  * @param [in] saveFilePath 下载点位表的存储路径   C://test/
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::PointTableDownLoad(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::PointTableDownLoad(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string pointTableName = list.front();list.pop_front();
-    std::string saveFilePath = list.front();list.pop_front();
+  std::string pointTableName = list.front();
+  list.pop_front();
+  std::string saveFilePath = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->PointTableDownLoad(pointTableName,saveFilePath);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->PointTableDownLoad(pointTableName, saveFilePath);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6833,14 +7753,16 @@ std::string robot_command_thread::PointTableDownLoad(std::string para){
  * @param [in] pointTableFilePath 上传点位表的全路径名   C://test/pointTable1.db
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::PointTableUpLoad(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::PointTableUpLoad(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string pointTableFilePath = list.front();list.pop_front();
+  std::string pointTableFilePath = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->PointTableUpLoad(pointTableFilePath);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->PointTableUpLoad(pointTableFilePath);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6850,15 +7772,18 @@ std::string robot_command_thread::PointTableUpLoad(std::string para){
  * @param [out] errorStr 切换点位表错误信息
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::PointTableUpdateLua(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::PointTableUpdateLua(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string pointTableName = list.front();list.pop_front();
-    std::string luaFileName = list.front();list.pop_front();
+  std::string pointTableName = list.front();
+  list.pop_front();
+  std::string luaFileName = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->PointTableUpdateLua(pointTableName,luaFileName);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->PointTableUpdateLua(pointTableName, luaFileName);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6879,29 +7804,45 @@ std::string robot_command_thread::PointTableUpdateLua(std::string para){
  * @param [in] weaveRotAngle 摆动方向侧倾角(绕摆动X轴偏转)，单位°
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WeaveSetPara(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeaveSetPara(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weaveNum = std::stoi(list.front());list.pop_front();
-    int weaveType = std::stoi(list.front());list.pop_front();
-    double weaveFrequency = std::stod(list.front());list.pop_front();
-    int weaveIncStayTime = std::stoi(list.front());list.pop_front();
-    double weaveRange = std::stod(list.front());list.pop_front();
-    double weaveLeftRange = std::stod(list.front());list.pop_front();
-    double weaveRightRange = std::stod(list.front());list.pop_front();
-    int additionalStayTime = std::stoi(list.front());list.pop_front();
-    int weaveLeftStayTime = std::stoi(list.front());list.pop_front();
-    int weaveRightStayTime = std::stoi(list.front());list.pop_front();
-    int weaveCircleRadio = std::stoi(list.front());list.pop_front();
-    int weaveStationary = std::stoi(list.front());list.pop_front();
-    double weaveYawAngle = std::stod(list.front());list.pop_front();
-    double weaveRotAngle = std::stod(list.front());list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
+  int weaveType = std::stoi(list.front());
+  list.pop_front();
+  double weaveFrequency = std::stod(list.front());
+  list.pop_front();
+  int weaveIncStayTime = std::stoi(list.front());
+  list.pop_front();
+  double weaveRange = std::stod(list.front());
+  list.pop_front();
+  double weaveLeftRange = std::stod(list.front());
+  list.pop_front();
+  double weaveRightRange = std::stod(list.front());
+  list.pop_front();
+  int additionalStayTime = std::stoi(list.front());
+  list.pop_front();
+  int weaveLeftStayTime = std::stoi(list.front());
+  list.pop_front();
+  int weaveRightStayTime = std::stoi(list.front());
+  list.pop_front();
+  int weaveCircleRadio = std::stoi(list.front());
+  list.pop_front();
+  int weaveStationary = std::stoi(list.front());
+  list.pop_front();
+  double weaveYawAngle = std::stod(list.front());
+  list.pop_front();
+  double weaveRotAngle = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeaveSetPara(weaveNum,weaveType,weaveFrequency,weaveIncStayTime,
-                                        weaveRange,weaveLeftRange,weaveRightRange,additionalStayTime,weaveLeftStayTime,
-                                        weaveRightStayTime,weaveCircleRadio,weaveStationary,weaveYawAngle,weaveRotAngle);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeaveSetPara(
+    weaveNum, weaveType, weaveFrequency, weaveIncStayTime, weaveRange, weaveLeftRange,
+    weaveRightRange, additionalStayTime, weaveLeftStayTime, weaveRightStayTime, weaveCircleRadio,
+    weaveStationary, weaveYawAngle, weaveRotAngle);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6917,23 +7858,34 @@ std::string robot_command_thread::WeaveSetPara(std::string para){
  * @param [in] weaveStationary 摆动位置等待，0-等待时间内位置继续移动；1-等待时间内位置静止
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WeaveOnlineSetPara(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeaveOnlineSetPara(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weaveNum = std::stoi(list.front());list.pop_front();
-    int weaveType = std::stoi(list.front());list.pop_front();
-    double weaveFrequency = std::stod(list.front());list.pop_front();
-    int weaveIncStayTime = std::stoi(list.front());list.pop_front();
-    double weaveRange = std::stod(list.front());list.pop_front();
-    int weaveLeftStayTime = std::stoi(list.front());list.pop_front();
-    int weaveRightStayTime = std::stoi(list.front());list.pop_front();
-    int weaveCircleRadio = std::stoi(list.front());list.pop_front();
-    int weaveStationary = std::stoi(list.front());list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
+  int weaveType = std::stoi(list.front());
+  list.pop_front();
+  double weaveFrequency = std::stod(list.front());
+  list.pop_front();
+  int weaveIncStayTime = std::stoi(list.front());
+  list.pop_front();
+  double weaveRange = std::stod(list.front());
+  list.pop_front();
+  int weaveLeftStayTime = std::stoi(list.front());
+  list.pop_front();
+  int weaveRightStayTime = std::stoi(list.front());
+  list.pop_front();
+  int weaveCircleRadio = std::stoi(list.front());
+  list.pop_front();
+  int weaveStationary = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeaveOnlineSetPara(weaveNum,weaveType,weaveFrequency,weaveIncStayTime,
-                                        weaveRange,weaveLeftStayTime,weaveRightStayTime,weaveCircleRadio,weaveStationary);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeaveOnlineSetPara(
+    weaveNum, weaveType, weaveFrequency, weaveIncStayTime, weaveRange, weaveLeftStayTime,
+    weaveRightStayTime, weaveCircleRadio, weaveStationary);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6941,14 +7893,16 @@ std::string robot_command_thread::WeaveOnlineSetPara(std::string para){
  * @param [in] weaveNum 摆焊参数配置编号
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WeaveStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeaveStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weaveNum = std::stoi(list.front());list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeaveStart(weaveNum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeaveStart(weaveNum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6956,14 +7910,16 @@ std::string robot_command_thread::WeaveStart(std::string para){
  * @param [in] weaveNum 摆焊参数配置编号
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WeaveEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeaveEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weaveNum = std::stoi(list.front());list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeaveEnd(weaveNum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeaveEnd(weaveNum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -6990,45 +7946,66 @@ std::string robot_command_thread::WeaveEnd(std::string para){
  *@param[in]offset_flag 0-不偏移，1-基坐标系/工件坐标系下偏移，2-工具坐标系下偏移
  *@param[in]offset_pos 位姿偏移量
  */
-std::string robot_command_thread::SegmentWeldStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SegmentWeldStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    DescPose startDesePos;
-    _fillDescPose(list,startDesePos);
-    DescPose endDesePos;
-    _fillDescPose(list,endDesePos);
-    JointPos startJPos;
-    _fillJointPose(list,startJPos);
-    JointPos endJPos;
-    _fillJointPose(list,endJPos);
-    double weldLength = std::stod(list.front());list.pop_front();
-    double noWeldLength = std::stod(list.front());list.pop_front();
-    int weldIOType = std::stoi(list.front());list.pop_front();
-    int arcNum = std::stoi(list.front());list.pop_front();
-    int weldTimeout = std::stoi(list.front());list.pop_front();
-    int isWeave = std::stoi(list.front());list.pop_front();
-    int weaveNum = std::stoi(list.front());list.pop_front();
-    int tool = std::stoi(list.front());list.pop_front();
-    int user = std::stoi(list.front());list.pop_front();
-    float vel = std::stod(list.front());list.pop_front();
-    float acc = std::stod(list.front());list.pop_front();
-    float ovl = std::stod(list.front());list.pop_front();
-    float blendR = std::stod(list.front());list.pop_front();
-    ExaxisPos epos;
-    epos.ePos[0] = std::stod(list.front().c_str());list.pop_front();
-    epos.ePos[1] = std::stod(list.front().c_str());list.pop_front();
-    epos.ePos[2] = std::stod(list.front().c_str());list.pop_front();
-    epos.ePos[3] = std::stod(list.front().c_str());list.pop_front();
-    uint8_t search = std::stoi(list.front());list.pop_front();
-    uint8_t offset_flag = std::stoi(list.front());list.pop_front();
-    DescPose offset_pos;
-    _fillDescPose(list,offset_pos);
+  DescPose startDesePos;
+  _fillDescPose(list, startDesePos);
+  DescPose endDesePos;
+  _fillDescPose(list, endDesePos);
+  JointPos startJPos;
+  _fillJointPose(list, startJPos);
+  JointPos endJPos;
+  _fillJointPose(list, endJPos);
+  double weldLength = std::stod(list.front());
+  list.pop_front();
+  double noWeldLength = std::stod(list.front());
+  list.pop_front();
+  int weldIOType = std::stoi(list.front());
+  list.pop_front();
+  int arcNum = std::stoi(list.front());
+  list.pop_front();
+  int weldTimeout = std::stoi(list.front());
+  list.pop_front();
+  int isWeave = std::stoi(list.front());
+  list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
+  int tool = std::stoi(list.front());
+  list.pop_front();
+  int user = std::stoi(list.front());
+  list.pop_front();
+  float vel = std::stod(list.front());
+  list.pop_front();
+  float acc = std::stod(list.front());
+  list.pop_front();
+  float ovl = std::stod(list.front());
+  list.pop_front();
+  float blendR = std::stod(list.front());
+  list.pop_front();
+  ExaxisPos epos;
+  epos.ePos[0] = std::stod(list.front().c_str());
+  list.pop_front();
+  epos.ePos[1] = std::stod(list.front().c_str());
+  list.pop_front();
+  epos.ePos[2] = std::stod(list.front().c_str());
+  list.pop_front();
+  epos.ePos[3] = std::stod(list.front().c_str());
+  list.pop_front();
+  uint8_t search = std::stoi(list.front());
+  list.pop_front();
+  uint8_t offset_flag = std::stoi(list.front());
+  list.pop_front();
+  DescPose offset_pos;
+  _fillDescPose(list, offset_pos);
 
-    int res = _ptr_robot->SegmentWeldStart(&startDesePos,&endDesePos,&startJPos,&endJPos,weldLength,noWeldLength,
-                                            weldIOType,arcNum,weldTimeout,isWeave,weaveNum,tool,user,vel,acc,ovl,blendR,
-                                            &epos,search,offset_flag,&offset_pos);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SegmentWeldStart(
+    &startDesePos, &endDesePos, &startJPos, &endJPos, weldLength, noWeldLength, weldIOType, arcNum,
+    weldTimeout, isWeave, weaveNum, tool, user, vel, acc, ovl, blendR, &epos, search, offset_flag,
+    &offset_pos);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7038,16 +8015,20 @@ std::string robot_command_thread::SegmentWeldStart(std::string para){
  * @param file_num：滚动存储的文件数量，1~20个.单个文件上限50M;
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::LoggerInit(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LoggerInit(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int output_model = std::stoi(list.front());list.pop_front();
-    std::string file_path = list.front();list.pop_front();
-    int file_num = std::stoi(list.front());list.pop_front();
+  int output_model = std::stoi(list.front());
+  list.pop_front();
+  std::string file_path = list.front();
+  list.pop_front();
+  int file_num = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->LoggerInit(output_model,file_path,file_num);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->LoggerInit(output_model, file_path, file_num);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7055,16 +8036,17 @@ std::string robot_command_thread::LoggerInit(std::string para){
  * @param lvl: 过滤等级值，值越小输出日志越少，默认值是1. 1-error, 2-warnning, 3-inform, 4-debug;
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetLoggerLevel(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLoggerLevel(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int lvl = std::stoi(list.front());list.pop_front();
+  int lvl = std::stoi(list.front());
+  list.pop_front();
 
-    _ptr_robot->SetLoggerLevel(lvl);
-    return "0";
+  _ptr_robot->SetLoggerLevel(lvl);
+  return "0";
 }
-
 
 /**
  * @brief 获取485扩展轴伺服状态
@@ -7075,22 +8057,26 @@ std::string robot_command_thread::SetLoggerLevel(std::string para){
  * @param [out] servoSpeed 伺服当前速度 mm/s或°/s
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::AuxServoGetStatus(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AuxServoGetStatus(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int servoId = std::stoi(list.front());list.pop_front();
+  int servoId = std::stoi(list.front());
+  list.pop_front();
 
-    int servoErrCode;
-    int servoState;
-    double servoPos;
-    double servoSpeed;
-    double servoTorque;
+  int servoErrCode;
+  int servoState;
+  double servoPos;
+  double servoSpeed;
+  double servoTorque;
 
-    int res = _ptr_robot->AuxServoGetStatus(servoId,&servoErrCode,&servoState,&servoPos,&servoSpeed,&servoTorque);
-    return std::string(std::to_string(res) + "," + std::to_string(servoErrCode) + "," +\
-            std::to_string(servoState) + "," + std::to_string(servoPos) + "," +\
-            std::to_string(servoSpeed) + "," + std::to_string(servoTorque));
+  int res = _ptr_robot->AuxServoGetStatus(
+    servoId, &servoErrCode, &servoState, &servoPos, &servoSpeed, &servoTorque);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(servoErrCode) + "," + std::to_string(servoState) +
+    "," + std::to_string(servoPos) + "," + std::to_string(servoSpeed) + "," +
+    std::to_string(servoTorque));
 }
 
 /**
@@ -7098,14 +8084,16 @@ std::string robot_command_thread::AuxServoGetStatus(std::string para){
  * @param [in] acc 机器人加速度百分比
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetOaccScale(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetOaccScale(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double acc = std::stod(list.front());list.pop_front();
+  double acc = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetOaccScale(acc);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetOaccScale(acc);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7116,26 +8104,32 @@ std::string robot_command_thread::SetOaccScale(std::string para){
  * @param [in] zeroZoneCmp 死区补偿值AO百分比，整形，默认为20%，范围[0-100]
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveAOStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MoveAOStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int AONum = std::stoi(list.front());list.pop_front();
-    int maxTCPSpeed = std::stoi(list.front());list.pop_front();
-    int maxAOPercent = std::stoi(list.front());list.pop_front();
-    int zeroZoneCmp = std::stoi(list.front());list.pop_front();
+  int AONum = std::stoi(list.front());
+  list.pop_front();
+  int maxTCPSpeed = std::stoi(list.front());
+  list.pop_front();
+  int maxAOPercent = std::stoi(list.front());
+  list.pop_front();
+  int zeroZoneCmp = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->MoveAOStart(AONum,maxTCPSpeed,maxAOPercent,zeroZoneCmp);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->MoveAOStart(AONum, maxTCPSpeed, maxAOPercent, zeroZoneCmp);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 控制箱AO飞拍停止
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveAOStop(std::string para){
-    int res = _ptr_robot->MoveAOStop();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::MoveAOStop(std::string para)
+{
+  int res = _ptr_robot->MoveAOStop();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7146,35 +8140,42 @@ std::string robot_command_thread::MoveAOStop(std::string para){
  * @param [in] zeroZoneCmp 死区补偿值AO百分比，整形，默认为20%，范围[0-100]
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveToolAOStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MoveToolAOStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int AONum = std::stoi(list.front());list.pop_front();
-    int maxTCPSpeed = std::stoi(list.front());list.pop_front();
-    int maxAOPercent = std::stoi(list.front());list.pop_front();
-    int zeroZoneCmp = std::stoi(list.front());list.pop_front();
+  int AONum = std::stoi(list.front());
+  list.pop_front();
+  int maxTCPSpeed = std::stoi(list.front());
+  list.pop_front();
+  int maxAOPercent = std::stoi(list.front());
+  list.pop_front();
+  int zeroZoneCmp = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->MoveToolAOStart(AONum,maxTCPSpeed,maxAOPercent,zeroZoneCmp);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->MoveToolAOStart(AONum, maxTCPSpeed, maxAOPercent, zeroZoneCmp);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 末端AO飞拍停止
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MoveToolAOStop(std::string para){
-    int res = _ptr_robot->MoveToolAOStop();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::MoveToolAOStop(std::string para)
+{
+  int res = _ptr_robot->MoveToolAOStop();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 卸载UDP通信
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::ExtDevUnloadUDPDriver(std::string para){
-    int res = _ptr_robot->ExtDevUnloadUDPDriver();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ExtDevUnloadUDPDriver(std::string para)
+{
+  int res = _ptr_robot->ExtDevUnloadUDPDriver();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7182,14 +8183,16 @@ std::string robot_command_thread::ExtDevUnloadUDPDriver(std::string para){
  * @param [in] filterTime 滤波时间(ms)
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetAuxDIFilterTime(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAuxDIFilterTime(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int filterTime = std::stoi(list.front());list.pop_front();
+  int filterTime = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetAuxDIFilterTime(filterTime);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetAuxDIFilterTime(filterTime);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7198,15 +8201,18 @@ std::string robot_command_thread::SetAuxDIFilterTime(std::string para){
  * @param [in] filterTime 滤波时间(ms)
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetAuxAIFilterTime(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAuxAIFilterTime(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int AONum = std::stoi(list.front());list.pop_front();
-    int filterTime = std::stoi(list.front());list.pop_front();
+  int AONum = std::stoi(list.front());
+  list.pop_front();
+  int filterTime = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetAuxAIFilterTime(AONum,filterTime);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetAuxAIFilterTime(AONum, filterTime);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7217,17 +8223,22 @@ std::string robot_command_thread::SetAuxAIFilterTime(std::string para){
  * @param [in] errorAlarm 是否继续运动
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WaitAuxDI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WaitAuxDI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int DINum = std::stoi(list.front());list.pop_front();
-    int bOpen = std::stoi(list.front());list.pop_front();
-    int time = std::stoi(list.front());list.pop_front();
-    int errorAlarm = std::stoi(list.front());list.pop_front();
+  int DINum = std::stoi(list.front());
+  list.pop_front();
+  int bOpen = std::stoi(list.front());
+  list.pop_front();
+  int time = std::stoi(list.front());
+  list.pop_front();
+  int errorAlarm = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WaitAuxDI(DINum,bOpen,time,errorAlarm);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WaitAuxDI(DINum, bOpen, time, errorAlarm);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7239,18 +8250,24 @@ std::string robot_command_thread::WaitAuxDI(std::string para){
  * @param [in] errorAlarm 是否继续运动
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::WaitAuxAI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WaitAuxAI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int AINum = std::stoi(list.front());list.pop_front();
-    int sign = std::stoi(list.front());list.pop_front();
-    int value = std::stoi(list.front());list.pop_front();
-    int time = std::stoi(list.front());list.pop_front();
-    int errorAlarm = std::stoi(list.front());list.pop_front();
+  int AINum = std::stoi(list.front());
+  list.pop_front();
+  int sign = std::stoi(list.front());
+  list.pop_front();
+  int value = std::stoi(list.front());
+  list.pop_front();
+  int time = std::stoi(list.front());
+  list.pop_front();
+  int errorAlarm = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WaitAuxAI(AINum,sign,value,time,errorAlarm);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WaitAuxAI(AINum, sign, value, time, errorAlarm);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7260,20 +8277,25 @@ std::string robot_command_thread::WaitAuxAI(std::string para){
  * @param [out] isOpen 0-关；1-开
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetAuxDI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetAuxDI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int DINum = std::stoi(list.front());list.pop_front();
-    int isNoBlock = std::stoi(list.front());list.pop_front();
+  int DINum = std::stoi(list.front());
+  list.pop_front();
+  int isNoBlock = std::stoi(list.front());
+  list.pop_front();
 
-    bool isOpen;
+  bool isOpen;
 
-    int res = _ptr_robot->GetAuxDI(DINum,isNoBlock,isOpen);
-    int isOpen_tmp;
-    if(isOpen == true) isOpen_tmp = 1;
-    else isOpen_tmp = 0;
-    return std::string(std::to_string(res) + "," + std::to_string(isOpen_tmp));
+  int res = _ptr_robot->GetAuxDI(DINum, isNoBlock, isOpen);
+  int isOpen_tmp;
+  if (isOpen == true)
+    isOpen_tmp = 1;
+  else
+    isOpen_tmp = 0;
+  return std::string(std::to_string(res) + "," + std::to_string(isOpen_tmp));
 }
 
 /**
@@ -7283,17 +8305,20 @@ std::string robot_command_thread::GetAuxDI(std::string para){
  * @param [out] isOpen 0-关；1-开
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::GetAuxAI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetAuxAI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int AINum = std::stoi(list.front());list.pop_front();
-    int isNoBlock = std::stoi(list.front());list.pop_front();
+  int AINum = std::stoi(list.front());
+  list.pop_front();
+  int isNoBlock = std::stoi(list.front());
+  list.pop_front();
 
-    int value;
+  int value;
 
-    int res = _ptr_robot->GetAuxAI(AINum,isNoBlock,value);
-    return std::string(std::to_string(res) + "," + std::to_string(value));
+  int res = _ptr_robot->GetAuxAI(AINum, isNoBlock, value);
+  return std::string(std::to_string(res) + "," + std::to_string(value));
 }
 
 /**
@@ -7301,15 +8326,16 @@ std::string robot_command_thread::GetAuxAI(std::string para){
  * @param [in] pos 位姿值
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::SetRefPointInExAxisEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetRefPointInExAxisEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    DescPose pos;
-    _fillDescPose(list,pos);
+  DescPose pos;
+  _fillDescPose(list, pos);
 
-    int res = _ptr_robot->SetRefPointInExAxisEnd(pos);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetRefPointInExAxisEnd(pos);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7317,14 +8343,16 @@ std::string robot_command_thread::SetRefPointInExAxisEnd(std::string para){
  * @param [in]  pointNum 点编号[1-4]
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::PositionorSetRefPoint(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::PositionorSetRefPoint(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int pointNum = std::stoi(list.front());list.pop_front();
+  int pointNum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->PositionorSetRefPoint(pointNum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->PositionorSetRefPoint(pointNum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7332,14 +8360,15 @@ std::string robot_command_thread::PositionorSetRefPoint(std::string para){
  * @param [out]  coord 坐标系值
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::PositionorComputeECoordSys(std::string para){
-    DescPose coord;
+std::string robot_command_thread::PositionorComputeECoordSys(std::string para)
+{
+  DescPose coord;
 
-    int res = _ptr_robot->PositionorComputeECoordSys(coord);
-    return std::string(std::to_string(res) + "," + std::to_string(coord.tran.x) + "," + \
-            std::to_string(coord.tran.y) + "," + std::to_string(coord.tran.z) + "," + \
-            std::to_string(coord.rpy.rx) + "," + std::to_string(coord.rpy.ry) + "," + \
-            std::to_string(coord.rpy.rz));
+  int res = _ptr_robot->PositionorComputeECoordSys(coord);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(coord.tran.x) + "," + std::to_string(coord.tran.y) +
+    "," + std::to_string(coord.tran.z) + "," + std::to_string(coord.rpy.rx) + "," +
+    std::to_string(coord.rpy.ry) + "," + std::to_string(coord.rpy.rz));
 }
 
 /**
@@ -7366,48 +8395,71 @@ std::string robot_command_thread::PositionorComputeECoordSys(std::string para){
  * @param  [in] blendR [-1.0]-运动到位(阻塞)，[0~1000.0]-平滑半径(非阻塞)，单位mm
  * @return  错误码
  */
-std::string robot_command_thread::ExtAxisSyncMoveC(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ExtAxisSyncMoveC(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
+  JointPos joint_pos_p;
+  _fillJointPose(list, joint_pos_p);
+  DescPose desc_pos_p;
+  _fillDescPose(list, desc_pos_p);
+  int ptool = std::stoi(list.front());
+  list.pop_front();
+  int puser = std::stoi(list.front());
+  list.pop_front();
+  float pvel = std::stod(list.front());
+  list.pop_front();
+  float pacc = std::stod(list.front());
+  list.pop_front();
+  ExaxisPos epos_p;
+  epos_p.ePos[0] = std::stod(list.front().c_str());
+  list.pop_front();
+  epos_p.ePos[1] = std::stod(list.front().c_str());
+  list.pop_front();
+  epos_p.ePos[2] = std::stod(list.front().c_str());
+  list.pop_front();
+  epos_p.ePos[3] = std::stod(list.front().c_str());
+  list.pop_front();
+  uint8_t poffset_flag = std::stoi(list.front());
+  list.pop_front();
+  DescPose offset_pos_p;
+  _fillDescPose(list, offset_pos_p);
+  JointPos joint_pos_t;
+  _fillJointPose(list, joint_pos_t);
+  DescPose desc_pos_t;
+  _fillDescPose(list, desc_pos_t);
+  int ttool = std::stoi(list.front());
+  list.pop_front();
+  int tuser = std::stoi(list.front());
+  list.pop_front();
+  float tvel = std::stod(list.front());
+  list.pop_front();
+  float tacc = std::stod(list.front());
+  list.pop_front();
+  ExaxisPos epos_t;
+  epos_t.ePos[0] = std::stod(list.front().c_str());
+  list.pop_front();
+  epos_t.ePos[1] = std::stod(list.front().c_str());
+  list.pop_front();
+  epos_t.ePos[2] = std::stod(list.front().c_str());
+  list.pop_front();
+  epos_t.ePos[3] = std::stod(list.front().c_str());
+  list.pop_front();
+  uint8_t toffset_flag = std::stoi(list.front());
+  list.pop_front();
+  DescPose offset_pos_t;
+  _fillDescPose(list, offset_pos_t);
+  float ovl = std::stod(list.front());
+  list.pop_front();
+  float blendR = std::stod(list.front());
+  list.pop_front();
 
-    JointPos joint_pos_p;
-    _fillJointPose(list,joint_pos_p);
-    DescPose desc_pos_p;
-    _fillDescPose(list,desc_pos_p);
-    int ptool = std::stoi(list.front());list.pop_front();
-    int puser = std::stoi(list.front());list.pop_front();
-    float pvel = std::stod(list.front());list.pop_front();
-    float pacc = std::stod(list.front());list.pop_front();
-    ExaxisPos epos_p;
-    epos_p.ePos[0] = std::stod(list.front().c_str());list.pop_front();
-    epos_p.ePos[1] = std::stod(list.front().c_str());list.pop_front();
-    epos_p.ePos[2] = std::stod(list.front().c_str());list.pop_front();
-    epos_p.ePos[3] = std::stod(list.front().c_str());list.pop_front();
-    uint8_t poffset_flag = std::stoi(list.front());list.pop_front();
-    DescPose offset_pos_p;
-    _fillDescPose(list,offset_pos_p);
-    JointPos joint_pos_t;
-    _fillJointPose(list,joint_pos_t);
-    DescPose desc_pos_t;
-    _fillDescPose(list,desc_pos_t);
-    int ttool = std::stoi(list.front());list.pop_front();
-    int tuser = std::stoi(list.front());list.pop_front();
-    float tvel = std::stod(list.front());list.pop_front();
-    float tacc = std::stod(list.front());list.pop_front();
-    ExaxisPos epos_t;
-    epos_t.ePos[0] = std::stod(list.front().c_str());list.pop_front();
-    epos_t.ePos[1] = std::stod(list.front().c_str());list.pop_front();
-    epos_t.ePos[2] = std::stod(list.front().c_str());list.pop_front();
-    epos_t.ePos[3] = std::stod(list.front().c_str());list.pop_front();
-    uint8_t toffset_flag = std::stoi(list.front());list.pop_front();
-    DescPose offset_pos_t;
-    _fillDescPose(list,offset_pos_t);
-    float ovl = std::stod(list.front());list.pop_front();
-    float blendR = std::stod(list.front());list.pop_front();
-
-    int res = _ptr_robot->ExtAxisSyncMoveC(joint_pos_p, desc_pos_p, ptool, puser, pvel, pacc, epos_p, poffset_flag, offset_pos_p, joint_pos_t, desc_pos_t, ttool, tuser, tvel, tacc, epos_t, toffset_flag, offset_pos_t, ovl, blendR);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ExtAxisSyncMoveC(
+    joint_pos_p, desc_pos_p, ptool, puser, pvel, pacc, epos_p, poffset_flag, offset_pos_p,
+    joint_pos_t, desc_pos_t, ttool, tuser, tvel, tacc, epos_t, toffset_flag, offset_pos_t, ovl,
+    blendR);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7421,20 +8473,29 @@ std::string robot_command_thread::ExtAxisSyncMoveC(std::string para){
  * @param  [in] offectFlag  1-带偏移量寻位；2-示教点寻位
  * @return  错误码
  */
-std::string robot_command_thread::WireSearchStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WireSearchStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int refPos = std::stoi(list.front());list.pop_front();
-    float searchVel = std::stod(list.front());list.pop_front();
-    int searchDis = std::stoi(list.front());list.pop_front();
-    int autoBackFlag = std::stoi(list.front());list.pop_front();
-    float autoBackVel = std::stod(list.front());list.pop_front();
-    int autoBackDis = std::stoi(list.front());list.pop_front();
-    int offectFlag = std::stoi(list.front());list.pop_front();
+  int refPos = std::stoi(list.front());
+  list.pop_front();
+  float searchVel = std::stod(list.front());
+  list.pop_front();
+  int searchDis = std::stoi(list.front());
+  list.pop_front();
+  int autoBackFlag = std::stoi(list.front());
+  list.pop_front();
+  float autoBackVel = std::stod(list.front());
+  list.pop_front();
+  int autoBackDis = std::stoi(list.front());
+  list.pop_front();
+  int offectFlag = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WireSearchStart(refPos, searchVel, searchDis, autoBackFlag, autoBackVel, autoBackDis, offectFlag);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WireSearchStart(
+    refPos, searchVel, searchDis, autoBackFlag, autoBackVel, autoBackDis, offectFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7448,20 +8509,29 @@ std::string robot_command_thread::WireSearchStart(std::string para){
  * @param  [in] offectFlag  1-带偏移量寻位；2-示教点寻位
  * @return  错误码
  */
-std::string robot_command_thread::WireSearchEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WireSearchEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int refPos = std::stoi(list.front());list.pop_front();
-    float searchVel = std::stod(list.front());list.pop_front();
-    int searchDis = std::stoi(list.front());list.pop_front();
-    int autoBackFlag = std::stoi(list.front());list.pop_front();
-    float autoBackVel = std::stod(list.front());list.pop_front();
-    int autoBackDis = std::stoi(list.front());list.pop_front();
-    int offectFlag = std::stoi(list.front());list.pop_front();
+  int refPos = std::stoi(list.front());
+  list.pop_front();
+  float searchVel = std::stod(list.front());
+  list.pop_front();
+  int searchDis = std::stoi(list.front());
+  list.pop_front();
+  int autoBackFlag = std::stoi(list.front());
+  list.pop_front();
+  float autoBackVel = std::stod(list.front());
+  list.pop_front();
+  int autoBackDis = std::stoi(list.front());
+  list.pop_front();
+  int offectFlag = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WireSearchEnd(refPos, searchVel, searchDis, autoBackFlag, autoBackVel, autoBackDis, offectFlag);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WireSearchEnd(
+    refPos, searchVel, searchDis, autoBackFlag, autoBackVel, autoBackDis, offectFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7474,45 +8544,52 @@ std::string robot_command_thread::WireSearchEnd(std::string para){
  * @param  [out] offect 偏移位姿[x, y, z, a, b, c]
  * @return  错误码
  */
-std::string robot_command_thread::GetWireSearchOffset(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetWireSearchOffset(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int seamType = std::stoi(list.front());list.pop_front();
-    int method = std::stoi(list.front());list.pop_front();
-    std::vector<std::string> varNameRef;
-    for(int i = 0;i < 6; i++){
-        varNameRef.push_back(list.front());
-        list.pop_front();
-    }
-    std::vector<std::string> varNameRes;
-    for(int i = 0;i < 6; i++){
-        varNameRes.push_back(list.front());
-        list.pop_front();
-    }
+  int seamType = std::stoi(list.front());
+  list.pop_front();
+  int method = std::stoi(list.front());
+  list.pop_front();
+  std::vector<std::string> varNameRef;
+  for (int i = 0; i < 6; i++) {
+    varNameRef.push_back(list.front());
+    list.pop_front();
+  }
+  std::vector<std::string> varNameRes;
+  for (int i = 0; i < 6; i++) {
+    varNameRes.push_back(list.front());
+    list.pop_front();
+  }
 
-    int offectFlag;
-    DescPose offect;
+  int offectFlag;
+  DescPose offect;
 
-    int res = _ptr_robot->GetWireSearchOffset(seamType, method, varNameRef, varNameRes, offectFlag, offect);
-    return std::string(std::to_string(res) + "," + std::to_string(offectFlag) + "," + std::to_string(offect.tran.x) + "," + \
-            std::to_string(offect.tran.y) + "," + std::to_string(offect.tran.z) + "," + \
-            std::to_string(offect.rpy.rx) + "," + std::to_string(offect.rpy.ry) + "," + \
-            std::to_string(offect.rpy.rz));
+  int res =
+    _ptr_robot->GetWireSearchOffset(seamType, method, varNameRef, varNameRes, offectFlag, offect);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(offectFlag) + "," + std::to_string(offect.tran.x) +
+    "," + std::to_string(offect.tran.y) + "," + std::to_string(offect.tran.z) + "," +
+    std::to_string(offect.rpy.rx) + "," + std::to_string(offect.rpy.ry) + "," +
+    std::to_string(offect.rpy.rz));
 }
 
 /**
  * @brief  等待焊丝寻位完成
  * @return  错误码
  */
-std::string robot_command_thread::WireSearchWait(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WireSearchWait(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string varName = list.front();list.pop_front();
+  std::string varName = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->WireSearchWait(varName);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WireSearchWait(varName);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7521,16 +8598,18 @@ std::string robot_command_thread::WireSearchWait(std::string para){
  * @param  [in] pos  接触点数据[x, y, x, a, b, c]
  * @return  错误码
  */
-std::string robot_command_thread::SetPointToDatabase(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetPointToDatabase(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string varName = list.front();list.pop_front();
-    DescPose pos;
-    _fillDescPose(list,pos);
+  std::string varName = list.front();
+  list.pop_front();
+  DescPose pos;
+  _fillDescPose(list, pos);
 
-    int res = _ptr_robot->SetPointToDatabase(varName,pos);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetPointToDatabase(varName, pos);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7556,46 +8635,71 @@ std::string robot_command_thread::SetPointToDatabase(std::string para){
  * @param  [in] offsetParameter 偏置参数；采样(偏置采样开始时间，默认采一周期)；百分比(偏置百分比(-100 ~ 100))
  * @return  错误码
  */
-std::string robot_command_thread::ArcWeldTraceControl(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ArcWeldTraceControl(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int flag = std::stoi(list.front());list.pop_front();
-    double delaytime = std::stod(list.front());list.pop_front();
-    int isLeftRight = std::stoi(list.front());list.pop_front();
-    double klr = std::stod(list.front());list.pop_front();
-    double tStartLr = std::stod(list.front());list.pop_front();
-    double stepMaxLr = std::stod(list.front());list.pop_front();
-    double sumMaxLr = std::stod(list.front());list.pop_front();
-    int isUpLow = std::stoi(list.front());list.pop_front();
-    double kud = std::stod(list.front());list.pop_front();
-    double tStartUd = std::stod(list.front());list.pop_front();
-    double stepMaxUd = std::stod(list.front());list.pop_front();
-    double sumMaxUd = std::stod(list.front());list.pop_front();
-    int axisSelect = std::stoi(list.front());list.pop_front();
-    int referenceType = std::stoi(list.front());list.pop_front();
-    double referSampleStartUd = std::stod(list.front());list.pop_front();
-    double referSampleCountUd = std::stod(list.front());list.pop_front();
-    double referenceCurrent = std::stod(list.front());list.pop_front();
-    int offsetType = std::stoi(list.front());list.pop_front();
-    int offsetParameter = std::stoi(list.front());list.pop_front();
+  int flag = std::stoi(list.front());
+  list.pop_front();
+  double delaytime = std::stod(list.front());
+  list.pop_front();
+  int isLeftRight = std::stoi(list.front());
+  list.pop_front();
+  double klr = std::stod(list.front());
+  list.pop_front();
+  double tStartLr = std::stod(list.front());
+  list.pop_front();
+  double stepMaxLr = std::stod(list.front());
+  list.pop_front();
+  double sumMaxLr = std::stod(list.front());
+  list.pop_front();
+  int isUpLow = std::stoi(list.front());
+  list.pop_front();
+  double kud = std::stod(list.front());
+  list.pop_front();
+  double tStartUd = std::stod(list.front());
+  list.pop_front();
+  double stepMaxUd = std::stod(list.front());
+  list.pop_front();
+  double sumMaxUd = std::stod(list.front());
+  list.pop_front();
+  int axisSelect = std::stoi(list.front());
+  list.pop_front();
+  int referenceType = std::stoi(list.front());
+  list.pop_front();
+  double referSampleStartUd = std::stod(list.front());
+  list.pop_front();
+  double referSampleCountUd = std::stod(list.front());
+  list.pop_front();
+  double referenceCurrent = std::stod(list.front());
+  list.pop_front();
+  int offsetType = std::stoi(list.front());
+  list.pop_front();
+  int offsetParameter = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ArcWeldTraceControl(flag, delaytime, isLeftRight, klr, tStartLr, stepMaxLr, sumMaxLr, isUpLow, kud, tStartUd, stepMaxUd, sumMaxUd, axisSelect, referenceType, referSampleStartUd, referSampleCountUd, referenceCurrent, offsetType = 0, offsetParameter);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ArcWeldTraceControl(
+    flag, delaytime, isLeftRight, klr, tStartLr, stepMaxLr, sumMaxLr, isUpLow, kud, tStartUd,
+    stepMaxUd, sumMaxUd, axisSelect, referenceType, referSampleStartUd, referSampleCountUd,
+    referenceCurrent, offsetType = 0, offsetParameter);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief  设置电弧跟踪输入信号端口
  * @param  [in] channel 电弧跟踪AI通带选择,[0-3]
  */
-std::string robot_command_thread::ArcWeldTraceExtAIChannelConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ArcWeldTraceExtAIChannelConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int channel = std::stoi(list.front());list.pop_front();
+  int channel = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ArcWeldTraceExtAIChannelConfig(channel);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ArcWeldTraceExtAIChannelConfig(channel);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7612,40 +8716,47 @@ std::string robot_command_thread::ArcWeldTraceExtAIChannelConfig(std::string par
  * @param  [in] Vmax 最大关节速度限制
  * @return  错误码
  */
-std::string robot_command_thread::EndForceDragControl(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::EndForceDragControl(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
-    int asaptiveFlag = std::stoi(list.front());list.pop_front();
-    int interfereDragFlag = std::stoi(list.front());list.pop_front();
-    int ingularityConstraintsFlag = std::stoi(list.front());list.pop_front();
-    std::vector<double> M;
-    for(int i = 0;i < 6; i++){
-        M.push_back(std::stod(list.front()));
-        list.pop_front();
-    }
-    std::vector<double> B;
-    for(int i = 0;i < 6; i++){
-        B.push_back(std::stod(list.front()));
-        list.pop_front();
-    }
-    std::vector<double> K;
-    for(int i = 0;i < 6; i++){
-        K.push_back(std::stod(list.front()));
-        list.pop_front();
-    }
-    std::vector<double> F;
-    for(int i = 0;i < 6; i++){
-        F.push_back(std::stod(list.front()));
-        list.pop_front();
-    }
-    double Fmax = std::stod(list.front());list.pop_front();
-    double Vmax = std::stod(list.front());list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
+  int asaptiveFlag = std::stoi(list.front());
+  list.pop_front();
+  int interfereDragFlag = std::stoi(list.front());
+  list.pop_front();
+  int ingularityConstraintsFlag = std::stoi(list.front());
+  list.pop_front();
+  std::vector<double> M;
+  for (int i = 0; i < 6; i++) {
+    M.push_back(std::stod(list.front()));
+    list.pop_front();
+  }
+  std::vector<double> B;
+  for (int i = 0; i < 6; i++) {
+    B.push_back(std::stod(list.front()));
+    list.pop_front();
+  }
+  std::vector<double> K;
+  for (int i = 0; i < 6; i++) {
+    K.push_back(std::stod(list.front()));
+    list.pop_front();
+  }
+  std::vector<double> F;
+  for (int i = 0; i < 6; i++) {
+    F.push_back(std::stod(list.front()));
+    list.pop_front();
+  }
+  double Fmax = std::stod(list.front());
+  list.pop_front();
+  double Vmax = std::stod(list.front());
+  list.pop_front();
 
-
-    int res = _ptr_robot->EndForceDragControl(status,asaptiveFlag,interfereDragFlag,ingularityConstraintsFlag,M,B,K,F,Fmax,Vmax);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->EndForceDragControl(
+    status, asaptiveFlag, interfereDragFlag, ingularityConstraintsFlag, M, B, K, F, Fmax, Vmax);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7653,14 +8764,16 @@ std::string robot_command_thread::EndForceDragControl(std::string para){
  * @param  [in] status 控制状态，0-关闭；1-开启
  * @return  错误码
  */
-std::string robot_command_thread::SetForceSensorDragAutoFlag(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetForceSensorDragAutoFlag(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetForceSensorDragAutoFlag(status);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetForceSensorDragAutoFlag(status);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7669,13 +8782,15 @@ std::string robot_command_thread::SetForceSensorDragAutoFlag(std::string para){
  * @param  [out] sixDimensionalDragState 六维力辅助拖动控制状态，0-关闭；1-开启
  * @return  错误码
  */
-std::string robot_command_thread::GetForceAndTorqueDragState(std::string para){
-    int dragState;
-    int sixDimensionalDragState;
+std::string robot_command_thread::GetForceAndTorqueDragState(std::string para)
+{
+  int dragState;
+  int sixDimensionalDragState;
 
-    int res = _ptr_robot->GetForceAndTorqueDragState(dragState,sixDimensionalDragState);
-    return std::string(std::to_string(res) + "," + std::to_string(dragState) + "," + \
-            std::to_string(sixDimensionalDragState));
+  int res = _ptr_robot->GetForceAndTorqueDragState(dragState, sixDimensionalDragState);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(dragState) + "," +
+    std::to_string(sixDimensionalDragState));
 }
 
 /**
@@ -7683,14 +8798,16 @@ std::string robot_command_thread::GetForceAndTorqueDragState(std::string para){
  * @param  [in] weight 负载重量 kg
  * @return  错误码
  */
-std::string robot_command_thread::SetForceSensorPayload(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetForceSensorPayload(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double weight = std::stod(list.front());list.pop_front();
+  double weight = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetForceSensorPayload(weight);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetForceSensorPayload(weight);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7700,16 +8817,20 @@ std::string robot_command_thread::SetForceSensorPayload(std::string para){
  * @param  [in] z 负载质心z mm
  * @return  错误码
  */
-std::string robot_command_thread::SetForceSensorPayloadCog(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetForceSensorPayloadCog(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double x = std::stod(list.front());list.pop_front();
-    double y = std::stod(list.front());list.pop_front();
-    double z = std::stod(list.front());list.pop_front();
+  double x = std::stod(list.front());
+  list.pop_front();
+  double y = std::stod(list.front());
+  list.pop_front();
+  double z = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetForceSensorPayloadCog(x,y,z);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetForceSensorPayloadCog(x, y, z);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7717,11 +8838,12 @@ std::string robot_command_thread::SetForceSensorPayloadCog(std::string para){
  * @param  [in] weight 负载重量 kg
  * @return  错误码
  */
-std::string robot_command_thread::GetForceSensorPayload(std::string para){
-    double weight;
+std::string robot_command_thread::GetForceSensorPayload(std::string para)
+{
+  double weight;
 
-    int res = _ptr_robot->GetForceSensorPayload(weight);
-    return std::string(std::to_string(res) + "," + std::to_string(weight));
+  int res = _ptr_robot->GetForceSensorPayload(weight);
+  return std::string(std::to_string(res) + "," + std::to_string(weight));
 }
 
 /**
@@ -7729,14 +8851,16 @@ std::string robot_command_thread::GetForceSensorPayload(std::string para){
  * @param  [in] weight 负载重量 kg
  * @return  错误码
  */
-std::string robot_command_thread::GetForceSensorPayloadCog(std::string para){
-    double x;
-    double y;
-    double z;
+std::string robot_command_thread::GetForceSensorPayloadCog(std::string para)
+{
+  double x;
+  double y;
+  double z;
 
-    int res = _ptr_robot->GetForceSensorPayloadCog(x,y,z);
-    return std::string(std::to_string(res) + "," + std::to_string(x) + "," + \
-            std::to_string(y) + "," + std::to_string(z));
+  int res = _ptr_robot->GetForceSensorPayloadCog(x, y, z);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(x) + "," + std::to_string(y) + "," +
+    std::to_string(z));
 }
 
 /**
@@ -7745,14 +8869,15 @@ std::string robot_command_thread::GetForceSensorPayloadCog(std::string para){
  * @param  [out] pos 传感器质心 mm
  * @return  错误码
  */
-std::string robot_command_thread::ForceSensorAutoComputeLoad(std::string para){
-    double weight;
-    DescTran pos;
+std::string robot_command_thread::ForceSensorAutoComputeLoad(std::string para)
+{
+  double weight;
+  DescTran pos;
 
-    int res = _ptr_robot->ForceSensorAutoComputeLoad(weight,pos);
-    return std::string(std::to_string(res) + "," + std::to_string(weight) + "," +\
-            std::to_string(pos.x) + "," + std::to_string(pos.y) + "," +\
-            std::to_string(pos.z));
+  int res = _ptr_robot->ForceSensorAutoComputeLoad(weight, pos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(weight) + "," + std::to_string(pos.x) + "," +
+    std::to_string(pos.y) + "," + std::to_string(pos.z));
 }
 
 /**
@@ -7760,14 +8885,16 @@ std::string robot_command_thread::ForceSensorAutoComputeLoad(std::string para){
  * @param  [in] recordCount 记录数据个数 1-3
  * @return  错误码
  */
-std::string robot_command_thread::ForceSensorSetSaveDataFlag(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ForceSensorSetSaveDataFlag(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int recordCount = std::stoi(list.front());list.pop_front();
+  int recordCount = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ForceSensorSetSaveDataFlag(recordCount);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ForceSensorSetSaveDataFlag(recordCount);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7776,14 +8903,15 @@ std::string robot_command_thread::ForceSensorSetSaveDataFlag(std::string para){
  * @param  [out] pos 传感器质心 [x, y, z]
  * @return  错误码
  */
-std::string robot_command_thread::ForceSensorComputeLoad(std::string para){
-    double weight;
-    DescTran pos;
+std::string robot_command_thread::ForceSensorComputeLoad(std::string para)
+{
+  double weight;
+  DescTran pos;
 
-    int res = _ptr_robot->ForceSensorComputeLoad(weight,pos);
-    return std::string(std::to_string(res) + "," + std::to_string(weight) + "," +\
-            std::to_string(pos.x) + "," + std::to_string(pos.y) + "," +\
-            std::to_string(pos.z));
+  int res = _ptr_robot->ForceSensorComputeLoad(weight, pos);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(weight) + "," + std::to_string(pos.x) + "," +
+    std::to_string(pos.y) + "," + std::to_string(pos.z));
 }
 
 /**
@@ -7797,29 +8925,33 @@ std::string robot_command_thread::ForceSensorComputeLoad(std::string para){
  * @param  [out] user 工件号
  * @return  错误码
  */
-std::string robot_command_thread::GetSegmentWeldPoint(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
-    DescPose startPos;
-    _fillDescPose(list,startPos);
-    DescPose endPos;
-    _fillDescPose(list,endPos);
-    double startDistance = std::stod(list.front());list.pop_front();
+std::string robot_command_thread::GetSegmentWeldPoint(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  DescPose startPos;
+  _fillDescPose(list, startPos);
+  DescPose endPos;
+  _fillDescPose(list, endPos);
+  double startDistance = std::stod(list.front());
+  list.pop_front();
 
-    DescPose weldPointDesc;
-    JointPos weldPointJoint;
-    int tool;
-    int user;
+  DescPose weldPointDesc;
+  JointPos weldPointJoint;
+  int tool;
+  int user;
 
-    int res = _ptr_robot->GetSegmentWeldPoint(startPos,endPos,startDistance,weldPointDesc,weldPointJoint,tool,user);
-    return std::string(std::to_string(res) + "," + std::to_string(weldPointDesc.tran.x) + "," + \
-            std::to_string(weldPointDesc.tran.y) + "," + std::to_string(weldPointDesc.tran.z) + "," + \
-            std::to_string(weldPointDesc.rpy.rx) + "," + std::to_string(weldPointDesc.rpy.ry) + "," + \
-            std::to_string(weldPointDesc.rpy.rz) + "," + std::to_string(weldPointJoint.jPos[0]) + "," +\
-            std::to_string(weldPointJoint.jPos[1]) + "," + std::to_string(weldPointJoint.jPos[2]) + "," +\
-            std::to_string(weldPointJoint.jPos[3]) + "," + std::to_string(weldPointJoint.jPos[4]) + "," +\
-            std::to_string(weldPointJoint.jPos[5]) + "," + std::to_string(tool) + "," +\
-            std::to_string(user));
+  int res = _ptr_robot->GetSegmentWeldPoint(
+    startPos, endPos, startDistance, weldPointDesc, weldPointJoint, tool, user);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(weldPointDesc.tran.x) + "," +
+    std::to_string(weldPointDesc.tran.y) + "," + std::to_string(weldPointDesc.tran.z) + "," +
+    std::to_string(weldPointDesc.rpy.rx) + "," + std::to_string(weldPointDesc.rpy.ry) + "," +
+    std::to_string(weldPointDesc.rpy.rz) + "," + std::to_string(weldPointJoint.jPos[0]) + "," +
+    std::to_string(weldPointJoint.jPos[1]) + "," + std::to_string(weldPointJoint.jPos[2]) + "," +
+    std::to_string(weldPointJoint.jPos[3]) + "," + std::to_string(weldPointJoint.jPos[4]) + "," +
+    std::to_string(weldPointJoint.jPos[5]) + "," + std::to_string(tool) + "," +
+    std::to_string(user));
 }
 
 /**
@@ -7835,22 +8967,34 @@ std::string robot_command_thread::GetSegmentWeldPoint(std::string para){
  * @param  [in] endTime 收弧时间(ms)
  * @return  错误码
  */
-std::string robot_command_thread::WeldingSetProcessParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeldingSetProcessParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    double startCurrent = std::stod(list.front());list.pop_front();
-    double startVoltage = std::stod(list.front());list.pop_front();
-    double startTime = std::stod(list.front());list.pop_front();
-    double weldCurrent = std::stod(list.front());list.pop_front();
-    double weldVoltage = std::stod(list.front());list.pop_front();
-    double endCurrent = std::stod(list.front());list.pop_front();
-    double endVoltage = std::stod(list.front());list.pop_front();
-    double endTime = std::stod(list.front());list.pop_front();
+  int id = std::stoi(list.front());
+  list.pop_front();
+  double startCurrent = std::stod(list.front());
+  list.pop_front();
+  double startVoltage = std::stod(list.front());
+  list.pop_front();
+  double startTime = std::stod(list.front());
+  list.pop_front();
+  double weldCurrent = std::stod(list.front());
+  list.pop_front();
+  double weldVoltage = std::stod(list.front());
+  list.pop_front();
+  double endCurrent = std::stod(list.front());
+  list.pop_front();
+  double endVoltage = std::stod(list.front());
+  list.pop_front();
+  double endTime = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeldingSetProcessParam(id, startCurrent, startVoltage, startTime, weldCurrent, weldVoltage, endCurrent, endVoltage, endTime);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeldingSetProcessParam(
+    id, startCurrent, startVoltage, startTime, weldCurrent, weldVoltage, endCurrent, endVoltage,
+    endTime);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7866,26 +9010,30 @@ std::string robot_command_thread::WeldingSetProcessParam(std::string para){
  * @param  [out] endTime 收弧时间(ms)
  * @return  错误码
  */
-std::string robot_command_thread::WeldingGetProcessParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeldingGetProcessParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    double startCurrent;
-    double startVoltage;
-    double startTime;
-    double weldCurrent;
-    double weldVoltage;
-    double endCurrent;
-    double endVoltage;
-    double endTime;
+  int id = std::stoi(list.front());
+  list.pop_front();
+  double startCurrent;
+  double startVoltage;
+  double startTime;
+  double weldCurrent;
+  double weldVoltage;
+  double endCurrent;
+  double endVoltage;
+  double endTime;
 
-    int res = _ptr_robot->WeldingGetProcessParam(id, startCurrent, startVoltage, startTime, weldCurrent, weldVoltage, endCurrent, endVoltage, endTime);
-    return std::string(std::to_string(res) + "," + std::to_string(startCurrent) + "," + \
-            std::to_string(startVoltage) + "," + std::to_string(startTime) + "," + \
-            std::to_string(weldCurrent) + "," + std::to_string(weldVoltage) + "," + \
-            std::to_string(endCurrent) + "," + std::to_string(endVoltage) + "," + \
-            std::to_string(endTime));
+  int res = _ptr_robot->WeldingGetProcessParam(
+    id, startCurrent, startVoltage, startTime, weldCurrent, weldVoltage, endCurrent, endVoltage,
+    endTime);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(startCurrent) + "," + std::to_string(startVoltage) +
+    "," + std::to_string(startTime) + "," + std::to_string(weldCurrent) + "," +
+    std::to_string(weldVoltage) + "," + std::to_string(endCurrent) + "," +
+    std::to_string(endVoltage) + "," + std::to_string(endTime));
 }
 
 /**
@@ -7896,17 +9044,22 @@ std::string robot_command_thread::WeldingGetProcessParam(std::string para){
  * @param  [in] idBus 挂载位置，1-末端1号口；2-末端2号口...8-末端8号口(暂未开放)
  * @return  错误码
  */
-std::string robot_command_thread::AxleSensorConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AxleSensorConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int idCompany = std::stoi(list.front());list.pop_front();
-    int idDevice = std::stoi(list.front());list.pop_front();
-    int idSoftware = std::stoi(list.front());list.pop_front();
-    int idBus = std::stoi(list.front());list.pop_front();
+  int idCompany = std::stoi(list.front());
+  list.pop_front();
+  int idDevice = std::stoi(list.front());
+  list.pop_front();
+  int idSoftware = std::stoi(list.front());
+  list.pop_front();
+  int idBus = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->AxleSensorConfig(idCompany, idDevice, idSoftware, idBus);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->AxleSensorConfig(idCompany, idDevice, idSoftware, idBus);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7917,12 +9070,13 @@ std::string robot_command_thread::AxleSensorConfig(std::string para){
  * @param  [in] idBus 挂载位置，1-末端1号口；2-末端2号口...8-末端8号口(暂未开放)
  * @return  错误码
  */
-std::string robot_command_thread::AxleSensorConfigGet(std::string para){
-    int idCompany;
-    int idDevice;
-    int res = _ptr_robot->AxleSensorConfigGet(idCompany, idDevice);
-    return std::string(std::to_string(res) + "," + std::to_string(idCompany) + "," + \
-            std::to_string(idDevice));
+std::string robot_command_thread::AxleSensorConfigGet(std::string para)
+{
+  int idCompany;
+  int idDevice;
+  int res = _ptr_robot->AxleSensorConfigGet(idCompany, idDevice);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(idCompany) + "," + std::to_string(idDevice));
 }
 
 /**
@@ -7930,14 +9084,16 @@ std::string robot_command_thread::AxleSensorConfigGet(std::string para){
  * @param  [in] actFlag 0-复位；1-激活
  * @return  错误码
  */
-std::string robot_command_thread::AxleSensorActivate(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AxleSensorActivate(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int actFlag = std::stoi(list.front());list.pop_front();
+  int actFlag = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->AxleSensorActivate(actFlag);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->AxleSensorActivate(actFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7945,15 +9101,18 @@ std::string robot_command_thread::AxleSensorActivate(std::string para){
  * @param  [in] resetFlag  0-不复位；1-复位
  * @return  错误码
  */
-std::string robot_command_thread::SetOutputResetCtlBoxDO(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetOutputResetCtlBoxDO(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int resetFlag = std::stoi(list.front());list.pop_front();
-    int reloadFlag = std::stoi(list.front());list.pop_front();
+  int resetFlag = std::stoi(list.front());
+  list.pop_front();
+  int reloadFlag = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetOutputResetCtlBoxDO(resetFlag,reloadFlag);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetOutputResetCtlBoxDO(resetFlag, reloadFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7961,15 +9120,18 @@ std::string robot_command_thread::SetOutputResetCtlBoxDO(std::string para){
  * @param  [in] resetFlag  0-不复位；1-复位
  * @return  错误码
  */
-std::string robot_command_thread::SetOutputResetCtlBoxAO(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetOutputResetCtlBoxAO(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int resetFlag = std::stoi(list.front());list.pop_front();
-    int reloadFlag = std::stoi(list.front());list.pop_front();
+  int resetFlag = std::stoi(list.front());
+  list.pop_front();
+  int reloadFlag = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetOutputResetCtlBoxAO(resetFlag,reloadFlag);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetOutputResetCtlBoxAO(resetFlag, reloadFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7977,15 +9139,18 @@ std::string robot_command_thread::SetOutputResetCtlBoxAO(std::string para){
  * @param  [in] resetFlag  0-不复位；1-复位
  * @return  错误码
  */
-std::string robot_command_thread::SetOutputResetAxleDO(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetOutputResetAxleDO(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int resetFlag = std::stoi(list.front());list.pop_front();
-    int reloadFlag = std::stoi(list.front());list.pop_front();
+  int resetFlag = std::stoi(list.front());
+  list.pop_front();
+  int reloadFlag = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetOutputResetAxleDO(resetFlag,reloadFlag);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetOutputResetAxleDO(resetFlag, reloadFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -7993,15 +9158,18 @@ std::string robot_command_thread::SetOutputResetAxleDO(std::string para){
  * @param  [in] resetFlag  0-不复位；1-复位
  * @return  错误码
  */
-std::string robot_command_thread::SetOutputResetAxleAO(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetOutputResetAxleAO(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int resetFlag = std::stoi(list.front());list.pop_front();
-    int reloadFlag = std::stoi(list.front());list.pop_front();
+  int resetFlag = std::stoi(list.front());
+  list.pop_front();
+  int reloadFlag = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetOutputResetAxleAO(resetFlag,reloadFlag);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetOutputResetAxleAO(resetFlag, reloadFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8009,15 +9177,18 @@ std::string robot_command_thread::SetOutputResetAxleAO(std::string para){
  * @param  [in] resetFlag  0-不复位；1-复位
  * @return  错误码
  */
-std::string robot_command_thread::SetOutputResetExtDO(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetOutputResetExtDO(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int resetFlag = std::stoi(list.front());list.pop_front();
-    int reloadFlag = std::stoi(list.front());list.pop_front();
+  int resetFlag = std::stoi(list.front());
+  list.pop_front();
+  int reloadFlag = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetOutputResetExtDO(resetFlag,reloadFlag);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetOutputResetExtDO(resetFlag, reloadFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8025,15 +9196,18 @@ std::string robot_command_thread::SetOutputResetExtDO(std::string para){
  * @param  [in] resetFlag  0-不复位；1-复位
  * @return  错误码
  */
-std::string robot_command_thread::SetOutputResetExtAO(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetOutputResetExtAO(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int resetFlag = std::stoi(list.front());list.pop_front();
-    int reloadFlag = std::stoi(list.front());list.pop_front();
+  int resetFlag = std::stoi(list.front());
+  list.pop_front();
+  int reloadFlag = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetOutputResetExtAO(resetFlag,reloadFlag);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetOutputResetExtAO(resetFlag, reloadFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8041,15 +9215,18 @@ std::string robot_command_thread::SetOutputResetExtAO(std::string para){
  * @param  [in] resetFlag  0-不复位；1-复位
  * @return  错误码
  */
-std::string robot_command_thread::SetOutputResetSmartToolDO(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetOutputResetSmartToolDO(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int resetFlag = std::stoi(list.front());list.pop_front();
-    int reloadFlag = std::stoi(list.front());list.pop_front();
+  int resetFlag = std::stoi(list.front());
+  list.pop_front();
+  int reloadFlag = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetOutputResetSmartToolDO(resetFlag,reloadFlag);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetOutputResetSmartToolDO(resetFlag, reloadFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8057,14 +9234,16 @@ std::string robot_command_thread::SetOutputResetSmartToolDO(std::string para){
  * @param  [in] weaveNum  摆动参数编号
  * @return  错误码
  */
-std::string robot_command_thread::WeaveStartSim(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeaveStartSim(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weaveNum = std::stoi(list.front());list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeaveStartSim(weaveNum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeaveStartSim(weaveNum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8072,14 +9251,16 @@ std::string robot_command_thread::WeaveStartSim(std::string para){
  * @param  [in] weaveNum  摆动参数编号
  * @return  错误码
  */
-std::string robot_command_thread::WeaveEndSim(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeaveEndSim(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weaveNum = std::stoi(list.front());list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeaveEndSim(weaveNum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeaveEndSim(weaveNum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8087,14 +9268,16 @@ std::string robot_command_thread::WeaveEndSim(std::string para){
  * @param  [in] weaveNum  摆动参数编号
  * @return  错误码
  */
-std::string robot_command_thread::WeaveInspectStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeaveInspectStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weaveNum = std::stoi(list.front());list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeaveInspectStart(weaveNum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeaveInspectStart(weaveNum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8102,14 +9285,16 @@ std::string robot_command_thread::WeaveInspectStart(std::string para){
  * @param  [in] weaveNum  摆动参数编号
  * @return  错误码
  */
-std::string robot_command_thread::WeaveInspectEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeaveInspectEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weaveNum = std::stoi(list.front());list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WeaveInspectEnd(weaveNum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WeaveInspectEnd(weaveNum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8118,15 +9303,18 @@ std::string robot_command_thread::WeaveInspectEnd(std::string para){
  * @param [in] thresholdMode 碰撞等级阈值方式；0-碰撞等级固定阈值方式；1-自定义碰撞检测阈值
  * @return  错误码
  */
-std::string robot_command_thread::SetCollisionDetectionMethod(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetCollisionDetectionMethod(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int method = std::stoi(list.front());list.pop_front();
-    int thresholdMode = std::stoi(list.front());list.pop_front();
+  int method = std::stoi(list.front());
+  list.pop_front();
+  int thresholdMode = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetCollisionDetectionMethod(method,thresholdMode);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetCollisionDetectionMethod(method, thresholdMode);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8134,14 +9322,16 @@ std::string robot_command_thread::SetCollisionDetectionMethod(std::string para){
  * @param  [in] status 0-关闭；1-开启
  * @return  错误码
  */
-std::string robot_command_thread::SetStaticCollisionOnOff(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetStaticCollisionOnOff(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetStaticCollisionOnOff(status);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetStaticCollisionOnOff(status);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8150,15 +9340,18 @@ std::string robot_command_thread::SetStaticCollisionOnOff(std::string para){
  * @param  [in] power 设定最大功率(W);
  * @return  错误码
  */
-std::string robot_command_thread::SetPowerLimit(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetPowerLimit(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
-    double power = std::stod(list.front());list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
+  double power = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetPowerLimit(status,power);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetPowerLimit(status, power);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8166,14 +9359,16 @@ std::string robot_command_thread::SetPowerLimit(std::string para){
  * @param [in] comType 指令下发类型；0-xmlrpc；1-UDP(对应机器人20007端口)
  * @return  错误码
  */
-std::string robot_command_thread::ServoJTStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ServoJTStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int comType  = std::stoi(list.front());list.pop_front();
+  int comType = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ServoJTStart(comType);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ServoJTStart(comType);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8182,21 +9377,29 @@ std::string robot_command_thread::ServoJTStart(std::string para){
  * @param  [in] interval 指令周期，单位s，范围[0.001~0.008]
  * @return  错误码
  */
-std::string robot_command_thread::ServoJT(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ServoJT(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    float torque[6];
-    torque[0] = std::stod(list.front());list.pop_front();
-    torque[1] = std::stod(list.front());list.pop_front();
-    torque[2] = std::stod(list.front());list.pop_front();
-    torque[3] = std::stod(list.front());list.pop_front();
-    torque[4] = std::stod(list.front());list.pop_front();
-    torque[5] = std::stod(list.front());list.pop_front();
-    double interval = std::stod(list.front());list.pop_front();
+  float torque[6];
+  torque[0] = std::stod(list.front());
+  list.pop_front();
+  torque[1] = std::stod(list.front());
+  list.pop_front();
+  torque[2] = std::stod(list.front());
+  list.pop_front();
+  torque[3] = std::stod(list.front());
+  list.pop_front();
+  torque[4] = std::stod(list.front());
+  list.pop_front();
+  torque[5] = std::stod(list.front());
+  list.pop_front();
+  double interval = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ServoJT(torque,interval);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ServoJT(torque, interval);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8204,14 +9407,16 @@ std::string robot_command_thread::ServoJT(std::string para){
  * @param [in] comType 指令下发类型；0-xmlrpc；1-UDP(对应机器人20007端口)
  * @return  错误码
  */
-std::string robot_command_thread::ServoJTEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ServoJTEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int comType  = std::stoi(list.front());list.pop_front();
+  int comType = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ServoJTEnd(comType);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ServoJTEnd(comType);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8219,14 +9424,16 @@ std::string robot_command_thread::ServoJTEnd(std::string para){
  * @param [in] period 机器人 20004 端口反馈周期(ms)
  * @return  错误码
  */
-std::string robot_command_thread::SetRobotRealtimeStateSamplePeriod(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetRobotRealtimeStateSamplePeriod(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int period = std::stoi(list.front());list.pop_front();
+  int period = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetRobotRealtimeStateSamplePeriod(period);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetRobotRealtimeStateSamplePeriod(period);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8234,59 +9441,63 @@ std::string robot_command_thread::SetRobotRealtimeStateSamplePeriod(std::string 
  * @param [out] period 机器人 20004 端口反馈周期(ms)
  * @return  错误码
  */
-std::string robot_command_thread::GetRobotRealtimeStateSamplePeriod(std::string para){
-    int period;
+std::string robot_command_thread::GetRobotRealtimeStateSamplePeriod(std::string para)
+{
+  int period;
 
-    int res = _ptr_robot->GetRobotRealtimeStateSamplePeriod(period);
-    return std::string(std::to_string(res) + "," + std::to_string(period));
+  int res = _ptr_robot->GetRobotRealtimeStateSamplePeriod(period);
+  return std::string(std::to_string(res) + "," + std::to_string(period));
 }
 
 /**
  * @brief 获取机器人关节驱动器温度(℃)
  * @return  错误码
  */
-std::string robot_command_thread::GetJointDriverTemperature(std::string para){
-    double temperature[6];
+std::string robot_command_thread::GetJointDriverTemperature(std::string para)
+{
+  double temperature[6];
 
-    int res = _ptr_robot->GetJointDriverTemperature(temperature);
-    return std::string(std::to_string(res) + "," + std::to_string(temperature[0]) + "," +\
-            std::to_string(temperature[1]) + "," + std::to_string(temperature[2]) + "," +\
-            std::to_string(temperature[3]) + "," + std::to_string(temperature[4]) + "," +\
-            std::to_string(temperature[5]));
+  int res = _ptr_robot->GetJointDriverTemperature(temperature);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(temperature[0]) + "," +
+    std::to_string(temperature[1]) + "," + std::to_string(temperature[2]) + "," +
+    std::to_string(temperature[3]) + "," + std::to_string(temperature[4]) + "," +
+    std::to_string(temperature[5]));
 }
 
 /**
  * @brief 获取机器人关节驱动器扭矩(Nm)
  * @return  错误码
  */
-std::string robot_command_thread::GetJointDriverTorque(std::string para){
-    double torque[6];
+std::string robot_command_thread::GetJointDriverTorque(std::string para)
+{
+  double torque[6];
 
-    int res = _ptr_robot->GetJointDriverTorque(torque);
-    return std::string(std::to_string(res) + "," + std::to_string(torque[0]) + "," +\
-            std::to_string(torque[1]) + "," + std::to_string(torque[2]) + "," +\
-            std::to_string(torque[3]) + "," + std::to_string(torque[4]) + "," +\
-            std::to_string(torque[5]));
+  int res = _ptr_robot->GetJointDriverTorque(torque);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(torque[0]) + "," + std::to_string(torque[1]) + "," +
+    std::to_string(torque[2]) + "," + std::to_string(torque[3]) + "," + std::to_string(torque[4]) +
+    "," + std::to_string(torque[5]));
 }
 
 /**
  * @brief 电弧追踪 + 多层多道补偿开启
  * @return  错误码
  */
-std::string robot_command_thread::ArcWeldTraceReplayStart(std::string para){
-
-    int res = _ptr_robot->ArcWeldTraceReplayStart();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ArcWeldTraceReplayStart(std::string para)
+{
+  int res = _ptr_robot->ArcWeldTraceReplayStart();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 电弧追踪 + 多层多道补偿关闭
  * @return  错误码
  */
-std::string robot_command_thread::ArcWeldTraceReplayEnd(std::string para){
-
-    int res = _ptr_robot->ArcWeldTraceReplayEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ArcWeldTraceReplayEnd(std::string para)
+{
+  int res = _ptr_robot->ArcWeldTraceReplayEnd();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8300,33 +9511,47 @@ std::string robot_command_thread::ArcWeldTraceReplayEnd(std::string para){
  * @return 指令执行是否成功
  * @retval 0-成功，其他-错误码 
  */
-std::string robot_command_thread::MultilayerOffsetTrsfToBase(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MultilayerOffsetTrsfToBase(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    DescTran pointO;
-    pointO.x = std::stod(list.front().c_str());list.pop_front();
-    pointO.y = std::stod(list.front().c_str());list.pop_front();
-    pointO.z = std::stod(list.front().c_str());list.pop_front();
-    DescTran pointX;
-    pointX.x = std::stod(list.front().c_str());list.pop_front();
-    pointX.y = std::stod(list.front().c_str());list.pop_front();
-    pointX.z = std::stod(list.front().c_str());list.pop_front();
-    DescTran pointZ;
-    pointZ.x = std::stod(list.front().c_str());list.pop_front();
-    pointZ.y = std::stod(list.front().c_str());list.pop_front();
-    pointZ.z = std::stod(list.front().c_str());list.pop_front();
-    double dx = std::stod(list.front().c_str());list.pop_front();
-    double dy = std::stod(list.front().c_str());list.pop_front();
-    double db = std::stod(list.front().c_str());list.pop_front();
+  DescTran pointO;
+  pointO.x = std::stod(list.front().c_str());
+  list.pop_front();
+  pointO.y = std::stod(list.front().c_str());
+  list.pop_front();
+  pointO.z = std::stod(list.front().c_str());
+  list.pop_front();
+  DescTran pointX;
+  pointX.x = std::stod(list.front().c_str());
+  list.pop_front();
+  pointX.y = std::stod(list.front().c_str());
+  list.pop_front();
+  pointX.z = std::stod(list.front().c_str());
+  list.pop_front();
+  DescTran pointZ;
+  pointZ.x = std::stod(list.front().c_str());
+  list.pop_front();
+  pointZ.y = std::stod(list.front().c_str());
+  list.pop_front();
+  pointZ.z = std::stod(list.front().c_str());
+  list.pop_front();
+  double dx = std::stod(list.front().c_str());
+  list.pop_front();
+  double dy = std::stod(list.front().c_str());
+  list.pop_front();
+  double db = std::stod(list.front().c_str());
+  list.pop_front();
 
-    DescPose offset;
-    
-    int res = _ptr_robot->MultilayerOffsetTrsfToBase(pointO, pointX, pointZ, dx, dy, db, offset);
-    return std::string(std::to_string(res) + "," + std::to_string(offset.tran.x) + "," + \
-            std::to_string(offset.tran.y) + "," + std::to_string(offset.tran.z) + "," + \
-            std::to_string(offset.rpy.rx) + "," + std::to_string(offset.rpy.ry) + "," + \
-            std::to_string(offset.rpy.rz));
+  DescPose offset;
+
+  int res = _ptr_robot->MultilayerOffsetTrsfToBase(pointO, pointX, pointZ, dx, dy, db, offset);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(offset.tran.x) + "," +
+    std::to_string(offset.tran.y) + "," + std::to_string(offset.tran.z) + "," +
+    std::to_string(offset.rpy.rx) + "," + std::to_string(offset.rpy.ry) + "," +
+    std::to_string(offset.rpy.rz));
 }
 
 /**
@@ -8334,23 +9559,26 @@ std::string robot_command_thread::MultilayerOffsetTrsfToBase(std::string para){
  * @param [in] ratio 姿态速度百分比[0-300]
  * @return  错误码
  */
-std::string robot_command_thread::AngularSpeedStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AngularSpeedStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int ratio = std::stoi(list.front());list.pop_front();
+  int ratio = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->AngularSpeedStart(ratio);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->AngularSpeedStart(ratio);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 指定姿态速度关闭
  * @return  错误码
  */
-std::string robot_command_thread::AngularSpeedEnd(std::string para){
-    int res = _ptr_robot->AngularSpeedEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::AngularSpeedEnd(std::string para)
+{
+  int res = _ptr_robot->AngularSpeedEnd();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8358,15 +9586,18 @@ std::string robot_command_thread::AngularSpeedEnd(std::string para){
  * @param [in] ratio 姿态速度百分比[0-300]
  * @return  错误码
  */
-std::string robot_command_thread::SoftwareUpgrade(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SoftwareUpgrade(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string filePath = list.front();list.pop_front();
-    int block = std::stoi(list.front());list.pop_front();
+  std::string filePath = list.front();
+  list.pop_front();
+  int block = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SoftwareUpgrade(filePath,block);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SoftwareUpgrade(filePath, block);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8374,11 +9605,12 @@ std::string robot_command_thread::SoftwareUpgrade(std::string para){
  * @param [out] state 机器人软件包升级状态(0-空闲中或上传升级包中；1~100：升级完成百分比；-1:升级软件失败；-2：校验失败；-3：版本校验失败；-4：解压失败；-5：用户配置升级失败；-6：外设配置升级失败；-7：扩展轴配置升级失败；-8：机器人配置升级失败；-9：DH参数配置升级失败)
  * @return  错误码
  */
-std::string robot_command_thread::GetSoftwareUpgradeState(std::string para){
-    int state;
+std::string robot_command_thread::GetSoftwareUpgradeState(std::string para)
+{
+  int state;
 
-    int res = _ptr_robot->GetSoftwareUpgradeState(state);
-    return std::string(std::to_string(res) + "," + std::to_string(state));
+  int res = _ptr_robot->GetSoftwareUpgradeState(state);
+  return std::string(std::to_string(res) + "," + std::to_string(state));
 }
 
 /**
@@ -8386,14 +9618,16 @@ std::string robot_command_thread::GetSoftwareUpgradeState(std::string para){
  * @param param 末端通讯参数
  * @return  错误码
  */
-std::string robot_command_thread::GetAxleCommunicationParam(std::string para){
-    AxleComParam param;
+std::string robot_command_thread::GetAxleCommunicationParam(std::string para)
+{
+  AxleComParam param;
 
-    int res = _ptr_robot->GetAxleCommunicationParam(&param);
-    return std::string(std::to_string(res) + "," + std::to_string(param.baudRate) + "," + \
-            std::to_string(param.dataBit) + "," + std::to_string(param.stopBit) + "," + \
-            std::to_string(param.verify) + "," + std::to_string(param.timeout) + "," + \
-            std::to_string(param.timeoutTimes) + "," + std::to_string(param.period));
+  int res = _ptr_robot->GetAxleCommunicationParam(&param);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(param.baudRate) + "," +
+    std::to_string(param.dataBit) + "," + std::to_string(param.stopBit) + "," +
+    std::to_string(param.verify) + "," + std::to_string(param.timeout) + "," +
+    std::to_string(param.timeoutTimes) + "," + std::to_string(param.period));
 }
 
 /**
@@ -8401,21 +9635,29 @@ std::string robot_command_thread::GetAxleCommunicationParam(std::string para){
  * @param param  末端通讯参数
  * @return  错误码
  */
-std::string robot_command_thread::SetAxleCommunicationParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAxleCommunicationParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    AxleComParam param;
-    param.baudRate = std::stoi(list.front());list.pop_front();
-	param.dataBit = std::stoi(list.front());list.pop_front(); 
-	param.stopBit = std::stoi(list.front());list.pop_front(); 
-	param.verify = std::stoi(list.front());list.pop_front();  
-	param.timeout = std::stoi(list.front());list.pop_front(); 
-	param.timeoutTimes = std::stoi(list.front());list.pop_front();
-	param.period = std::stoi(list.front());list.pop_front();
+  AxleComParam param;
+  param.baudRate = std::stoi(list.front());
+  list.pop_front();
+  param.dataBit = std::stoi(list.front());
+  list.pop_front();
+  param.stopBit = std::stoi(list.front());
+  list.pop_front();
+  param.verify = std::stoi(list.front());
+  list.pop_front();
+  param.timeout = std::stoi(list.front());
+  list.pop_front();
+  param.timeoutTimes = std::stoi(list.front());
+  list.pop_front();
+  param.period = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetAxleCommunicationParam(param);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetAxleCommunicationParam(param);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8423,14 +9665,16 @@ std::string robot_command_thread::SetAxleCommunicationParam(std::string para){
  * @param type 1-MCU升级文件；2-LUA文件
  * @return  错误码
  */
-std::string robot_command_thread::SetAxleFileType(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAxleFileType(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front());list.pop_front();
+  int type = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetAxleFileType(type);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetAxleFileType(type);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8438,14 +9682,16 @@ std::string robot_command_thread::SetAxleFileType(std::string para){
  * @param enable 0-不启用；1-启用
  * @return  错误码
  */
-std::string robot_command_thread::SetAxleLuaEnable(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAxleLuaEnable(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int enable = std::stoi(list.front());list.pop_front();
+  int enable = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetAxleLuaEnable(enable);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetAxleLuaEnable(enable);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8453,14 +9699,16 @@ std::string robot_command_thread::SetAxleLuaEnable(std::string para){
  * @param status 0-不恢复；1-恢复
  * @return  错误码
  */
-std::string robot_command_thread::SetRecoverAxleLuaErr(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetRecoverAxleLuaErr(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetRecoverAxleLuaErr(status);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetRecoverAxleLuaErr(status);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8468,11 +9716,12 @@ std::string robot_command_thread::SetRecoverAxleLuaErr(std::string para){
  * @param status status[0]: 0-未使能；1-已使能
  * @return  错误码
  */
-std::string robot_command_thread::GetAxleLuaEnableStatus(std::string para){
-    int status[1];
+std::string robot_command_thread::GetAxleLuaEnableStatus(std::string para)
+{
+  int status[1];
 
-    int res = _ptr_robot->GetAxleLuaEnableStatus(status);
-    return std::string(std::to_string(res) + "," + std::to_string(status[0]));
+  int res = _ptr_robot->GetAxleLuaEnableStatus(status);
+  return std::string(std::to_string(res) + "," + std::to_string(status[0]));
 }
 
 /**
@@ -8483,17 +9732,23 @@ std::string robot_command_thread::GetAxleLuaEnableStatus(std::string para){
  * @param dexhandEnable 灵巧手启用状态，0-不启用；1-启用
  * @return  错误码
  */
-std::string robot_command_thread::SetAxleLuaEnableDeviceType(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAxleLuaEnableDeviceType(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int forceSensorEnable = std::stoi(list.front());list.pop_front();
-    int gripperEnable = std::stoi(list.front());list.pop_front();
-    int IOEnable = std::stoi(list.front());list.pop_front();
-    int dexhandEnable = std::stoi(list.front());list.pop_front();
+  int forceSensorEnable = std::stoi(list.front());
+  list.pop_front();
+  int gripperEnable = std::stoi(list.front());
+  list.pop_front();
+  int IOEnable = std::stoi(list.front());
+  list.pop_front();
+  int dexhandEnable = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetAxleLuaEnableDeviceType(forceSensorEnable,gripperEnable,IOEnable,dexhandEnable);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetAxleLuaEnableDeviceType(
+    forceSensorEnable, gripperEnable, IOEnable, dexhandEnable);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8504,16 +9759,19 @@ std::string robot_command_thread::SetAxleLuaEnableDeviceType(std::string para){
  * @param dexhandEnable 灵巧手启用状态，0-不启用；1-启用
  * @return  错误码
  */
-std::string robot_command_thread::GetAxleLuaEnableDeviceType(std::string para){
-    int forceSensorEnable;
-    int gripperEnable;
-    int IOEnable;
-    int dexhandEnable;
+std::string robot_command_thread::GetAxleLuaEnableDeviceType(std::string para)
+{
+  int forceSensorEnable;
+  int gripperEnable;
+  int IOEnable;
+  int dexhandEnable;
 
-    int res = _ptr_robot->GetAxleLuaEnableDeviceType(&forceSensorEnable,&gripperEnable,&IOEnable,&dexhandEnable);
-    return std::string(std::to_string(res) + "," + std::to_string(forceSensorEnable) + "," + \
-            std::to_string(gripperEnable) + "," + std::to_string(IOEnable) + "," + \
-            std::to_string(dexhandEnable));
+  int res = _ptr_robot->GetAxleLuaEnableDeviceType(
+    &forceSensorEnable, &gripperEnable, &IOEnable, &dexhandEnable);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(forceSensorEnable) + "," +
+    std::to_string(gripperEnable) + "," + std::to_string(IOEnable) + "," +
+    std::to_string(dexhandEnable));
 }
 
 /**
@@ -8524,26 +9782,29 @@ std::string robot_command_thread::GetAxleLuaEnableDeviceType(std::string para){
  * @param dexhandEnable 灵巧手启用状态，0-不启用；1-启用
  * @return  错误码
  */
-std::string robot_command_thread::GetAxleLuaEnableDevice(std::string para){
-    int forceSensorEnable[8];
-    int gripperEnable[8];
-    int IOEnable[8];
-    int dexhandEnable;
+std::string robot_command_thread::GetAxleLuaEnableDevice(std::string para)
+{
+  int forceSensorEnable[8];
+  int gripperEnable[8];
+  int IOEnable[8];
+  int dexhandEnable;
 
-    int res = _ptr_robot->GetAxleLuaEnableDevice(forceSensorEnable,gripperEnable,IOEnable,&dexhandEnable);
-    return std::string(std::to_string(res) + "," + std::to_string(forceSensorEnable[0]) + "," + \
-            std::to_string(forceSensorEnable[1]) + "," + std::to_string(forceSensorEnable[2]) + "," + \
-            std::to_string(forceSensorEnable[3]) + "," + std::to_string(forceSensorEnable[4]) + "," + \
-            std::to_string(forceSensorEnable[5]) + "," + std::to_string(forceSensorEnable[6]) + "," + \
-            std::to_string(forceSensorEnable[7]) + "," + std::to_string(gripperEnable[0]) + "," + \
-            std::to_string(gripperEnable[1]) + "," + std::to_string(gripperEnable[2]) + "," + \
-            std::to_string(gripperEnable[3]) + "," + std::to_string(gripperEnable[4]) + "," + \
-            std::to_string(gripperEnable[5]) + "," + std::to_string(gripperEnable[6]) + "," + \
-            std::to_string(gripperEnable[7]) + "," + std::to_string(IOEnable[0]) + "," + \
-            std::to_string(IOEnable[1]) + "," + std::to_string(IOEnable[2]) + "," + \
-            std::to_string(IOEnable[3]) + "," + std::to_string(IOEnable[4]) + "," + \
-            std::to_string(IOEnable[5]) + "," + std::to_string(IOEnable[6]) + "," + \
-            std::to_string(IOEnable[7]) + "," + std::to_string(dexhandEnable));
+  int res =
+    _ptr_robot->GetAxleLuaEnableDevice(forceSensorEnable, gripperEnable, IOEnable, &dexhandEnable);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(forceSensorEnable[0]) + "," +
+    std::to_string(forceSensorEnable[1]) + "," + std::to_string(forceSensorEnable[2]) + "," +
+    std::to_string(forceSensorEnable[3]) + "," + std::to_string(forceSensorEnable[4]) + "," +
+    std::to_string(forceSensorEnable[5]) + "," + std::to_string(forceSensorEnable[6]) + "," +
+    std::to_string(forceSensorEnable[7]) + "," + std::to_string(gripperEnable[0]) + "," +
+    std::to_string(gripperEnable[1]) + "," + std::to_string(gripperEnable[2]) + "," +
+    std::to_string(gripperEnable[3]) + "," + std::to_string(gripperEnable[4]) + "," +
+    std::to_string(gripperEnable[5]) + "," + std::to_string(gripperEnable[6]) + "," +
+    std::to_string(gripperEnable[7]) + "," + std::to_string(IOEnable[0]) + "," +
+    std::to_string(IOEnable[1]) + "," + std::to_string(IOEnable[2]) + "," +
+    std::to_string(IOEnable[3]) + "," + std::to_string(IOEnable[4]) + "," +
+    std::to_string(IOEnable[5]) + "," + std::to_string(IOEnable[6]) + "," +
+    std::to_string(IOEnable[7]) + "," + std::to_string(dexhandEnable));
 }
 
 /**
@@ -8552,19 +9813,22 @@ std::string robot_command_thread::GetAxleLuaEnableDevice(std::string para){
  * @param func func[0]-夹爪使能；func[1]-夹爪初始化；2-位置设置；3-速度设置；4-力矩设置；6-读夹爪状态；7-读初始化状态；8-读故障码；9-读位置；10-读速度；11-读力矩
  * @return  错误码
  */
-std::string robot_command_thread::SetAxleLuaGripperFunc(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAxleLuaGripperFunc(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    int len = list.size();
-    int func[len];
-    for(int i = 0; i < len;i++){
-        func[i] = std::stoi(list.front());list.pop_front();
-    }
-    
-    int res = _ptr_robot->SetAxleLuaGripperFunc(id,func);
-    return std::string(std::to_string(res));
+  int id = std::stoi(list.front());
+  list.pop_front();
+  int len = list.size();
+  int func[len];
+  for (int i = 0; i < len; i++) {
+    func[i] = std::stoi(list.front());
+    list.pop_front();
+  }
+
+  int res = _ptr_robot->SetAxleLuaGripperFunc(id, func);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8573,23 +9837,23 @@ std::string robot_command_thread::SetAxleLuaGripperFunc(std::string para){
  * @param func func[0]-夹爪使能；func[1]-夹爪初始化；2-位置设置；3-速度设置；4-力矩设置；6-读夹爪状态；7-读初始化状态；8-读故障码；9-读位置；10-读速度；11-读力矩
  * @return  错误码
  */
-std::string robot_command_thread::GetAxleLuaGripperFunc(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetAxleLuaGripperFunc(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    int func[16];
-    
-    int res = _ptr_robot->GetAxleLuaGripperFunc(id,func);
-    return std::string(std::to_string(res) + "," + std::to_string(func[0]) + "," + \
-            std::to_string(func[1]) + "," + std::to_string(func[2]) + "," + \
-            std::to_string(func[3]) + "," + std::to_string(func[4]) + "," + \
-            std::to_string(func[5]) + "," + std::to_string(func[6]) + "," + \
-            std::to_string(func[7]) + "," + std::to_string(func[8]) + "," + \
-            std::to_string(func[9]) + "," + std::to_string(func[10]) + "," + \
-            std::to_string(func[11]) + "," + std::to_string(func[12]) + "," + \
-            std::to_string(func[13]) + "," + std::to_string(func[14]) + "," + \
-            std::to_string(func[15]));
+  int id = std::stoi(list.front());
+  list.pop_front();
+  int func[16];
+
+  int res = _ptr_robot->GetAxleLuaGripperFunc(id, func);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(func[0]) + "," + std::to_string(func[1]) + "," +
+    std::to_string(func[2]) + "," + std::to_string(func[3]) + "," + std::to_string(func[4]) + "," +
+    std::to_string(func[5]) + "," + std::to_string(func[6]) + "," + std::to_string(func[7]) + "," +
+    std::to_string(func[8]) + "," + std::to_string(func[9]) + "," + std::to_string(func[10]) + "," +
+    std::to_string(func[11]) + "," + std::to_string(func[12]) + "," + std::to_string(func[13]) +
+    "," + std::to_string(func[14]) + "," + std::to_string(func[15]));
 }
 
 /**
@@ -8597,15 +9861,18 @@ std::string robot_command_thread::GetAxleLuaGripperFunc(std::string para){
  * @param id 控制器LUA协议编号
  * @return  错误码
  */
-std::string robot_command_thread::SetCtrlOpenLuaErrCode(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetCtrlOpenLuaErrCode(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    int code = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetCtrlOpenLuaErrCode(id,code);
-    return std::string(std::to_string(res));
+  int id = std::stoi(list.front());
+  list.pop_front();
+  int code = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetCtrlOpenLuaErrCode(id, code);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8615,16 +9882,20 @@ std::string robot_command_thread::SetCtrlOpenLuaErrCode(std::string para){
  * @param fileName 上传文件名
  * @return  错误码
  */
-std::string robot_command_thread::SlaveFileWrite(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SlaveFileWrite(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front());list.pop_front();
-    int slaveID = std::stoi(list.front());list.pop_front();
-    std::string fileName = list.front();list.pop_front();
-    
-    int res = _ptr_robot->SlaveFileWrite(type,slaveID,fileName);
-    return std::string(std::to_string(res));
+  int type = std::stoi(list.front());
+  list.pop_front();
+  int slaveID = std::stoi(list.front());
+  list.pop_front();
+  std::string fileName = list.front();
+  list.pop_front();
+
+  int res = _ptr_robot->SlaveFileWrite(type, slaveID, fileName);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8632,23 +9903,26 @@ std::string robot_command_thread::SlaveFileWrite(std::string para){
  * @param filePath 本地lua文件路径名 ".../AXLE_LUA_End_DaHuan.lua"
  * @return  错误码
  */
-std::string robot_command_thread::AxleLuaUpload(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AxleLuaUpload(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string filePath = list.front();list.pop_front();
-    
-    int res = _ptr_robot->AxleLuaUpload(filePath);
-    return std::string(std::to_string(res));
+  std::string filePath = list.front();
+  list.pop_front();
+
+  int res = _ptr_robot->AxleLuaUpload(filePath);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 机器人Ethercat从站进入boot模式
  * @return  错误码
  */
-std::string robot_command_thread::SetSysServoBootMode(std::string para){
-    int res = _ptr_robot->SetSysServoBootMode();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetSysServoBootMode(std::string para)
+{
+  int res = _ptr_robot->SetSysServoBootMode();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8656,14 +9930,16 @@ std::string robot_command_thread::SetSysServoBootMode(std::string para){
  * @param DONum 焊机控制模式DO端口(0-127)
  * @return  错误码
  */
-std::string robot_command_thread::SetWeldMachineCtrlModeExtDoNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWeldMachineCtrlModeExtDoNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int DONum = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetWeldMachineCtrlModeExtDoNum(DONum);
-    return std::string(std::to_string(res));
+  int DONum = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetWeldMachineCtrlModeExtDoNum(DONum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8672,15 +9948,18 @@ std::string robot_command_thread::SetWeldMachineCtrlModeExtDoNum(std::string par
  * @param [in] ioType 控制类型；0-控制箱IO；1-数字通信协议(UDP);2-数字通信协议(ModbusTCP)
  * @return  错误码
  */
-std::string robot_command_thread::SetWeldMachineCtrlMode(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWeldMachineCtrlMode(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int mode = std::stoi(list.front());list.pop_front();
-    int ioType = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetWeldMachineCtrlMode(mode,ioType);
-    return std::string(std::to_string(res));
+  int mode = std::stoi(list.front());
+  list.pop_front();
+  int ioType = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetWeldMachineCtrlMode(mode, ioType);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8688,12 +9967,12 @@ std::string robot_command_thread::SetWeldMachineCtrlMode(std::string para){
  * @param [out] mode 焊机控制模式;0-直流一元模式；1-脉冲一元模式；2-JOB模式；3-近控模式；4-分别模式；5-CC/CV模式；6-TIG；7-CMT
  * @return 错误码
  */
-std::string robot_command_thread::GetWeldMachineCtrlMode(std::string para){
+std::string robot_command_thread::GetWeldMachineCtrlMode(std::string para)
+{
+  int mode;
 
-    int mode;
-
-    int res = _ptr_robot->GetWeldMachineCtrlMode(mode);
-    return std::string(std::to_string(res) + "," + std::to_string(mode));
+  int res = _ptr_robot->GetWeldMachineCtrlMode(mode);
+  return std::string(std::to_string(res) + "," + std::to_string(mode));
 }
 
 /**
@@ -8703,26 +9982,32 @@ std::string robot_command_thread::GetWeldMachineCtrlMode(std::string para){
  * @param [in] minElbowPos 肘奇异调整范围(mm), 默认50
  * @param [in] minWristPos 腕奇异调整范围(°), 默认10
  */
-std::string robot_command_thread::SingularAvoidStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SingularAvoidStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int protectMode = std::stoi(list.front());list.pop_front();
-    int minShoulderPos = std::stoi(list.front());list.pop_front();
-    int minElbowPos = std::stoi(list.front());list.pop_front();
-    int minWristPos = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SingularAvoidStart(protectMode,minShoulderPos,minElbowPos,minWristPos);
-    return std::string(std::to_string(res));
+  int protectMode = std::stoi(list.front());
+  list.pop_front();
+  int minShoulderPos = std::stoi(list.front());
+  list.pop_front();
+  int minElbowPos = std::stoi(list.front());
+  list.pop_front();
+  int minWristPos = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SingularAvoidStart(protectMode, minShoulderPos, minElbowPos, minWristPos);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 停止奇异位姿保护
  * @return 错误码
  */
-std::string robot_command_thread::SingularAvoidEnd(std::string para){
-    int res = _ptr_robot->SingularAvoidEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SingularAvoidEnd(std::string para)
+{
+  int res = _ptr_robot->SingularAvoidEnd();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8731,24 +10016,28 @@ std::string robot_command_thread::SingularAvoidEnd(std::string para){
  * @param [in] maxJek 统一关节急动度极值(deg/s3)
  * @return 错误码
  */
-std::string robot_command_thread::PtpFIRPlanningStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::PtpFIRPlanningStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double maxAcc = std::stod(list.front());list.pop_front();
-    double maxJek = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->PtpFIRPlanningStart(maxAcc,maxJek);
-    return std::string(std::to_string(res));
+  double maxAcc = std::stod(list.front());
+  list.pop_front();
+  double maxJek = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->PtpFIRPlanningStart(maxAcc, maxJek);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 关闭Ptp运动FIR滤波
  * @return 错误码
  */
-std::string robot_command_thread::PtpFIRPlanningEnd(std::string para){
-    int res = _ptr_robot->PtpFIRPlanningEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::PtpFIRPlanningEnd(std::string para)
+{
+  int res = _ptr_robot->PtpFIRPlanningEnd();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8759,28 +10048,33 @@ std::string robot_command_thread::PtpFIRPlanningEnd(std::string para){
  * @param [in] maxJerkDeg 角加加速度极值(deg/s3)
  * @return 错误码
  */
-std::string robot_command_thread::LinArcFIRPlanningStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LinArcFIRPlanningStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double maxAccLin = std::stod(list.front());list.pop_front();
-    double maxAccDeg = std::stod(list.front());list.pop_front();
-    double maxJerkLin = std::stod(list.front());list.pop_front();
-    double maxJerkDeg = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LinArcFIRPlanningStart(maxAccLin,maxAccDeg,maxJerkLin,maxJerkDeg);
-    return std::string(std::to_string(res));
+  double maxAccLin = std::stod(list.front());
+  list.pop_front();
+  double maxAccDeg = std::stod(list.front());
+  list.pop_front();
+  double maxJerkLin = std::stod(list.front());
+  list.pop_front();
+  double maxJerkDeg = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LinArcFIRPlanningStart(maxAccLin, maxAccDeg, maxJerkLin, maxJerkDeg);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 关闭LIN、ARC运动FIR滤波
  * @return 错误码
  */
-std::string robot_command_thread::LinArcFIRPlanningEnd(std::string para){
-    int res = _ptr_robot->LinArcFIRPlanningEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::LinArcFIRPlanningEnd(std::string para)
+{
+  int res = _ptr_robot->LinArcFIRPlanningEnd();
+  return std::string(std::to_string(res));
 }
-
 
 /**
  * @brief 激光轨迹记录
@@ -8796,71 +10090,100 @@ std::string robot_command_thread::LinArcFIRPlanningEnd(std::string para){
  * @param [in] speed 机器人运动速度百分比
  * @return 错误码
  */
-std::string robot_command_thread::LaserSensorRecord(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserSensorRecord(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
-    int delayMode = std::stoi(list.front());list.pop_front();
-    int delayTime = std::stoi(list.front());list.pop_front();
-    int delayDisExAxisNum = std::stoi(list.front());list.pop_front();
-    double delayDis = std::stod(list.front());list.pop_front();
-    double sensitivePara = std::stod(list.front());list.pop_front();
-    int trackMode = std::stoi(list.front());list.pop_front();
-    int triggerMode = std::stoi(list.front());list.pop_front();
-    int runTime = std::stoi(list.front());list.pop_front();
-    double speed = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserSensorRecord(status, delayMode, delayTime, delayDisExAxisNum, delayDis, sensitivePara, trackMode, triggerMode, runTime, speed);
-    return std::string(std::to_string(res));
+  int status = std::stoi(list.front());
+  list.pop_front();
+  int delayMode = std::stoi(list.front());
+  list.pop_front();
+  int delayTime = std::stoi(list.front());
+  list.pop_front();
+  int delayDisExAxisNum = std::stoi(list.front());
+  list.pop_front();
+  double delayDis = std::stod(list.front());
+  list.pop_front();
+  double sensitivePara = std::stod(list.front());
+  list.pop_front();
+  int trackMode = std::stoi(list.front());
+  list.pop_front();
+  int triggerMode = std::stoi(list.front());
+  list.pop_front();
+  int runTime = std::stoi(list.front());
+  list.pop_front();
+  double speed = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserSensorRecord(
+    status, delayMode, delayTime, delayDisExAxisNum, delayDis, sensitivePara, trackMode,
+    triggerMode, runTime, speed);
+  return std::string(std::to_string(res));
 }
 
-std::string robot_command_thread::LaserTrackingLaserOn(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserTrackingLaserOn(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weldId = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserTrackingLaserOn(weldId);
-    return std::string(std::to_string(res));
+  int weldId = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserTrackingLaserOn(weldId);
+  return std::string(std::to_string(res));
 }
 
-std::string robot_command_thread::LaserTrackingLaserOff(std::string para){
-    int res = _ptr_robot->LaserTrackingLaserOff();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::LaserTrackingLaserOff(std::string para)
+{
+  int res = _ptr_robot->LaserTrackingLaserOff();
+  return std::string(std::to_string(res));
 }
 
-std::string robot_command_thread::LaserTrackingTrackOn(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserTrackingTrackOn(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int coordId = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserTrackingTrackOn(coordId);
-    return std::string(std::to_string(res));
+  int coordId = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserTrackingTrackOn(coordId);
+  return std::string(std::to_string(res));
 }
 
-std::string robot_command_thread::LaserTrackingTrackOff(std::string para){
-    int res = _ptr_robot->LaserTrackingTrackOff();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::LaserTrackingTrackOff(std::string para)
+{
+  int res = _ptr_robot->LaserTrackingTrackOff();
+  return std::string(std::to_string(res));
 }
 
-std::string robot_command_thread::LaserTrackingSearchStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserTrackingSearchStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int direction = std::stoi(list.front());list.pop_front();
-    DescTran directionPoint;
-    directionPoint.x = std::stod(list.front().c_str());list.pop_front();
-    directionPoint.y = std::stod(list.front().c_str());list.pop_front();
-    directionPoint.z = std::stod(list.front().c_str());list.pop_front();
-    int vel = std::stoi(list.front());list.pop_front();
-    int distance = std::stoi(list.front());list.pop_front();
-    int timeout = std::stoi(list.front());list.pop_front();
-    int posSensorNum = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserTrackingSearchStart(direction, directionPoint, vel, distance, timeout, posSensorNum);
-    return std::string(std::to_string(res));
+  int direction = std::stoi(list.front());
+  list.pop_front();
+  DescTran directionPoint;
+  directionPoint.x = std::stod(list.front().c_str());
+  list.pop_front();
+  directionPoint.y = std::stod(list.front().c_str());
+  list.pop_front();
+  directionPoint.z = std::stod(list.front().c_str());
+  list.pop_front();
+  int vel = std::stoi(list.front());
+  list.pop_front();
+  int distance = std::stoi(list.front());
+  list.pop_front();
+  int timeout = std::stoi(list.front());
+  list.pop_front();
+  int posSensorNum = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserTrackingSearchStart(
+    direction, directionPoint, vel, distance, timeout, posSensorNum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8869,15 +10192,18 @@ std::string robot_command_thread::LaserTrackingSearchStart(std::string para){
  * @param [in] weldId 焊缝ID 默认为0
  * @return 错误码
  */
-std::string robot_command_thread::LaserTrackingLaserOnOff(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserTrackingLaserOnOff(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int OnOff = std::stoi(list.front());list.pop_front();
-    int weldId = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserTrackingLaserOnOff(OnOff,weldId);
-    return std::string(std::to_string(res));
+  int OnOff = std::stoi(list.front());
+  list.pop_front();
+  int weldId = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserTrackingLaserOnOff(OnOff, weldId);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8886,15 +10212,18 @@ std::string robot_command_thread::LaserTrackingLaserOnOff(std::string para){
  * @param [in] coordId 激光外设工具坐标系编号
  * @return 错误码
  */
-std::string robot_command_thread::LaserTrackingTrackOnOff(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserTrackingTrackOnOff(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int OnOff = std::stoi(list.front());list.pop_front();
-    int coordId = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserTrackingTrackOnOff(OnOff,coordId);
-    return std::string(std::to_string(res));
+  int OnOff = std::stoi(list.front());
+  list.pop_front();
+  int coordId = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserTrackingTrackOnOff(OnOff, coordId);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8906,18 +10235,25 @@ std::string robot_command_thread::LaserTrackingTrackOnOff(std::string para){
  * @param [in] posSensorNum 激光标定的工具坐标编号
  * @return 错误码
  */
-std::string robot_command_thread::LaserTrackingSearchStart_xyz(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserTrackingSearchStart_xyz(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int direction = std::stoi(list.front());list.pop_front();
-    int vel = std::stoi(list.front());list.pop_front();
-    int distance = std::stoi(list.front());list.pop_front();
-    int timeout = std::stoi(list.front());list.pop_front();
-    int posSensorNum = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserTrackingSearchStart_xyz(direction,vel,distance,timeout,posSensorNum);
-    return std::string(std::to_string(res));
+  int direction = std::stoi(list.front());
+  list.pop_front();
+  int vel = std::stoi(list.front());
+  list.pop_front();
+  int distance = std::stoi(list.front());
+  list.pop_front();
+  int timeout = std::stoi(list.front());
+  list.pop_front();
+  int posSensorNum = std::stoi(list.front());
+  list.pop_front();
+
+  int res =
+    _ptr_robot->LaserTrackingSearchStart_xyz(direction, vel, distance, timeout, posSensorNum);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8929,30 +10265,40 @@ std::string robot_command_thread::LaserTrackingSearchStart_xyz(std::string para)
  * @param [in] posSensorNum 激光标定的工具坐标编号
  * @return 错误码
  */
-std::string robot_command_thread::LaserTrackingSearchStart_point(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserTrackingSearchStart_point(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    DescTran direction;
-    direction.x = std::stod(list.front().c_str());list.pop_front();
-    direction.y = std::stod(list.front().c_str());list.pop_front();
-    direction.z = std::stod(list.front().c_str());list.pop_front();
-    int vel = std::stoi(list.front());list.pop_front();
-    int distance = std::stoi(list.front());list.pop_front();
-    int timeout = std::stoi(list.front());list.pop_front();
-    int posSensorNum = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserTrackingSearchStart_point(direction,vel,distance,timeout,posSensorNum);
-    return std::string(std::to_string(res));
+  DescTran direction;
+  direction.x = std::stod(list.front().c_str());
+  list.pop_front();
+  direction.y = std::stod(list.front().c_str());
+  list.pop_front();
+  direction.z = std::stod(list.front().c_str());
+  list.pop_front();
+  int vel = std::stoi(list.front());
+  list.pop_front();
+  int distance = std::stoi(list.front());
+  list.pop_front();
+  int timeout = std::stoi(list.front());
+  list.pop_front();
+  int posSensorNum = std::stoi(list.front());
+  list.pop_front();
+
+  int res =
+    _ptr_robot->LaserTrackingSearchStart_point(direction, vel, distance, timeout, posSensorNum);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 激光寻位结束
  * @return 错误码
  */
-std::string robot_command_thread::LaserTrackingSearchStop(std::string para){
-    int res = _ptr_robot->LaserTrackingSearchStop();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::LaserTrackingSearchStop(std::string para)
+{
+  int res = _ptr_robot->LaserTrackingSearchStop();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8964,15 +10310,18 @@ std::string robot_command_thread::LaserTrackingSearchStop(std::string para){
  * @param [in] posSensorNum 激光标定的工具坐标编号
  * @return 错误码
  */
-std::string robot_command_thread::LaserTrackingSensorConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserTrackingSensorConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string ip = list.front();list.pop_front();
-    int port = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserTrackingSensorConfig(ip,port);
-    return std::string(std::to_string(res));
+  std::string ip = list.front();
+  list.pop_front();
+  int port = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserTrackingSensorConfig(ip, port);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8980,14 +10329,16 @@ std::string robot_command_thread::LaserTrackingSensorConfig(std::string para){
  * @param [in] period 激光外设采样周期 单位ms
  * @return 错误码
  */
-std::string robot_command_thread::LaserTrackingSensorSamplePeriod(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserTrackingSensorSamplePeriod(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int period = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserTrackingSensorSamplePeriod(period);
-    return std::string(std::to_string(res));
+  int period = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserTrackingSensorSamplePeriod(period);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -8995,23 +10346,26 @@ std::string robot_command_thread::LaserTrackingSensorSamplePeriod(std::string pa
  * @param [in] type 激光外设驱动的协议类型 101-睿牛 102-创想 103-全视 104-同舟 105-奥太
  * @return 错误码
  */
-std::string robot_command_thread::LoadPosSensorDriver(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LoadPosSensorDriver(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LoadPosSensorDriver(type);
-    return std::string(std::to_string(res));
+  int type = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LoadPosSensorDriver(type);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 激光外设驱动卸载
  * @return 错误码
  */
-std::string robot_command_thread::UnLoadPosSensorDriver(std::string para){
-    int res = _ptr_robot->UnLoadPosSensorDriver();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::UnLoadPosSensorDriver(std::string para)
+{
+  int res = _ptr_robot->UnLoadPosSensorDriver();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9020,15 +10374,18 @@ std::string robot_command_thread::UnLoadPosSensorDriver(std::string para){
  * @param [in] delayTime 延时时间 单位ms
  * @return 错误码
  */
-std::string robot_command_thread::LaserSensorRecord1(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserSensorRecord1(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
-    int delayTime = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserSensorRecord1(status,delayTime);
-    return std::string(std::to_string(res));
+  int status = std::stoi(list.front());
+  list.pop_front();
+  int delayTime = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserSensorRecord1(status, delayTime);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9037,24 +10394,28 @@ std::string robot_command_thread::LaserSensorRecord1(std::string para){
  * @param [in] speed 速度 单位%
  * @return 错误码
  */
-std::string robot_command_thread::LaserSensorReplay(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserSensorReplay(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int delayTime = std::stoi(list.front());list.pop_front();
-    double speed = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserSensorReplay(delayTime,speed);
-    return std::string(std::to_string(res));
+  int delayTime = std::stoi(list.front());
+  list.pop_front();
+  double speed = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserSensorReplay(delayTime, speed);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 激光跟踪复现
  * @return 错误码
  */
-std::string robot_command_thread::MoveLTR(std::string para){
-    int res = _ptr_robot->MoveLTR();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::MoveLTR(std::string para)
+{
+  int res = _ptr_robot->MoveLTR();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9070,22 +10431,34 @@ std::string robot_command_thread::MoveLTR(std::string para){
  * @param [in] speed 速度 单位%
  * @return 错误码
  */
-std::string robot_command_thread::LaserSensorRecordandReplay(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserSensorRecordandReplay(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int delayMode = std::stoi(list.front());list.pop_front();
-    int delayTime = std::stoi(list.front());list.pop_front();
-    int delayDisExAxisNum = std::stoi(list.front());list.pop_front();
-    double delayDis = std::stod(list.front());list.pop_front();
-    double sensitivePara = std::stod(list.front());list.pop_front();
-    int trackMode = std::stoi(list.front());list.pop_front();
-    int triggerMode = std::stoi(list.front());list.pop_front();
-    double runTime = std::stod(list.front());list.pop_front();
-    double speed = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LaserSensorRecordandReplay(delayMode, delayTime, delayDisExAxisNum, delayDis, sensitivePara, trackMode, triggerMode, runTime, speed);
-    return std::string(std::to_string(res));
+  int delayMode = std::stoi(list.front());
+  list.pop_front();
+  int delayTime = std::stoi(list.front());
+  list.pop_front();
+  int delayDisExAxisNum = std::stoi(list.front());
+  list.pop_front();
+  double delayDis = std::stod(list.front());
+  list.pop_front();
+  double sensitivePara = std::stod(list.front());
+  list.pop_front();
+  int trackMode = std::stoi(list.front());
+  list.pop_front();
+  int triggerMode = std::stoi(list.front());
+  list.pop_front();
+  double runTime = std::stod(list.front());
+  list.pop_front();
+  double speed = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->LaserSensorRecordandReplay(
+    delayMode, delayTime, delayDisExAxisNum, delayDis, sensitivePara, trackMode, triggerMode,
+    runTime, speed);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9094,15 +10467,18 @@ std::string robot_command_thread::LaserSensorRecordandReplay(std::string para){
  * @param [in] ovl 速度 单位%
  * @return 错误码
  */
-std::string robot_command_thread::MoveToLaserRecordStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MoveToLaserRecordStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int moveType = std::stoi(list.front());list.pop_front();
-    double ovl = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->MoveToLaserRecordStart(moveType,ovl);
-    return std::string(std::to_string(res));
+  int moveType = std::stoi(list.front());
+  list.pop_front();
+  double ovl = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->MoveToLaserRecordStart(moveType, ovl);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9111,15 +10487,18 @@ std::string robot_command_thread::MoveToLaserRecordStart(std::string para){
  * @param [in] ovl 速度 单位%
  * @return 错误码
  */
-std::string robot_command_thread::MoveToLaserRecordEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MoveToLaserRecordEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int moveType = std::stoi(list.front());list.pop_front();
-    double ovl = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->MoveToLaserRecordEnd(moveType,ovl);
-    return std::string(std::to_string(res));
+  int moveType = std::stoi(list.front());
+  list.pop_front();
+  double ovl = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->MoveToLaserRecordEnd(moveType, ovl);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9132,20 +10511,27 @@ std::string robot_command_thread::MoveToLaserRecordEnd(std::string para){
  * @param [in] offset 偏移量
  * @return 错误码
  */
-std::string robot_command_thread::MoveToLaserSeamPos(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MoveToLaserSeamPos(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int moveFlag = std::stoi(list.front());list.pop_front();
-    double ovl = std::stod(list.front());list.pop_front();
-    int dataFlag = std::stoi(list.front());list.pop_front();
-    int plateType = std::stoi(list.front());list.pop_front();
-    int trackOffectType = std::stoi(list.front());list.pop_front();
-    DescPose offset;
-    _fillDescPose(list,offset);
-    
-    int res = _ptr_robot->MoveToLaserSeamPos(moveFlag,ovl,dataFlag,plateType,trackOffectType,offset);
-    return std::string(std::to_string(res));
+  int moveFlag = std::stoi(list.front());
+  list.pop_front();
+  double ovl = std::stod(list.front());
+  list.pop_front();
+  int dataFlag = std::stoi(list.front());
+  list.pop_front();
+  int plateType = std::stoi(list.front());
+  list.pop_front();
+  int trackOffectType = std::stoi(list.front());
+  list.pop_front();
+  DescPose offset;
+  _fillDescPose(list, offset);
+
+  int res =
+    _ptr_robot->MoveToLaserSeamPos(moveFlag, ovl, dataFlag, plateType, trackOffectType, offset);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9159,31 +10545,33 @@ std::string robot_command_thread::MoveToLaserSeamPos(std::string para){
  * @param [out] exaxis 扩展轴位置[mm]
  * @return 错误码
  */
-std::string robot_command_thread::GetLaserSeamPos(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetLaserSeamPos(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int trackOffectType = std::stoi(list.front());list.pop_front();
-    DescPose offset;
-    _fillDescPose(list,offset);
+  int trackOffectType = std::stoi(list.front());
+  list.pop_front();
+  DescPose offset;
+  _fillDescPose(list, offset);
 
-    JointPos jPos;
-    DescPose descPos;
-    int tool;
-    int user;
-    ExaxisPos exaxis;
-    
-    int res = _ptr_robot->GetLaserSeamPos(trackOffectType,offset,jPos,descPos,tool,user,exaxis);
-    return std::string(std::to_string(res) + "," + std::to_string(jPos.jPos[0]) + "," +\
-            std::to_string(jPos.jPos[1]) + "," + std::to_string(jPos.jPos[2]) + "," +\
-            std::to_string(jPos.jPos[3]) + "," + std::to_string(jPos.jPos[4]) + "," +\
-            std::to_string(jPos.jPos[5]) + "," + std::to_string(descPos.tran.x) + "," + \
-            std::to_string(descPos.tran.y) + "," + std::to_string(descPos.tran.z) + "," + \
-            std::to_string(descPos.rpy.rx) + "," + std::to_string(descPos.rpy.ry) + "," + \
-            std::to_string(descPos.rpy.rz) + "," + std::to_string(tool) + "," +\
-            std::to_string(user) + "," + std::to_string(exaxis.ePos[0]) + "," +\
-            std::to_string(exaxis.ePos[1]) + "," + std::to_string(exaxis.ePos[2]) + "," +\
-            std::to_string(exaxis.ePos[3]));
+  JointPos jPos;
+  DescPose descPos;
+  int tool;
+  int user;
+  ExaxisPos exaxis;
+
+  int res = _ptr_robot->GetLaserSeamPos(trackOffectType, offset, jPos, descPos, tool, user, exaxis);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(jPos.jPos[0]) + "," + std::to_string(jPos.jPos[1]) +
+    "," + std::to_string(jPos.jPos[2]) + "," + std::to_string(jPos.jPos[3]) + "," +
+    std::to_string(jPos.jPos[4]) + "," + std::to_string(jPos.jPos[5]) + "," +
+    std::to_string(descPos.tran.x) + "," + std::to_string(descPos.tran.y) + "," +
+    std::to_string(descPos.tran.z) + "," + std::to_string(descPos.rpy.rx) + "," +
+    std::to_string(descPos.rpy.ry) + "," + std::to_string(descPos.rpy.rz) + "," +
+    std::to_string(tool) + "," + std::to_string(user) + "," + std::to_string(exaxis.ePos[0]) + "," +
+    std::to_string(exaxis.ePos[1]) + "," + std::to_string(exaxis.ePos[2]) + "," +
+    std::to_string(exaxis.ePos[3]));
 }
 
 /**
@@ -9194,26 +10582,32 @@ std::string robot_command_thread::GetLaserSeamPos(std::string para){
  * @param [in] velEnd 焊接结束速度，(cm/min)
  * @return 错误码
  */
-std::string robot_command_thread::WeaveChangeStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeaveChangeStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weaveChangeFlag = std::stoi(list.front());list.pop_front();
-    int weaveNum = std::stoi(list.front());list.pop_front();
-    double velStart = std::stod(list.front());list.pop_front();
-    double velEnd = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->WeaveChangeStart(weaveChangeFlag,weaveNum,velStart,velEnd);
-    return std::string(std::to_string(res));
+  int weaveChangeFlag = std::stoi(list.front());
+  list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
+  double velStart = std::stod(list.front());
+  list.pop_front();
+  double velEnd = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->WeaveChangeStart(weaveChangeFlag, weaveNum, velStart, velEnd);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 摆动渐变结束
  * @return 错误码
  */
-std::string robot_command_thread::WeaveChangeEnd(std::string para){
-    int res = _ptr_robot->WeaveChangeEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::WeaveChangeEnd(std::string para)
+{
+  int res = _ptr_robot->WeaveChangeEnd();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9229,32 +10623,44 @@ std::string robot_command_thread::WeaveChangeEnd(std::string para){
  * @param [in] flag 匀速前瞻开启开关 0-不开启；1-开启
  * @return 错误码
  */
-std::string robot_command_thread::LoadTrajectoryLA(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LoadTrajectoryLA(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    char name[30];
-    list.front().copy(name,list.front().size());list.pop_front();
-    int mode = std::stoi(list.front());list.pop_front();
-    double errorLim = std::stod(list.front());list.pop_front();
-    int type = std::stoi(list.front());list.pop_front();
-    double precision = std::stod(list.front());list.pop_front();
-    double vamx = std::stod(list.front());list.pop_front();
-    double amax = std::stod(list.front());list.pop_front();
-    double jmax = std::stod(list.front());list.pop_front();
-    int flag = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->LoadTrajectoryLA(name, mode, errorLim, type, precision, vamx, amax, jmax, flag);
-    return std::string(std::to_string(res));
+  char name[30];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
+  int mode = std::stoi(list.front());
+  list.pop_front();
+  double errorLim = std::stod(list.front());
+  list.pop_front();
+  int type = std::stoi(list.front());
+  list.pop_front();
+  double precision = std::stod(list.front());
+  list.pop_front();
+  double vamx = std::stod(list.front());
+  list.pop_front();
+  double amax = std::stod(list.front());
+  list.pop_front();
+  double jmax = std::stod(list.front());
+  list.pop_front();
+  int flag = std::stoi(list.front());
+  list.pop_front();
+
+  int res =
+    _ptr_robot->LoadTrajectoryLA(name, mode, errorLim, type, precision, vamx, amax, jmax, flag);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 轨迹复现(轨迹前瞻)
  * @return 错误码
  */
-std::string robot_command_thread::MoveTrajectoryLA(std::string para){
-    int res = _ptr_robot->MoveTrajectoryLA();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::MoveTrajectoryLA(std::string para)
+{
+  int res = _ptr_robot->MoveTrajectoryLA();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9265,38 +10671,55 @@ std::string robot_command_thread::MoveTrajectoryLA(std::string para){
  * @param [in] block 0-非阻塞；1-阻塞
  * @return 错误码
  */
-std::string robot_command_thread::CustomCollisionDetectionStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::CustomCollisionDetectionStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int flag = std::stoi(list.front());list.pop_front();
-    double jointDetectionThreshould[6];
-    jointDetectionThreshould[0] = std::stod(list.front());list.pop_front();
-    jointDetectionThreshould[1] = std::stod(list.front());list.pop_front();
-    jointDetectionThreshould[2] = std::stod(list.front());list.pop_front();
-    jointDetectionThreshould[3] = std::stod(list.front());list.pop_front();
-    jointDetectionThreshould[4] = std::stod(list.front());list.pop_front();
-    jointDetectionThreshould[5] = std::stod(list.front());list.pop_front();
-    double tcpDetectionThreshould[6];
-    tcpDetectionThreshould[0] = std::stod(list.front());list.pop_front();
-    tcpDetectionThreshould[1] = std::stod(list.front());list.pop_front();
-    tcpDetectionThreshould[2] = std::stod(list.front());list.pop_front();
-    tcpDetectionThreshould[3] = std::stod(list.front());list.pop_front();
-    tcpDetectionThreshould[4] = std::stod(list.front());list.pop_front();
-    tcpDetectionThreshould[5] = std::stod(list.front());list.pop_front();
-    int block = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->CustomCollisionDetectionStart(flag, jointDetectionThreshould, tcpDetectionThreshould, block);
-    return std::string(std::to_string(res));
+  int flag = std::stoi(list.front());
+  list.pop_front();
+  double jointDetectionThreshould[6];
+  jointDetectionThreshould[0] = std::stod(list.front());
+  list.pop_front();
+  jointDetectionThreshould[1] = std::stod(list.front());
+  list.pop_front();
+  jointDetectionThreshould[2] = std::stod(list.front());
+  list.pop_front();
+  jointDetectionThreshould[3] = std::stod(list.front());
+  list.pop_front();
+  jointDetectionThreshould[4] = std::stod(list.front());
+  list.pop_front();
+  jointDetectionThreshould[5] = std::stod(list.front());
+  list.pop_front();
+  double tcpDetectionThreshould[6];
+  tcpDetectionThreshould[0] = std::stod(list.front());
+  list.pop_front();
+  tcpDetectionThreshould[1] = std::stod(list.front());
+  list.pop_front();
+  tcpDetectionThreshould[2] = std::stod(list.front());
+  list.pop_front();
+  tcpDetectionThreshould[3] = std::stod(list.front());
+  list.pop_front();
+  tcpDetectionThreshould[4] = std::stod(list.front());
+  list.pop_front();
+  tcpDetectionThreshould[5] = std::stod(list.front());
+  list.pop_front();
+  int block = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->CustomCollisionDetectionStart(
+    flag, jointDetectionThreshould, tcpDetectionThreshould, block);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 自定义碰撞检测阈值功能关闭
  * @return 错误码
  */
-std::string robot_command_thread::CustomCollisionDetectionEnd(std::string para){
-    int res = _ptr_robot->CustomCollisionDetectionEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::CustomCollisionDetectionEnd(std::string para)
+{
+  int res = _ptr_robot->CustomCollisionDetectionEnd();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9304,14 +10727,16 @@ std::string robot_command_thread::CustomCollisionDetectionEnd(std::string para){
  * @param [in] saveFlag 是否断电保存
  * @return 错误码
  */
-std::string robot_command_thread::AccSmoothStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AccSmoothStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int saveFlag = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->AccSmoothStart(saveFlag);
-    return std::string(std::to_string(res));
+  int saveFlag = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->AccSmoothStart(saveFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9319,14 +10744,16 @@ std::string robot_command_thread::AccSmoothStart(std::string para){
  * @param [in] saveFlag 是否断电保存
  * @return 错误码
  */
-std::string robot_command_thread::AccSmoothEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AccSmoothEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int saveFlag = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->AccSmoothEnd(saveFlag);
-    return std::string(std::to_string(res));
+  int saveFlag = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->AccSmoothEnd(saveFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9334,14 +10761,16 @@ std::string robot_command_thread::AccSmoothEnd(std::string para){
  * @param [in] savePath 保存文件路径"D://zDown/"
  * @return 错误码
  */
-std::string robot_command_thread::RbLogDownload(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::RbLogDownload(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string savePath = list.front();list.pop_front();
-    
-    int res = _ptr_robot->RbLogDownload(savePath);
-    return std::string(std::to_string(res));
+  std::string savePath = list.front();
+  list.pop_front();
+
+  int res = _ptr_robot->RbLogDownload(savePath);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9349,14 +10778,16 @@ std::string robot_command_thread::RbLogDownload(std::string para){
  * @param [in] savePath 保存文件路径"D://zDown/"
  * @return 错误码
  */
-std::string robot_command_thread::AllDataSourceDownload(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AllDataSourceDownload(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string savePath = list.front();list.pop_front();
-    
-    int res = _ptr_robot->AllDataSourceDownload(savePath);
-    return std::string(std::to_string(res));
+  std::string savePath = list.front();
+  list.pop_front();
+
+  int res = _ptr_robot->AllDataSourceDownload(savePath);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9364,14 +10795,16 @@ std::string robot_command_thread::AllDataSourceDownload(std::string para){
  * @param [in] savePath 保存文件路径"D://zDown/"
  * @return 错误码
  */
-std::string robot_command_thread::DataPackageDownload(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::DataPackageDownload(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string savePath = list.front();list.pop_front();
-    
-    int res = _ptr_robot->DataPackageDownload(savePath);
-    return std::string(std::to_string(res));
+  std::string savePath = list.front();
+  list.pop_front();
+
+  int res = _ptr_robot->DataPackageDownload(savePath);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9379,20 +10812,22 @@ std::string robot_command_thread::DataPackageDownload(std::string para){
  * @param [out] SNCode 控制箱SN码
  * @return 错误码
  */
-std::string robot_command_thread::GetRobotSN(std::string para){
-    std::string SNCode;
-    
-    int res = _ptr_robot->GetRobotSN(SNCode);
-    return std::string(std::to_string(res) + "," + std::string(SNCode));
+std::string robot_command_thread::GetRobotSN(std::string para)
+{
+  std::string SNCode;
+
+  int res = _ptr_robot->GetRobotSN(SNCode);
+  return std::string(std::to_string(res) + "," + std::string(SNCode));
 }
 
 /**
  * @brief 关闭机器人操作系统
  * @return 错误码
  */
-std::string robot_command_thread::ShutDownRobotOS(std::string para){
-    int res = _ptr_robot->ShutDownRobotOS();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ShutDownRobotOS(std::string para)
+{
+  int res = _ptr_robot->ShutDownRobotOS();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9400,23 +10835,26 @@ std::string robot_command_thread::ShutDownRobotOS(std::string para){
  * @param [in] timeout 等待超时时间ms
  * @return 错误码
  */
-std::string robot_command_thread::ConveyorComDetect(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ConveyorComDetect(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int timeout = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->ConveyorComDetect(timeout);
-    return std::string(std::to_string(res));
+  int timeout = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->ConveyorComDetect(timeout);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 传送带通讯输入检测触发
  * @return 错误码
  */
-std::string robot_command_thread::ConveyorComDetectTrigger(std::string para){
-    int res = _ptr_robot->ConveyorComDetectTrigger();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ConveyorComDetectTrigger(std::string para)
+{
+  int res = _ptr_robot->ConveyorComDetectTrigger();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9428,27 +10866,35 @@ std::string robot_command_thread::ConveyorComDetectTrigger(std::string para){
  * @param [in] blend 是否平滑 0-不平滑；1-平滑
  * @return 错误码
  */
-std::string robot_command_thread::WeldingSetVoltageGradualChangeStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeldingSetVoltageGradualChangeStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int IOType = std::stoi(list.front());list.pop_front();
-    double voltageStart = std::stod(list.front());list.pop_front();
-    double voltageEnd = std::stod(list.front());list.pop_front();
-    int AOIndex = std::stoi(list.front());list.pop_front();
-    int blend = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->WeldingSetVoltageGradualChangeStart(IOType, voltageStart, voltageEnd, AOIndex,blend);
-    return std::string(std::to_string(res));
+  int IOType = std::stoi(list.front());
+  list.pop_front();
+  double voltageStart = std::stod(list.front());
+  list.pop_front();
+  double voltageEnd = std::stod(list.front());
+  list.pop_front();
+  int AOIndex = std::stoi(list.front());
+  list.pop_front();
+  int blend = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->WeldingSetVoltageGradualChangeStart(
+    IOType, voltageStart, voltageEnd, AOIndex, blend);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 设置焊接电压渐变结束
  * @return 错误码
  */
-std::string robot_command_thread::WeldingSetVoltageGradualChangeEnd(std::string para){
-    int res = _ptr_robot->WeldingSetVoltageGradualChangeEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::WeldingSetVoltageGradualChangeEnd(std::string para)
+{
+  int res = _ptr_robot->WeldingSetVoltageGradualChangeEnd();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9460,27 +10906,35 @@ std::string robot_command_thread::WeldingSetVoltageGradualChangeEnd(std::string 
  * @param [in] blend 是否平滑 0-不平滑；1-平滑
  * @return 错误码
  */
-std::string robot_command_thread::WeldingSetCurrentGradualChangeStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WeldingSetCurrentGradualChangeStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int IOType = std::stoi(list.front());list.pop_front();
-    double currentStart = std::stod(list.front());list.pop_front();
-    double currentEnd = std::stod(list.front());list.pop_front();
-    int AOIndex = std::stoi(list.front());list.pop_front();
-    int blend = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->WeldingSetCurrentGradualChangeStart(IOType, currentStart, currentEnd, AOIndex,blend);
-    return std::string(std::to_string(res));
+  int IOType = std::stoi(list.front());
+  list.pop_front();
+  double currentStart = std::stod(list.front());
+  list.pop_front();
+  double currentEnd = std::stod(list.front());
+  list.pop_front();
+  int AOIndex = std::stoi(list.front());
+  list.pop_front();
+  int blend = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->WeldingSetCurrentGradualChangeStart(
+    IOType, currentStart, currentEnd, AOIndex, blend);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 设置焊接电流渐变结束
  * @return 错误码
  */
-std::string robot_command_thread::WeldingSetCurrentGradualChangeEnd(std::string para){
-    int res = _ptr_robot->WeldingSetCurrentGradualChangeEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::WeldingSetCurrentGradualChangeEnd(std::string para)
+{
+  int res = _ptr_robot->WeldingSetCurrentGradualChangeEnd();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9489,11 +10943,12 @@ std::string robot_command_thread::WeldingSetCurrentGradualChangeEnd(std::string 
                       bit3-A键；bit4-B键；bit5-C键；bit6-D键；bit7-E键；bit8-IO键；bit9-手自动；bit10开始)
  * @return 错误码
  */
-std::string robot_command_thread::GetSmarttoolBtnState(std::string para){
-    int state;
-    
-    int res = _ptr_robot->GetSmarttoolBtnState(state);
-    return std::string(std::to_string(res) + "," + std::to_string(state));
+std::string robot_command_thread::GetSmarttoolBtnState(std::string para)
+{
+  int state;
+
+  int res = _ptr_robot->GetSmarttoolBtnState(state);
+  return std::string(std::to_string(res) + "," + std::to_string(state));
 }
 
 /**
@@ -9502,15 +10957,18 @@ std::string robot_command_thread::GetSmarttoolBtnState(std::string para){
  * @param [in] period 监测周期(s),范围1-100
  * @return 错误码
  */
-std::string robot_command_thread::SetWideBoxTempFanMonitorParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWideBoxTempFanMonitorParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int enable = std::stoi(list.front());list.pop_front();
-    int period = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetWideBoxTempFanMonitorParam(enable,period);
-    return std::string(std::to_string(res));
+  int enable = std::stoi(list.front());
+  list.pop_front();
+  int period = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetWideBoxTempFanMonitorParam(enable, period);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9519,13 +10977,14 @@ std::string robot_command_thread::SetWideBoxTempFanMonitorParam(std::string para
  * @param [out] period 监测周期(s),范围1-100
  * @return 错误码
  */
-std::string robot_command_thread::GetWideBoxTempFanMonitorParam(std::string para){
-    int enable;
-    int period;
-    
-    int res = _ptr_robot->GetWideBoxTempFanMonitorParam(enable,period);
-    return std::string(std::to_string(res) + "," + std::to_string(enable) + "," +\
-            std::to_string(period));
+std::string robot_command_thread::GetWideBoxTempFanMonitorParam(std::string para)
+{
+  int enable;
+  int period;
+
+  int res = _ptr_robot->GetWideBoxTempFanMonitorParam(enable, period);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(enable) + "," + std::to_string(period));
 }
 
 /**
@@ -9534,16 +10993,18 @@ std::string robot_command_thread::GetWideBoxTempFanMonitorParam(std::string para
  * @param [in] point 标定点坐标
  * @return 错误码
  */
-std::string robot_command_thread::SetFocusCalibPoint(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetFocusCalibPoint(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int pointNum = std::stoi(list.front());list.pop_front();
-    DescPose point;
-    _fillDescPose(list,point);
-    
-    int res = _ptr_robot->SetFocusCalibPoint(pointNum,point);
-    return std::string(std::to_string(res));
+  int pointNum = std::stoi(list.front());
+  list.pop_front();
+  DescPose point;
+  _fillDescPose(list, point);
+
+  int res = _ptr_robot->SetFocusCalibPoint(pointNum, point);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9553,19 +11014,21 @@ std::string robot_command_thread::SetFocusCalibPoint(std::string para){
  * @param [out] accuracy 标定精度误差
  * @return 错误码
  */
-std::string robot_command_thread::ComputeFocusCalib(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ComputeFocusCalib(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int pointNum = std::stoi(list.front());list.pop_front();
+  int pointNum = std::stoi(list.front());
+  list.pop_front();
 
-    DescTran resultPos;
-    float accuracy ;
+  DescTran resultPos;
+  float accuracy;
 
-    int res = _ptr_robot->ComputeFocusCalib(pointNum,resultPos,accuracy);
-    return std::string(std::to_string(res) + "," + std::to_string(resultPos.x) + "," +\
-                std::to_string(resultPos.y) + "," + std::to_string(resultPos.z) + "," +\
-                std::to_string(accuracy));
+  int res = _ptr_robot->ComputeFocusCalib(pointNum, resultPos, accuracy);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(resultPos.x) + "," + std::to_string(resultPos.y) +
+    "," + std::to_string(resultPos.z) + "," + std::to_string(accuracy));
 }
 
 /**
@@ -9577,27 +11040,34 @@ std::string robot_command_thread::ComputeFocusCalib(std::string para){
  * @param [in] type 锁定X轴指向(0-参考输入矢量；1-水平；2-垂直)
  * @return 错误码
  */
-std::string robot_command_thread::FocusStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FocusStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double kp = std::stod(list.front());list.pop_front();
-    double kpredict = std::stod(list.front());list.pop_front();
-    double aMax = std::stod(list.front());list.pop_front();
-    double vMax = std::stod(list.front());list.pop_front();
-    int type = std::stoi(list.front());list.pop_front();
+  double kp = std::stod(list.front());
+  list.pop_front();
+  double kpredict = std::stod(list.front());
+  list.pop_front();
+  double aMax = std::stod(list.front());
+  list.pop_front();
+  double vMax = std::stod(list.front());
+  list.pop_front();
+  int type = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FocusStart(kp,kpredict,aMax,vMax,type);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->FocusStart(kp, kpredict, aMax, vMax, type);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 停止焦点跟随
  * @return 错误码
  */
-std::string robot_command_thread::FocusEnd(std::string para){
-    int res = _ptr_robot->FocusEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::FocusEnd(std::string para)
+{
+  int res = _ptr_robot->FocusEnd();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9605,17 +11075,21 @@ std::string robot_command_thread::FocusEnd(std::string para){
  * @param [in] pos 焦点坐标XYZ
  * @return 错误码
  */
-std::string robot_command_thread::SetFocusPosition(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetFocusPosition(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    DescTran pos;
-    pos.x = std::stod(list.front().c_str());list.pop_front();
-    pos.y = std::stod(list.front().c_str());list.pop_front();
-    pos.z = std::stod(list.front().c_str());list.pop_front();
+  DescTran pos;
+  pos.x = std::stod(list.front().c_str());
+  list.pop_front();
+  pos.y = std::stod(list.front().c_str());
+  list.pop_front();
+  pos.z = std::stod(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->SetFocusPosition(pos);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetFocusPosition(pos);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9623,14 +11097,16 @@ std::string robot_command_thread::SetFocusPosition(std::string para){
  * @param [in] path 本地升级包全路径(D://zUP/XXXXX.bin)
  * @return 错误码
  */
-std::string robot_command_thread::SetEncoderUpgrade(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetEncoderUpgrade(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string path = list.front();list.pop_front();
+  std::string path = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->SetEncoderUpgrade(path);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetEncoderUpgrade(path);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9639,15 +11115,18 @@ std::string robot_command_thread::SetEncoderUpgrade(std::string para){
  * @param [in] path 本地升级包全路径(D://zUP/XXXXX.bin)
  * @return 错误码
  */
-std::string robot_command_thread::SetJointFirmwareUpgrade(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetJointFirmwareUpgrade(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front().c_str());list.pop_front();
-    std::string path = list.front();list.pop_front();
+  int type = std::stoi(list.front().c_str());
+  list.pop_front();
+  std::string path = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->SetJointFirmwareUpgrade(type,path);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetJointFirmwareUpgrade(type, path);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9656,15 +11135,18 @@ std::string robot_command_thread::SetJointFirmwareUpgrade(std::string para){
  * @param [in] path 本地升级包全路径(D://zUP/XXXXX.bin)
  * @return 错误码
  */
-std::string robot_command_thread::SetCtrlFirmwareUpgrade(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetCtrlFirmwareUpgrade(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front().c_str());list.pop_front();
-    std::string path = list.front();list.pop_front();
+  int type = std::stoi(list.front().c_str());
+  list.pop_front();
+  std::string path = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->SetCtrlFirmwareUpgrade(type,path);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetCtrlFirmwareUpgrade(type, path);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9673,15 +11155,18 @@ std::string robot_command_thread::SetCtrlFirmwareUpgrade(std::string para){
  * @param [in] path 本地升级包全路径(D://zUP/XXXXX.bin)
  * @return 错误码
  */
-std::string robot_command_thread::SetEndFirmwareUpgrade(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetEndFirmwareUpgrade(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front().c_str());list.pop_front();
-    std::string path = list.front();list.pop_front();
+  int type = std::stoi(list.front().c_str());
+  list.pop_front();
+  std::string path = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->SetEndFirmwareUpgrade(type,path);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetEndFirmwareUpgrade(type, path);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9689,14 +11174,16 @@ std::string robot_command_thread::SetEndFirmwareUpgrade(std::string para){
  * @param [in] path 本地升级包全路径(D://zUP/XXXXX.bin)
  * @return 错误码
  */
-std::string robot_command_thread::JointAllParamUpgrade(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::JointAllParamUpgrade(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string path = list.front();list.pop_front();
+  std::string path = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->JointAllParamUpgrade(path);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->JointAllParamUpgrade(path);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9704,14 +11191,16 @@ std::string robot_command_thread::JointAllParamUpgrade(std::string para){
  * @param [in] type 机器人型号
  * @return 错误码
  */
-std::string robot_command_thread::SetRobotType(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetRobotType(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int type = std::stoi(list.front().c_str());list.pop_front();
+  int type = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->SetRobotType(type);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetRobotType(type);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9722,26 +11211,28 @@ std::string robot_command_thread::SetRobotType(std::string para){
  * @param [out] exaxis 激光传感器识别点扩展轴位置
  * @return 错误码
  */
-std::string robot_command_thread::LaserRecordPoint(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::LaserRecordPoint(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int coordID = std::stoi(list.front());list.pop_front();
+  int coordID = std::stoi(list.front());
+  list.pop_front();
 
-    DescPose desc;
-    JointPos joint;
-    ExaxisPos exaxis;
+  DescPose desc;
+  JointPos joint;
+  ExaxisPos exaxis;
 
-    int res = _ptr_robot->LaserRecordPoint(coordID,desc,joint,exaxis);
-    return std::string(std::to_string(res) + ","  + std::to_string(desc.tran.x) + "," + \
-            std::to_string(desc.tran.y) + "," + std::to_string(desc.tran.z) + "," + \
-            std::to_string(desc.rpy.rx) + "," + std::to_string(desc.rpy.ry) + "," + \
-            std::to_string(desc.rpy.rz) + "," + std::to_string(joint.jPos[0]) + "," +\
-            std::to_string(joint.jPos[1]) + "," + std::to_string(joint.jPos[2]) + "," +\
-            std::to_string(joint.jPos[3]) + "," + std::to_string(joint.jPos[4]) + "," +\
-            std::to_string(joint.jPos[5]) + "," + std::to_string(exaxis.ePos[0]) + "," +\
-            std::to_string(exaxis.ePos[1]) + "," + std::to_string(exaxis.ePos[2]) + "," +\
-            std::to_string(exaxis.ePos[3]));            
+  int res = _ptr_robot->LaserRecordPoint(coordID, desc, joint, exaxis);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(desc.tran.x) + "," + std::to_string(desc.tran.y) +
+    "," + std::to_string(desc.tran.z) + "," + std::to_string(desc.rpy.rx) + "," +
+    std::to_string(desc.rpy.ry) + "," + std::to_string(desc.rpy.rz) + "," +
+    std::to_string(joint.jPos[0]) + "," + std::to_string(joint.jPos[1]) + "," +
+    std::to_string(joint.jPos[2]) + "," + std::to_string(joint.jPos[3]) + "," +
+    std::to_string(joint.jPos[4]) + "," + std::to_string(joint.jPos[5]) + "," +
+    std::to_string(exaxis.ePos[0]) + "," + std::to_string(exaxis.ePos[1]) + "," +
+    std::to_string(exaxis.ePos[2]) + "," + std::to_string(exaxis.ePos[3]));
 }
 
 /**
@@ -9749,14 +11240,16 @@ std::string robot_command_thread::LaserRecordPoint(std::string para){
  * @param [in] strategy 策略；0-以机器人为主；1-扩展轴与机器人同步
  * @return 错误码
  */
-std::string robot_command_thread::SetExAxisRobotPlan(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetExAxisRobotPlan(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int strategy = std::stoi(list.front());list.pop_front();
+  int strategy = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetExAxisRobotPlan(strategy);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetExAxisRobotPlan(strategy);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9766,16 +11259,20 @@ std::string robot_command_thread::SetExAxisRobotPlan(std::string para){
 * @param  [in] period 重连周期，单位ms
 * @return  错误码
 */
-std::string robot_command_thread::SetReConnectParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetReConnectParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    bool enable = (std::stoi(list.front()) != 0);list.pop_front();
-    int reconnectTime = std::stoi(list.front());list.pop_front();
-    int period = std::stoi(list.front());list.pop_front();
+  bool enable = (std::stoi(list.front()) != 0);
+  list.pop_front();
+  int reconnectTime = std::stoi(list.front());
+  list.pop_front();
+  int period = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetReConnectParam(enable,reconnectTime,period);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetReConnectParam(enable, reconnectTime, period);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9785,15 +11282,16 @@ std::string robot_command_thread::SetReConnectParam(std::string para){
  * @param  [out] connState  0-未连接 1-已连接
  * @return  错误码
  */
-std::string robot_command_thread::GetFieldBusConfig(std::string para){
+std::string robot_command_thread::GetFieldBusConfig(std::string para)
+{
+  uint8_t type;
+  uint8_t version;
+  uint8_t connState;
 
-    uint8_t type;
-    uint8_t version;
-    uint8_t connState;
-
-    int res = _ptr_robot->GetFieldBusConfig(&type,&version,&connState);
-    return std::string(std::to_string(res) + ","  + std::to_string(type) + "," + \
-            std::to_string(version) + "," + std::to_string(connState));            
+  int res = _ptr_robot->GetFieldBusConfig(&type, &version, &connState);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(type) + "," + std::to_string(version) + "," +
+    std::to_string(connState));
 }
 
 /**
@@ -9803,25 +11301,36 @@ std::string robot_command_thread::GetFieldBusConfig(std::string para){
  * @param  [in] status[8] 写入的数值，最多写8个
  * @return  错误码
  */
-std::string robot_command_thread::FieldBusSlaveWriteDO(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FieldBusSlaveWriteDO(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t DOIndex = std::stoi(list.front());list.pop_front();
-    uint8_t wirteNum = std::stoi(list.front());list.pop_front();
+  uint8_t DOIndex = std::stoi(list.front());
+  list.pop_front();
+  uint8_t wirteNum = std::stoi(list.front());
+  list.pop_front();
 
-    uint8_t status[8]; 
-    status[0] = std::stoi(list.front());list.pop_front();
-    status[1] = std::stoi(list.front());list.pop_front();
-    status[2] = std::stoi(list.front());list.pop_front();
-    status[3] = std::stoi(list.front());list.pop_front();
-    status[4] = std::stoi(list.front());list.pop_front();
-    status[5] = std::stoi(list.front());list.pop_front();
-    status[6] = std::stoi(list.front());list.pop_front();
-    status[7] = std::stoi(list.front());list.pop_front();
+  uint8_t status[8];
+  status[0] = std::stoi(list.front());
+  list.pop_front();
+  status[1] = std::stoi(list.front());
+  list.pop_front();
+  status[2] = std::stoi(list.front());
+  list.pop_front();
+  status[3] = std::stoi(list.front());
+  list.pop_front();
+  status[4] = std::stoi(list.front());
+  list.pop_front();
+  status[5] = std::stoi(list.front());
+  list.pop_front();
+  status[6] = std::stoi(list.front());
+  list.pop_front();
+  status[7] = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FieldBusSlaveWriteDO(DOIndex,wirteNum,status);
-    return std::string(std::to_string(res));            
+  int res = _ptr_robot->FieldBusSlaveWriteDO(DOIndex, wirteNum, status);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9831,25 +11340,36 @@ std::string robot_command_thread::FieldBusSlaveWriteDO(std::string para){
  * @param  [in] status[8] 写入的数值，最多写8个
  * @return  错误码
  */
-std::string robot_command_thread::FieldBusSlaveWriteAO(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FieldBusSlaveWriteAO(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t AOIndex = std::stoi(list.front());list.pop_front();
-    uint8_t wirteNum = std::stoi(list.front());list.pop_front();
+  uint8_t AOIndex = std::stoi(list.front());
+  list.pop_front();
+  uint8_t wirteNum = std::stoi(list.front());
+  list.pop_front();
 
-    double status[8]; 
-    status[0] = std::stod(list.front());list.pop_front();
-    status[1] = std::stod(list.front());list.pop_front();
-    status[2] = std::stod(list.front());list.pop_front();
-    status[3] = std::stod(list.front());list.pop_front();
-    status[4] = std::stod(list.front());list.pop_front();
-    status[5] = std::stod(list.front());list.pop_front();
-    status[6] = std::stod(list.front());list.pop_front();
-    status[7] = std::stod(list.front());list.pop_front();
+  double status[8];
+  status[0] = std::stod(list.front());
+  list.pop_front();
+  status[1] = std::stod(list.front());
+  list.pop_front();
+  status[2] = std::stod(list.front());
+  list.pop_front();
+  status[3] = std::stod(list.front());
+  list.pop_front();
+  status[4] = std::stod(list.front());
+  list.pop_front();
+  status[5] = std::stod(list.front());
+  list.pop_front();
+  status[6] = std::stod(list.front());
+  list.pop_front();
+  status[7] = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FieldBusSlaveWriteAO(AOIndex,wirteNum,status);
-    return std::string(std::to_string(res));            
+  int res = _ptr_robot->FieldBusSlaveWriteAO(AOIndex, wirteNum, status);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9859,21 +11379,24 @@ std::string robot_command_thread::FieldBusSlaveWriteAO(std::string para){
  * @param  [out] status[8] 读取到的数值，最多读8个
  * @return  错误码
  */
-std::string robot_command_thread::FieldBusSlaveReadDI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FieldBusSlaveReadDI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t DOIndex = std::stoi(list.front());list.pop_front();
-    uint8_t readNum = std::stoi(list.front());list.pop_front();
+  uint8_t DOIndex = std::stoi(list.front());
+  list.pop_front();
+  uint8_t readNum = std::stoi(list.front());
+  list.pop_front();
 
-    uint8_t status[8]; 
+  uint8_t status[8];
 
-    int res = _ptr_robot->FieldBusSlaveReadDI(DOIndex,readNum,status);
-    return std::string(std::to_string(res) + ","  + std::to_string(status[0]) + "," +\
-        std::to_string(status[1]) + "," + std::to_string(status[2]) + "," +\
-        std::to_string(status[3]) + "," + std::to_string(status[4]) + "," +\
-        std::to_string(status[5]) + "," + std::to_string(status[6]) + "," +\
-        std::to_string(status[7]));             
+  int res = _ptr_robot->FieldBusSlaveReadDI(DOIndex, readNum, status);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(status[0]) + "," + std::to_string(status[1]) + "," +
+    std::to_string(status[2]) + "," + std::to_string(status[3]) + "," + std::to_string(status[4]) +
+    "," + std::to_string(status[5]) + "," + std::to_string(status[6]) + "," +
+    std::to_string(status[7]));
 }
 
 /**
@@ -9883,21 +11406,24 @@ std::string robot_command_thread::FieldBusSlaveReadDI(std::string para){
  * @param  [out] status[8] 读取到的数值，最多读8个
  * @return  错误码
  */
-std::string robot_command_thread::FieldBusSlaveReadAI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FieldBusSlaveReadAI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t AIIndex = std::stoi(list.front());list.pop_front();
-    uint8_t readNum = std::stoi(list.front());list.pop_front();
+  uint8_t AIIndex = std::stoi(list.front());
+  list.pop_front();
+  uint8_t readNum = std::stoi(list.front());
+  list.pop_front();
 
-    double status[8]; 
+  double status[8];
 
-    int res = _ptr_robot->FieldBusSlaveReadAI(AIIndex,readNum,status);
-    return std::string(std::to_string(res) + ","  + std::to_string(status[0]) + "," +\
-        std::to_string(status[1]) + "," + std::to_string(status[2]) + "," +\
-        std::to_string(status[3]) + "," + std::to_string(status[4]) + "," +\
-        std::to_string(status[5]) + "," + std::to_string(status[6]) + "," +\
-        std::to_string(status[7]));             
+  int res = _ptr_robot->FieldBusSlaveReadAI(AIIndex, readNum, status);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(status[0]) + "," + std::to_string(status[1]) + "," +
+    std::to_string(status[2]) + "," + std::to_string(status[3]) + "," + std::to_string(status[4]) +
+    "," + std::to_string(status[5]) + "," + std::to_string(status[6]) + "," +
+    std::to_string(status[7]));
 }
 
 /**
@@ -9907,16 +11433,20 @@ std::string robot_command_thread::FieldBusSlaveReadAI(std::string para){
  * @param [in] waitMs 最大等待时间(ms)
  * @return 错误码
  */
-std::string robot_command_thread::FieldBusSlaveWaitDI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FieldBusSlaveWaitDI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t DIIndex = std::stoi(list.front());list.pop_front();
-    bool status = (std::stoi(list.front()) != 0);list.pop_front();
-    int waitMs = std::stoi(list.front());list.pop_front();
+  uint8_t DIIndex = std::stoi(list.front());
+  list.pop_front();
+  bool status = (std::stoi(list.front()) != 0);
+  list.pop_front();
+  int waitMs = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FieldBusSlaveWaitDI(DIIndex,status,waitMs);
-    return std::string(std::to_string(res));            
+  int res = _ptr_robot->FieldBusSlaveWaitDI(DIIndex, status, waitMs);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9927,17 +11457,22 @@ std::string robot_command_thread::FieldBusSlaveWaitDI(std::string para){
  * @param [in] waitMs 最大等待时间(ms)
  * @return 错误码
  */
-std::string robot_command_thread::FieldBusSlaveWaitAI(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::FieldBusSlaveWaitAI(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t AIIndex = std::stoi(list.front());list.pop_front();
-    uint8_t waitType = std::stoi(list.front());list.pop_front();
-    double value = std::stod(list.front());list.pop_front();
-    int waitMs = std::stoi(list.front());list.pop_front();
+  uint8_t AIIndex = std::stoi(list.front());
+  list.pop_front();
+  uint8_t waitType = std::stoi(list.front());
+  list.pop_front();
+  double value = std::stod(list.front());
+  list.pop_front();
+  int waitMs = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->FieldBusSlaveWaitAI(AIIndex,waitType,value,waitMs);
-    return std::string(std::to_string(res));            
+  int res = _ptr_robot->FieldBusSlaveWaitAI(AIIndex, waitType, value, waitMs);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9947,37 +11482,60 @@ std::string robot_command_thread::FieldBusSlaveWaitAI(std::string para){
  * @param [in] ctrlValue 控制值
  * @return 错误码
  */
-std::string robot_command_thread::SetSuckerCtrl(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetSuckerCtrl(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t slaveID = std::stoi(list.front());list.pop_front();
-    uint8_t len = std::stoi(list.front());list.pop_front();
+  uint8_t slaveID = std::stoi(list.front());
+  list.pop_front();
+  uint8_t len = std::stoi(list.front());
+  list.pop_front();
 
-    uint8_t ctrlValue[20];
-    ctrlValue[0] = std::stoi(list.front());list.pop_front();
-    ctrlValue[1] = std::stoi(list.front());list.pop_front();
-    ctrlValue[2] = std::stoi(list.front());list.pop_front();
-    ctrlValue[3] = std::stoi(list.front());list.pop_front();
-    ctrlValue[4] = std::stoi(list.front());list.pop_front();
-    ctrlValue[5] = std::stoi(list.front());list.pop_front();
-    ctrlValue[6] = std::stoi(list.front());list.pop_front();
-    ctrlValue[7] = std::stoi(list.front());list.pop_front();
-    ctrlValue[8] = std::stoi(list.front());list.pop_front();
-    ctrlValue[9] = std::stoi(list.front());list.pop_front();
-    ctrlValue[10] = std::stoi(list.front());list.pop_front();
-    ctrlValue[11] = std::stoi(list.front());list.pop_front();
-    ctrlValue[12] = std::stoi(list.front());list.pop_front();
-    ctrlValue[13] = std::stoi(list.front());list.pop_front();
-    ctrlValue[14] = std::stoi(list.front());list.pop_front();
-    ctrlValue[15] = std::stoi(list.front());list.pop_front();
-    ctrlValue[16] = std::stoi(list.front());list.pop_front();
-    ctrlValue[17] = std::stoi(list.front());list.pop_front();
-    ctrlValue[18] = std::stoi(list.front());list.pop_front();
-    ctrlValue[19] = std::stoi(list.front());list.pop_front();
+  uint8_t ctrlValue[20];
+  ctrlValue[0] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[1] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[2] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[3] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[4] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[5] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[6] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[7] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[8] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[9] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[10] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[11] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[12] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[13] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[14] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[15] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[16] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[17] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[18] = std::stoi(list.front());
+  list.pop_front();
+  ctrlValue[19] = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetSuckerCtrl(slaveID,len,ctrlValue);
-    return std::string(std::to_string(res));            
+  int res = _ptr_robot->SetSuckerCtrl(slaveID, len, ctrlValue);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -9988,19 +11546,22 @@ std::string robot_command_thread::SetSuckerCtrl(std::string para){
  * @param [out] error 吸盘当前的错误码
  * @return 错误码
  */
-std::string robot_command_thread::GetSuckerState(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetSuckerState(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t slaveID = std::stoi(list.front());list.pop_front();
+  uint8_t slaveID = std::stoi(list.front());
+  list.pop_front();
 
-    uint8_t state;
-    int pressValue;
-    int error;
+  uint8_t state;
+  int pressValue;
+  int error;
 
-    int res = _ptr_robot->GetSuckerState(slaveID,&state,&pressValue,&error);
-    return std::string(std::to_string(res) + ","  + std::to_string(state) + "," +\
-        std::to_string(pressValue) + "," + std::to_string(error));          
+  int res = _ptr_robot->GetSuckerState(slaveID, &state, &pressValue, &error);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(state) + "," + std::to_string(pressValue) + "," +
+    std::to_string(error));
 }
 
 /**
@@ -10010,18 +11571,21 @@ std::string robot_command_thread::GetSuckerState(std::string para){
  * @param [in] ms 等待最大时间
  * @return 错误码
  */
-std::string robot_command_thread::WaitSuckerState(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WaitSuckerState(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t slaveID = std::stoi(list.front());list.pop_front();
-    uint8_t state = std::stoi(list.front());list.pop_front();
-    int ms = std::stoi(list.front());list.pop_front();
+  uint8_t slaveID = std::stoi(list.front());
+  list.pop_front();
+  uint8_t state = std::stoi(list.front());
+  list.pop_front();
+  int ms = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WaitSuckerState(slaveID,state,ms);
-    return std::string(std::to_string(res));            
+  int res = _ptr_robot->WaitSuckerState(slaveID, state, ms);
+  return std::string(std::to_string(res));
 }
-
 
 /**
 * @brief 阻抗启停控制
@@ -10037,49 +11601,81 @@ std::string robot_command_thread::WaitSuckerState(std::string para){
 * @param [in] maxWA 最大角加速度(°/s2)
 * @return 错误码
 */
-std::string robot_command_thread::ImpedanceControlStartStop(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ImpedanceControlStartStop(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
-    int workSpace = std::stoi(list.front());list.pop_front();
-    
-    double forceThreshold[6];
-    forceThreshold[0] = std::stod(list.front());list.pop_front();
-    forceThreshold[1] = std::stod(list.front());list.pop_front();
-    forceThreshold[2] = std::stod(list.front());list.pop_front();
-    forceThreshold[3] = std::stod(list.front());list.pop_front();
-    forceThreshold[4] = std::stod(list.front());list.pop_front();
-    forceThreshold[5] = std::stod(list.front());list.pop_front();
-    double m[6];
-    m[0] = std::stod(list.front());list.pop_front();
-    m[1] = std::stod(list.front());list.pop_front();
-    m[2] = std::stod(list.front());list.pop_front();
-    m[3] = std::stod(list.front());list.pop_front();
-    m[4] = std::stod(list.front());list.pop_front();
-    m[5] = std::stod(list.front());list.pop_front();
-    double b[6];
-    b[0] = std::stod(list.front());list.pop_front();
-    b[1] = std::stod(list.front());list.pop_front();
-    b[2] = std::stod(list.front());list.pop_front();
-    b[3] = std::stod(list.front());list.pop_front();
-    b[4] = std::stod(list.front());list.pop_front();
-    b[5] = std::stod(list.front());list.pop_front();
-    double k[6];
-    k[0] = std::stod(list.front());list.pop_front();
-    k[1] = std::stod(list.front());list.pop_front();
-    k[2] = std::stod(list.front());list.pop_front();
-    k[3] = std::stod(list.front());list.pop_front();
-    k[4] = std::stod(list.front());list.pop_front();
-    k[5] = std::stod(list.front());list.pop_front();
-    
-    double maxV = std::stod(list.front());list.pop_front();
-    double maxVA = std::stod(list.front());list.pop_front();
-    double maxW = std::stod(list.front());list.pop_front();
-    double maxWA = std::stod(list.front());list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
+  int workSpace = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ImpedanceControlStartStop(status,workSpace,forceThreshold,m,b,k,maxV,maxVA,maxW,maxWA);
-    return std::string(std::to_string(res));            
+  double forceThreshold[6];
+  forceThreshold[0] = std::stod(list.front());
+  list.pop_front();
+  forceThreshold[1] = std::stod(list.front());
+  list.pop_front();
+  forceThreshold[2] = std::stod(list.front());
+  list.pop_front();
+  forceThreshold[3] = std::stod(list.front());
+  list.pop_front();
+  forceThreshold[4] = std::stod(list.front());
+  list.pop_front();
+  forceThreshold[5] = std::stod(list.front());
+  list.pop_front();
+  double m[6];
+  m[0] = std::stod(list.front());
+  list.pop_front();
+  m[1] = std::stod(list.front());
+  list.pop_front();
+  m[2] = std::stod(list.front());
+  list.pop_front();
+  m[3] = std::stod(list.front());
+  list.pop_front();
+  m[4] = std::stod(list.front());
+  list.pop_front();
+  m[5] = std::stod(list.front());
+  list.pop_front();
+  double b[6];
+  b[0] = std::stod(list.front());
+  list.pop_front();
+  b[1] = std::stod(list.front());
+  list.pop_front();
+  b[2] = std::stod(list.front());
+  list.pop_front();
+  b[3] = std::stod(list.front());
+  list.pop_front();
+  b[4] = std::stod(list.front());
+  list.pop_front();
+  b[5] = std::stod(list.front());
+  list.pop_front();
+  double k[6];
+  k[0] = std::stod(list.front());
+  list.pop_front();
+  k[1] = std::stod(list.front());
+  list.pop_front();
+  k[2] = std::stod(list.front());
+  list.pop_front();
+  k[3] = std::stod(list.front());
+  list.pop_front();
+  k[4] = std::stod(list.front());
+  list.pop_front();
+  k[5] = std::stod(list.front());
+  list.pop_front();
+
+  double maxV = std::stod(list.front());
+  list.pop_front();
+  double maxVA = std::stod(list.front());
+  list.pop_front();
+  double maxW = std::stod(list.front());
+  list.pop_front();
+  double maxWA = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->ImpedanceControlStartStop(
+    status, workSpace, forceThreshold, m, b, k, maxV, maxVA, maxW, maxWA);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -10087,14 +11683,16 @@ std::string robot_command_thread::ImpedanceControlStartStop(std::string para){
  * @param [in] flag 0-关闭；1-开启
  * @return 错误码
  */
-std::string robot_command_thread::SetTorqueDetectionSwitch(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetTorqueDetectionSwitch(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t flag = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetTorqueDetectionSwitch(flag);
-    return std::string(std::to_string(res));            
+  uint8_t flag = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetTorqueDetectionSwitch(flag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -10107,25 +11705,26 @@ std::string robot_command_thread::SetTorqueDetectionSwitch(std::string para){
 * @param [out] loadNo 负载编号
 * @return 错误码
 */
-std::string robot_command_thread::GetToolCoordWithID(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetToolCoordWithID(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    DescPose coord;
-    int type;
-    int install;
-    int toolID;
-    int loadNo;
+  int id = std::stoi(list.front());
+  list.pop_front();
+  DescPose coord;
+  int type;
+  int install;
+  int toolID;
+  int loadNo;
 
-    int res = _ptr_robot->GetToolCoordWithID(id,coord,type,install,toolID,loadNo);
-    return std::string(std::to_string(res) + ","  + std::to_string(coord.tran.x) + "," + \
-            std::to_string(coord.tran.y) + "," + std::to_string(coord.tran.z) + "," + \
-            std::to_string(coord.rpy.rx) + "," + std::to_string(coord.rpy.ry) + "," + \
-            std::to_string(coord.rpy.rz) + "," + std::to_string(type) + "," + \
-            std::to_string(install) + "," + std::to_string(toolID) + "," + \
-            std::to_string(loadNo));            
-}  
+  int res = _ptr_robot->GetToolCoordWithID(id, coord, type, install, toolID, loadNo);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(coord.tran.x) + "," + std::to_string(coord.tran.y) +
+    "," + std::to_string(coord.tran.z) + "," + std::to_string(coord.rpy.rx) + "," +
+    std::to_string(coord.rpy.ry) + "," + std::to_string(coord.rpy.rz) + "," + std::to_string(type) +
+    "," + std::to_string(install) + "," + std::to_string(toolID) + "," + std::to_string(loadNo));
+}
 
 /**
 * @brief 根据编号获取工件坐标系
@@ -10134,20 +11733,23 @@ std::string robot_command_thread::GetToolCoordWithID(std::string para){
 * @param [out] refFrame 参考坐标系
 * @return 错误码
 */
-std::string robot_command_thread::GetWObjCoordWithID(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetWObjCoordWithID(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    DescPose coord;
-    int refFrame;
+  int id = std::stoi(list.front());
+  list.pop_front();
+  DescPose coord;
+  int refFrame;
 
-    int res = _ptr_robot->GetWObjCoordWithID(id,coord,refFrame);
-    return std::string(std::to_string(res) + ","  + std::to_string(coord.tran.x) + "," + \
-            std::to_string(coord.tran.y) + "," + std::to_string(coord.tran.z) + "," + \
-            std::to_string(coord.rpy.rx) + "," + std::to_string(coord.rpy.ry) + "," + \
-            std::to_string(coord.rpy.rz) + "," + std::to_string(refFrame));
-}  
+  int res = _ptr_robot->GetWObjCoordWithID(id, coord, refFrame);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(coord.tran.x) + "," + std::to_string(coord.tran.y) +
+    "," + std::to_string(coord.tran.z) + "," + std::to_string(coord.rpy.rx) + "," +
+    std::to_string(coord.rpy.ry) + "," + std::to_string(coord.rpy.rz) + "," +
+    std::to_string(refFrame));
+}
 
 /**
 * @brief 根据编号获取外部工具坐标系
@@ -10156,23 +11758,25 @@ std::string robot_command_thread::GetWObjCoordWithID(std::string para){
 * @param [out] tcoord 机器人末端安装工件坐标系位姿
 * @return 错误码
 */
-std::string robot_command_thread::GetExToolCoordWithID(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetExToolCoordWithID(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    DescPose coord;
-    DescPose tcoord;
+  int id = std::stoi(list.front());
+  list.pop_front();
+  DescPose coord;
+  DescPose tcoord;
 
-    int res = _ptr_robot->GetExToolCoordWithID(id,coord,tcoord);
-    return std::string(std::to_string(res) + ","  + std::to_string(coord.tran.x) + "," + \
-            std::to_string(coord.tran.y) + "," + std::to_string(coord.tran.z) + "," + \
-            std::to_string(coord.rpy.rx) + "," + std::to_string(coord.rpy.ry) + "," + \
-            std::to_string(coord.rpy.rz) + ","  + std::to_string(tcoord.tran.x) + "," + \
-            std::to_string(tcoord.tran.y) + "," + std::to_string(tcoord.tran.z) + "," + \
-            std::to_string(tcoord.rpy.rx) + "," + std::to_string(tcoord.rpy.ry) + "," + \
-            std::to_string(tcoord.rpy.rz));            
-} 
+  int res = _ptr_robot->GetExToolCoordWithID(id, coord, tcoord);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(coord.tran.x) + "," + std::to_string(coord.tran.y) +
+    "," + std::to_string(coord.tran.z) + "," + std::to_string(coord.rpy.rx) + "," +
+    std::to_string(coord.rpy.ry) + "," + std::to_string(coord.rpy.rz) + "," +
+    std::to_string(tcoord.tran.x) + "," + std::to_string(tcoord.tran.y) + "," +
+    std::to_string(tcoord.tran.z) + "," + std::to_string(tcoord.rpy.rx) + "," +
+    std::to_string(tcoord.rpy.ry) + "," + std::to_string(tcoord.rpy.rz));
+}
 
 /**
 * @brief 根据编号获取扩展轴坐标系
@@ -10182,22 +11786,24 @@ std::string robot_command_thread::GetExToolCoordWithID(std::string para){
 * @param [out] calibFlag 标定标志；0-未标定；1-已标定
 * @return 错误码
 */
-std::string robot_command_thread::GetExAxisCoordWithID(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetExAxisCoordWithID(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    DescPose coord;
-    int axisCoordNum;
-    int calibFlag;
+  int id = std::stoi(list.front());
+  list.pop_front();
+  DescPose coord;
+  int axisCoordNum;
+  int calibFlag;
 
-    int res = _ptr_robot->GetExAxisCoordWithID(id,coord,axisCoordNum,calibFlag);
-    return std::string(std::to_string(res) + ","  + std::to_string(coord.tran.x) + "," + \
-            std::to_string(coord.tran.y) + "," + std::to_string(coord.tran.z) + "," + \
-            std::to_string(coord.rpy.rx) + "," + std::to_string(coord.rpy.ry) + "," + \
-            std::to_string(coord.rpy.rz) + "," + std::to_string(axisCoordNum) + "," + \
-            std::to_string(calibFlag));            
-} 
+  int res = _ptr_robot->GetExAxisCoordWithID(id, coord, axisCoordNum, calibFlag);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(coord.tran.x) + "," + std::to_string(coord.tran.y) +
+    "," + std::to_string(coord.tran.z) + "," + std::to_string(coord.rpy.rx) + "," +
+    std::to_string(coord.rpy.ry) + "," + std::to_string(coord.rpy.rz) + "," +
+    std::to_string(axisCoordNum) + "," + std::to_string(calibFlag));
+}
 
 /**
 * @brief 根据编号获取负载质量及质心
@@ -10206,33 +11812,37 @@ std::string robot_command_thread::GetExAxisCoordWithID(std::string para){
 * @param [out] cog 负载质心
 * @return 错误码
 */
-std::string robot_command_thread::GetTargetPayloadWithID(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetTargetPayloadWithID(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
+  int id = std::stoi(list.front());
+  list.pop_front();
 
-    double weight;
-    DescTran cog;
+  double weight;
+  DescTran cog;
 
-    int res = _ptr_robot->GetTargetPayloadWithID(id,weight,cog);
-    return std::string(std::to_string(res) + "," + std::to_string(weight) + "," + std::to_string(cog.x) + "," +\
-                std::to_string(cog.y) + "," + std::to_string(cog.z));       
-} 
+  int res = _ptr_robot->GetTargetPayloadWithID(id, weight, cog);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(weight) + "," + std::to_string(cog.x) + "," +
+    std::to_string(cog.y) + "," + std::to_string(cog.z));
+}
 
 /**
 * @brief 获取当前工具坐标系
 * @param [out] coord 坐标系数值
 * @return 错误码
 */
-std::string robot_command_thread::GetCurToolCoord(std::string para){
-    DescPose coord;
+std::string robot_command_thread::GetCurToolCoord(std::string para)
+{
+  DescPose coord;
 
-    int res = _ptr_robot->GetCurToolCoord(coord);
-    return std::string(std::to_string(res) + ","  + std::to_string(coord.tran.x) + "," + \
-            std::to_string(coord.tran.y) + "," + std::to_string(coord.tran.z) + "," + \
-            std::to_string(coord.rpy.rx) + "," + std::to_string(coord.rpy.ry) + "," + \
-            std::to_string(coord.rpy.rz));            
+  int res = _ptr_robot->GetCurToolCoord(coord);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(coord.tran.x) + "," + std::to_string(coord.tran.y) +
+    "," + std::to_string(coord.tran.z) + "," + std::to_string(coord.rpy.rx) + "," +
+    std::to_string(coord.rpy.ry) + "," + std::to_string(coord.rpy.rz));
 }
 
 /**
@@ -10240,14 +11850,15 @@ std::string robot_command_thread::GetCurToolCoord(std::string para){
 * @param [out] coord 坐标系数值
 * @return 错误码
 */
-std::string robot_command_thread::GetCurWObjCoord(std::string para){
-    DescPose coord;
+std::string robot_command_thread::GetCurWObjCoord(std::string para)
+{
+  DescPose coord;
 
-    int res = _ptr_robot->GetCurWObjCoord(coord);
-    return std::string(std::to_string(res) + ","  + std::to_string(coord.tran.x) + "," + \
-            std::to_string(coord.tran.y) + "," + std::to_string(coord.tran.z) + "," + \
-            std::to_string(coord.rpy.rx) + "," + std::to_string(coord.rpy.ry) + "," + \
-            std::to_string(coord.rpy.rz));            
+  int res = _ptr_robot->GetCurWObjCoord(coord);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(coord.tran.x) + "," + std::to_string(coord.tran.y) +
+    "," + std::to_string(coord.tran.z) + "," + std::to_string(coord.rpy.rx) + "," +
+    std::to_string(coord.rpy.ry) + "," + std::to_string(coord.rpy.rz));
 }
 
 /**
@@ -10255,14 +11866,15 @@ std::string robot_command_thread::GetCurWObjCoord(std::string para){
 * @param [out] coord 坐标系数值
 * @return 错误码
 */
-std::string robot_command_thread::GetCurExToolCoord(std::string para){
-    DescPose coord;
+std::string robot_command_thread::GetCurExToolCoord(std::string para)
+{
+  DescPose coord;
 
-    int res = _ptr_robot->GetCurExToolCoord(coord);
-    return std::string(std::to_string(res) + ","  + std::to_string(coord.tran.x) + "," + \
-            std::to_string(coord.tran.y) + "," + std::to_string(coord.tran.z) + "," + \
-            std::to_string(coord.rpy.rx) + "," + std::to_string(coord.rpy.ry) + "," + \
-            std::to_string(coord.rpy.rz));            
+  int res = _ptr_robot->GetCurExToolCoord(coord);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(coord.tran.x) + "," + std::to_string(coord.tran.y) +
+    "," + std::to_string(coord.tran.z) + "," + std::to_string(coord.rpy.rx) + "," +
+    std::to_string(coord.rpy.ry) + "," + std::to_string(coord.rpy.rz));
 }
 
 /**
@@ -10270,14 +11882,15 @@ std::string robot_command_thread::GetCurExToolCoord(std::string para){
 * @param [out] coord 坐标系数值
 * @return 错误码
 */
-std::string robot_command_thread::GetCurExAxisCoord(std::string para){
-    DescPose coord;
+std::string robot_command_thread::GetCurExAxisCoord(std::string para)
+{
+  DescPose coord;
 
-    int res = _ptr_robot->GetCurExAxisCoord(coord);
-    return std::string(std::to_string(res) + ","  + std::to_string(coord.tran.x) + "," + \
-            std::to_string(coord.tran.y) + "," + std::to_string(coord.tran.z) + "," + \
-            std::to_string(coord.rpy.rx) + "," + std::to_string(coord.rpy.ry) + "," + \
-            std::to_string(coord.rpy.rz));            
+  int res = _ptr_robot->GetCurExAxisCoord(coord);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(coord.tran.x) + "," + std::to_string(coord.tran.y) +
+    "," + std::to_string(coord.tran.z) + "," + std::to_string(coord.rpy.rx) + "," +
+    std::to_string(coord.rpy.ry) + "," + std::to_string(coord.rpy.rz));
 }
 
 /**
@@ -10285,14 +11898,16 @@ std::string robot_command_thread::GetCurExAxisCoord(std::string para){
  * @param [in] filePath 操作系统升级包全路径
  * @return  错误码
  */
-std::string robot_command_thread::KernelUpgrade(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::KernelUpgrade(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string filePath = list.front();list.pop_front();
+  std::string filePath = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->KernelUpgrade(filePath);
-    return std::string(std::to_string(res));            
+  int res = _ptr_robot->KernelUpgrade(filePath);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -10300,11 +11915,12 @@ std::string robot_command_thread::KernelUpgrade(std::string para){
  * @param [out] result 升级结果：0:成功；-1:失败
  * @return  错误码
  */
-std::string robot_command_thread::GetKernelUpgradeResult(std::string para){
-    int result;
+std::string robot_command_thread::GetKernelUpgradeResult(std::string para)
+{
+  int result;
 
-    int res = _ptr_robot->GetKernelUpgradeResult(result);
-    return std::string(std::to_string(res) + ","  + std::to_string(result));            
+  int res = _ptr_robot->GetKernelUpgradeResult(result);
+  return std::string(std::to_string(res) + "," + std::to_string(result));
 }
 
 /**
@@ -10318,39 +11934,58 @@ std::string robot_command_thread::GetKernelUpgradeResult(std::string para){
  * @param [in] stationary 摆动位置等待：0-等待时间内继续运动；1-等待时间内位置静止
  * @return  错误码
  */
-std::string robot_command_thread::CustomWeaveSetPara(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::CustomWeaveSetPara(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    int pointNum = std::stoi(list.front());list.pop_front();
+  int id = std::stoi(list.front());
+  list.pop_front();
+  int pointNum = std::stoi(list.front());
+  list.pop_front();
 
-    DescTran point[10];
-    for(int i = 0; i < 10; i++)
-    {
-        point[i].x = std::stod(list.front().c_str());list.pop_front();
-        point[i].y = std::stod(list.front().c_str());list.pop_front();
-        point[i].z = std::stod(list.front().c_str());list.pop_front();
-    }
-    double stayTime[10];
-    stayTime[0] = std::stod(list.front().c_str());list.pop_front();
-    stayTime[1] = std::stod(list.front().c_str());list.pop_front();
-    stayTime[2] = std::stod(list.front().c_str());list.pop_front();
-    stayTime[3] = std::stod(list.front().c_str());list.pop_front();
-    stayTime[4] = std::stod(list.front().c_str());list.pop_front();
-    stayTime[5] = std::stod(list.front().c_str());list.pop_front();
-    stayTime[6] = std::stod(list.front().c_str());list.pop_front();
-    stayTime[7] = std::stod(list.front().c_str());list.pop_front();
-    stayTime[8] = std::stod(list.front().c_str());list.pop_front();
-    stayTime[9] = std::stod(list.front().c_str());list.pop_front();
+  DescTran point[10];
+  for (int i = 0; i < 10; i++) {
+    point[i].x = std::stod(list.front().c_str());
+    list.pop_front();
+    point[i].y = std::stod(list.front().c_str());
+    list.pop_front();
+    point[i].z = std::stod(list.front().c_str());
+    list.pop_front();
+  }
+  double stayTime[10];
+  stayTime[0] = std::stod(list.front().c_str());
+  list.pop_front();
+  stayTime[1] = std::stod(list.front().c_str());
+  list.pop_front();
+  stayTime[2] = std::stod(list.front().c_str());
+  list.pop_front();
+  stayTime[3] = std::stod(list.front().c_str());
+  list.pop_front();
+  stayTime[4] = std::stod(list.front().c_str());
+  list.pop_front();
+  stayTime[5] = std::stod(list.front().c_str());
+  list.pop_front();
+  stayTime[6] = std::stod(list.front().c_str());
+  list.pop_front();
+  stayTime[7] = std::stod(list.front().c_str());
+  list.pop_front();
+  stayTime[8] = std::stod(list.front().c_str());
+  list.pop_front();
+  stayTime[9] = std::stod(list.front().c_str());
+  list.pop_front();
 
-    double frequency = std::stod(list.front().c_str());list.pop_front();
-    int incStayType = std::stoi(list.front());list.pop_front();
-    int stationary = std::stoi(list.front());list.pop_front();
+  double frequency = std::stod(list.front().c_str());
+  list.pop_front();
+  int incStayType = std::stoi(list.front());
+  list.pop_front();
+  int stationary = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->CustomWeaveSetPara(id,pointNum,point,stayTime,frequency,incStayType,stationary);
-    return std::string(std::to_string(res));          
-} 
+  int res = _ptr_robot->CustomWeaveSetPara(
+    id, pointNum, point, stayTime, frequency, incStayType, stationary);
+  return std::string(std::to_string(res));
+}
 
 /**
  * @brief 获取自定义摆动参数
@@ -10363,58 +11998,63 @@ std::string robot_command_thread::CustomWeaveSetPara(std::string para){
  * @param [out] stationary 摆动位置等待：0-等待时间内继续运动；1-等待时间内位置静止
  * @return  错误码
  */
-std::string robot_command_thread::CustomWeaveGetPara(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::CustomWeaveGetPara(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    int pointNum;
-    DescTran point[10];
-    double stayTime[10];
-    double frequency;
-    int incStayType;
-    int stationary;
+  int id = std::stoi(list.front());
+  list.pop_front();
+  int pointNum;
+  DescTran point[10];
+  double stayTime[10];
+  double frequency;
+  int incStayType;
+  int stationary;
 
-    int res = _ptr_robot->CustomWeaveGetPara(id,pointNum,point,stayTime,frequency,incStayType,stationary);
-    return std::string(std::to_string(res) + "," + std::to_string(pointNum) + "," +\
-                std::to_string(point[0].x) + "," + std::to_string(point[0].y) + "," +\
-                std::to_string(point[0].z) + "," + std::to_string(point[1].x) + "," +\
-                std::to_string(point[1].y) + "," + std::to_string(point[1].z) + "," +\
-                std::to_string(point[2].x) + "," + std::to_string(point[2].y) + "," +\
-                std::to_string(point[2].z) + "," + std::to_string(point[3].x) + "," +\
-                std::to_string(point[3].y) + "," + std::to_string(point[3].z) + "," +\
-                std::to_string(point[4].x) + "," + std::to_string(point[4].y) + "," +\
-                std::to_string(point[4].z) + "," + std::to_string(point[5].x) + "," +\
-                std::to_string(point[5].y) + "," + std::to_string(point[5].z) + "," +\
-                std::to_string(point[6].x) + "," + std::to_string(point[6].y) + "," +\
-                std::to_string(point[6].z) + "," + std::to_string(point[7].x) + "," +\
-                std::to_string(point[7].y) + "," + std::to_string(point[7].z) + "," +\
-                std::to_string(point[8].x) + "," + std::to_string(point[8].y) + "," +\
-                std::to_string(point[8].z) + "," + std::to_string(point[9].x) + "," +\
-                std::to_string(point[9].y) + "," + std::to_string(point[9].z) + "," +\
-                std::to_string(stayTime[0]) + "," + std::to_string(stayTime[1]) + "," +\
-                std::to_string(stayTime[2]) + "," + std::to_string(stayTime[3]) + "," +\
-                std::to_string(stayTime[4]) + "," + std::to_string(stayTime[5]) + "," +\
-                std::to_string(stayTime[6]) + "," + std::to_string(stayTime[7]) + "," +\
-                std::to_string(stayTime[8]) + "," + std::to_string(stayTime[9]) + "," +\
-                std::to_string(frequency) + "," + std::to_string(incStayType) + "," +\
-                std::to_string(stationary));            
-} 
+  int res = _ptr_robot->CustomWeaveGetPara(
+    id, pointNum, point, stayTime, frequency, incStayType, stationary);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(pointNum) + "," + std::to_string(point[0].x) + "," +
+    std::to_string(point[0].y) + "," + std::to_string(point[0].z) + "," +
+    std::to_string(point[1].x) + "," + std::to_string(point[1].y) + "," +
+    std::to_string(point[1].z) + "," + std::to_string(point[2].x) + "," +
+    std::to_string(point[2].y) + "," + std::to_string(point[2].z) + "," +
+    std::to_string(point[3].x) + "," + std::to_string(point[3].y) + "," +
+    std::to_string(point[3].z) + "," + std::to_string(point[4].x) + "," +
+    std::to_string(point[4].y) + "," + std::to_string(point[4].z) + "," +
+    std::to_string(point[5].x) + "," + std::to_string(point[5].y) + "," +
+    std::to_string(point[5].z) + "," + std::to_string(point[6].x) + "," +
+    std::to_string(point[6].y) + "," + std::to_string(point[6].z) + "," +
+    std::to_string(point[7].x) + "," + std::to_string(point[7].y) + "," +
+    std::to_string(point[7].z) + "," + std::to_string(point[8].x) + "," +
+    std::to_string(point[8].y) + "," + std::to_string(point[8].z) + "," +
+    std::to_string(point[9].x) + "," + std::to_string(point[9].y) + "," +
+    std::to_string(point[9].z) + "," + std::to_string(stayTime[0]) + "," +
+    std::to_string(stayTime[1]) + "," + std::to_string(stayTime[2]) + "," +
+    std::to_string(stayTime[3]) + "," + std::to_string(stayTime[4]) + "," +
+    std::to_string(stayTime[5]) + "," + std::to_string(stayTime[6]) + "," +
+    std::to_string(stayTime[7]) + "," + std::to_string(stayTime[8]) + "," +
+    std::to_string(stayTime[9]) + "," + std::to_string(frequency) + "," +
+    std::to_string(incStayType) + "," + std::to_string(stationary));
+}
 
 /**
  * @brief 关节扭矩传感器灵敏度标定功能开启
  * @param [in] status 0-关闭；1-开启
  * @return  错误码
  */
-std::string robot_command_thread::JointSensitivityEnable(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::JointSensitivityEnable(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->JointSensitivityEnable(status);
-    return std::string(std::to_string(res));          
-} 
+  int res = _ptr_robot->JointSensitivityEnable(status);
+  return std::string(std::to_string(res));
+}
 
 /**
  * @brief 获取关节扭矩传感器灵敏度标定结果
@@ -10422,49 +12062,53 @@ std::string robot_command_thread::JointSensitivityEnable(std::string para){
  * @param [out] linearityn j1~j6关节线性度[0-1]
  * @return 错误码
  */
-std::string robot_command_thread::JointSensitivityCalibration(std::string para){
-    double calibResult[6];
-    double linearity[6];
+std::string robot_command_thread::JointSensitivityCalibration(std::string para)
+{
+  double calibResult[6];
+  double linearity[6];
 
-    int res = _ptr_robot->JointSensitivityCalibration(calibResult,linearity);
-    return std::string(std::to_string(res)  + "," +\
-                std::to_string(calibResult[0]) + "," + std::to_string(calibResult[1]) + "," +\
-                std::to_string(calibResult[2]) + "," + std::to_string(calibResult[3]) + "," +\
-                std::to_string(calibResult[4]) + "," + std::to_string(calibResult[5]) + "," +\
-                std::to_string(linearity[0]) + "," + std::to_string(linearity[1]) + "," +\
-                std::to_string(linearity[2]) + "," + std::to_string(linearity[3]) + "," +\
-                std::to_string(linearity[4]) + "," + std::to_string(linearity[5]));            
-} 
+  int res = _ptr_robot->JointSensitivityCalibration(calibResult, linearity);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(calibResult[0]) + "," +
+    std::to_string(calibResult[1]) + "," + std::to_string(calibResult[2]) + "," +
+    std::to_string(calibResult[3]) + "," + std::to_string(calibResult[4]) + "," +
+    std::to_string(calibResult[5]) + "," + std::to_string(linearity[0]) + "," +
+    std::to_string(linearity[1]) + "," + std::to_string(linearity[2]) + "," +
+    std::to_string(linearity[3]) + "," + std::to_string(linearity[4]) + "," +
+    std::to_string(linearity[5]));
+}
 
 /**
  * @brief 关节扭矩传感器灵敏度数据采集
  * @return 错误码
  */
-std::string robot_command_thread::JointSensitivityCollect(std::string para){
+std::string robot_command_thread::JointSensitivityCollect(std::string para)
+{
+  int res = _ptr_robot->JointSensitivityCollect();
+  return std::string(std::to_string(res));
+}
 
-    int res = _ptr_robot->JointSensitivityCollect();
-    return std::string(std::to_string(res));            
-} 
+std::string robot_command_thread::Sleep(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-std::string robot_command_thread::Sleep(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+  int ms = std::stoi(list.front());
+  list.pop_front();
 
-    int ms = std::stoi(list.front());list.pop_front();
-
-    int res = _ptr_robot->Sleep(ms);
-    return std::string(std::to_string(res));            
-} 
+  int res = _ptr_robot->Sleep(ms);
+  return std::string(std::to_string(res));
+}
 
 /**
  * @brief 清空运动指令队列
  * @return 错误码
  */
-std::string robot_command_thread::MotionQueueClear(std::string para){
-
-    int res = _ptr_robot->MotionQueueClear();
-    return std::string(std::to_string(res));            
-} 
+std::string robot_command_thread::MotionQueueClear(std::string para)
+{
+  int res = _ptr_robot->MotionQueueClear();
+  return std::string(std::to_string(res));
+}
 
 /**
  * @brief 获取机器人8个从站端口错误帧数
@@ -10478,105 +12122,118 @@ std::string robot_command_thread::MotionQueueClear(std::string para){
  * @param [out] outLinkErr 输出链接错误帧数
  * @return 错误码
  */
-std::string robot_command_thread::GetSlavePortErrCounter(std::string para){
-    int inRecvErr[8];
-    int inCRCErr[8];
-    int inTransmitErr[8];
-    int inLinkErr[8];
-    int outRecvErr[8];
-    int outCRCErr[8];
-    int outTransmitErr[8];
-    int outLinkErr[8];
+std::string robot_command_thread::GetSlavePortErrCounter(std::string para)
+{
+  int inRecvErr[8];
+  int inCRCErr[8];
+  int inTransmitErr[8];
+  int inLinkErr[8];
+  int outRecvErr[8];
+  int outCRCErr[8];
+  int outTransmitErr[8];
+  int outLinkErr[8];
 
-    int res = _ptr_robot->GetSlavePortErrCounter(inRecvErr,inCRCErr,inTransmitErr,inLinkErr,outRecvErr,outCRCErr,outTransmitErr,outLinkErr);
-    std::string out = std::to_string(res);
-    for (int i = 0; i < 8; ++i) {
-        out += "," + std::to_string(inRecvErr[i]);
-    }
-    for (int i = 0; i < 8; ++i) {
-        out += "," + std::to_string(inCRCErr[i]);
-    }
-    for (int i = 0; i < 8; ++i) {
-        out += "," + std::to_string(inTransmitErr[i]);
-    }
-    for (int i = 0; i < 8; ++i) {
-        out += "," + std::to_string(inLinkErr[i]);
-    }
-    for (int i = 0; i < 8; ++i) {
-        out += "," + std::to_string(outRecvErr[i]);
-    }
-    for (int i = 0; i < 8; ++i) {
-        out += "," + std::to_string(outCRCErr[i]);
-    }
-    for (int i = 0; i < 8; ++i) {
-        out += "," + std::to_string(outTransmitErr[i]);
-    }
-    for (int i = 0; i < 8; ++i) {
-        out += "," + std::to_string(outLinkErr[i]);
-    }
-    return out;        
-} 
+  int res = _ptr_robot->GetSlavePortErrCounter(
+    inRecvErr, inCRCErr, inTransmitErr, inLinkErr, outRecvErr, outCRCErr, outTransmitErr,
+    outLinkErr);
+  std::string out = std::to_string(res);
+  for (int i = 0; i < 8; ++i) {
+    out += "," + std::to_string(inRecvErr[i]);
+  }
+  for (int i = 0; i < 8; ++i) {
+    out += "," + std::to_string(inCRCErr[i]);
+  }
+  for (int i = 0; i < 8; ++i) {
+    out += "," + std::to_string(inTransmitErr[i]);
+  }
+  for (int i = 0; i < 8; ++i) {
+    out += "," + std::to_string(inLinkErr[i]);
+  }
+  for (int i = 0; i < 8; ++i) {
+    out += "," + std::to_string(outRecvErr[i]);
+  }
+  for (int i = 0; i < 8; ++i) {
+    out += "," + std::to_string(outCRCErr[i]);
+  }
+  for (int i = 0; i < 8; ++i) {
+    out += "," + std::to_string(outTransmitErr[i]);
+  }
+  for (int i = 0; i < 8; ++i) {
+    out += "," + std::to_string(outLinkErr[i]);
+  }
+  return out;
+}
 
 /**
  * @brief 从站端口错误帧清零
  * @param [in] slaveID 从站编号0~7
  * @return 错误码
  */
-std::string robot_command_thread::SlavePortErrCounterClear(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SlavePortErrCounterClear(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int slaveID = std::stoi(list.front());list.pop_front();
+  int slaveID = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SlavePortErrCounterClear(slaveID);
-    return std::string(std::to_string(res));            
-} 
+  int res = _ptr_robot->SlavePortErrCounterClear(slaveID);
+  return std::string(std::to_string(res));
+}
 
 /**
  * @brief 设置各轴速度前馈系数
  * @param [in] radio 各轴速度前馈系数
  * @return 错误码
  */
-std::string robot_command_thread::SetVelFeedForwardRatio(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetVelFeedForwardRatio(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double radio[6];
-    radio[0] = std::stod(list.front());list.pop_front();
-    radio[1] = std::stod(list.front());list.pop_front();
-    radio[2] = std::stod(list.front());list.pop_front();
-    radio[3] = std::stod(list.front());list.pop_front();
-    radio[4] = std::stod(list.front());list.pop_front();
-    radio[5] = std::stod(list.front());list.pop_front();
+  double radio[6];
+  radio[0] = std::stod(list.front());
+  list.pop_front();
+  radio[1] = std::stod(list.front());
+  list.pop_front();
+  radio[2] = std::stod(list.front());
+  list.pop_front();
+  radio[3] = std::stod(list.front());
+  list.pop_front();
+  radio[4] = std::stod(list.front());
+  list.pop_front();
+  radio[5] = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetVelFeedForwardRatio(radio);
-    return std::string(std::to_string(res));            
-} 
+  int res = _ptr_robot->SetVelFeedForwardRatio(radio);
+  return std::string(std::to_string(res));
+}
 
 /**
  * @brief 获取各轴速度前馈系数
  * @param [out] radio 各轴速度前馈系数
  * @return 错误码
  */
-std::string robot_command_thread::GetVelFeedForwardRatio(std::string para){
-    double radio[6];
+std::string robot_command_thread::GetVelFeedForwardRatio(std::string para)
+{
+  double radio[6];
 
-    int res = _ptr_robot->GetVelFeedForwardRatio(radio);
-    return std::string(std::to_string(res)  + "," +\
-                std::to_string(radio[0]) + "," + std::to_string(radio[1]) + "," +\
-                std::to_string(radio[2]) + "," + std::to_string(radio[3]) + "," +\
-                std::to_string(radio[4]) + "," + std::to_string(radio[5]));            
+  int res = _ptr_robot->GetVelFeedForwardRatio(radio);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(radio[0]) + "," + std::to_string(radio[1]) + "," +
+    std::to_string(radio[2]) + "," + std::to_string(radio[3]) + "," + std::to_string(radio[4]) +
+    "," + std::to_string(radio[5]));
 }
 
 /**
  * @brief 机器人MCU日志生成
  * @return 错误码
  */
-std::string robot_command_thread::RobotMCULogCollect(std::string para){
-
-    int res = _ptr_robot->RobotMCULogCollect();
-    return std::string(std::to_string(res));            
-} 
+std::string robot_command_thread::RobotMCULogCollect(std::string para)
+{
+  int res = _ptr_robot->RobotMCULogCollect();
+  return std::string(std::to_string(res));
+}
 
 /**
  * @brief 移动到相贯线起始点
@@ -10591,92 +12248,119 @@ std::string robot_command_thread::RobotMCULogCollect(std::string para){
  * @param [in] moveType 运动类型; 0-PTP；1-LIN
  * @return 错误码
  */
-std::string robot_command_thread::MoveToIntersectLineStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MoveToIntersectLineStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int parameters_count = list.size();
+  int parameters_count = list.size();
 
-    if(parameters_count == 139)
-    {
-        DescPose mainPoint[6];
-        _fillDescPose(list,mainPoint[0]);
-        _fillDescPose(list,mainPoint[1]);
-        _fillDescPose(list,mainPoint[2]);
-        _fillDescPose(list,mainPoint[3]);
-        _fillDescPose(list,mainPoint[4]);
-        _fillDescPose(list,mainPoint[5]);
-        ExaxisPos mainExaxisPos[6];
-        for(int i = 0;i < 6; i++)
-        {
-            mainExaxisPos[i].ePos[0] = std::stod(list.front().c_str());list.pop_front();
-            mainExaxisPos[i].ePos[1] = std::stod(list.front().c_str());list.pop_front();
-            mainExaxisPos[i].ePos[2] = std::stod(list.front().c_str());list.pop_front();
-            mainExaxisPos[i].ePos[3] = std::stod(list.front().c_str());list.pop_front();
-        }
-        DescPose piecePoint[6];
-        _fillDescPose(list,piecePoint[0]);
-        _fillDescPose(list,piecePoint[1]);
-        _fillDescPose(list,piecePoint[2]);
-        _fillDescPose(list,piecePoint[3]);
-        _fillDescPose(list,piecePoint[4]);
-        _fillDescPose(list,piecePoint[5]);
-        ExaxisPos pieceExaxisPos[6];
-        for(int i = 0;i < 6; i++)
-        {
-            pieceExaxisPos[i].ePos[0] = std::stod(list.front().c_str());list.pop_front();
-            pieceExaxisPos[i].ePos[1] = std::stod(list.front().c_str());list.pop_front();
-            pieceExaxisPos[i].ePos[2] = std::stod(list.front().c_str());list.pop_front();
-            pieceExaxisPos[i].ePos[3] = std::stod(list.front().c_str());list.pop_front();
-        }
-        int extAxisFlag = std::stoi(list.front());list.pop_front();
-        ExaxisPos exaxisPos;
-        exaxisPos.ePos[0] = std::stod(list.front().c_str());list.pop_front();
-        exaxisPos.ePos[1] = std::stod(list.front().c_str());list.pop_front();
-        exaxisPos.ePos[2] = std::stod(list.front().c_str());list.pop_front();
-        exaxisPos.ePos[3] = std::stod(list.front().c_str());list.pop_front();
-        int tool = std::stoi(list.front());list.pop_front();
-        int wobj = std::stoi(list.front());list.pop_front();
-        double vel = std::stod(list.front());list.pop_front();
-        double acc = std::stod(list.front());list.pop_front();
-        double ovl = std::stod(list.front());list.pop_front();
-        double oacc = std::stod(list.front());list.pop_front();
-        int moveType = std::stoi(list.front());list.pop_front();
-        int moveDirection = std::stoi(list.front());list.pop_front();
-        DescPose offset;
-        _fillDescPose(list,offset);
-
-        int res = _ptr_robot->MoveToIntersectLineStart(mainPoint,mainExaxisPos,piecePoint,pieceExaxisPos,extAxisFlag,exaxisPos,tool,wobj,vel,acc,ovl,oacc,moveType,moveDirection,offset);
-        return std::string(std::to_string(res));
+  if (parameters_count == 139) {
+    DescPose mainPoint[6];
+    _fillDescPose(list, mainPoint[0]);
+    _fillDescPose(list, mainPoint[1]);
+    _fillDescPose(list, mainPoint[2]);
+    _fillDescPose(list, mainPoint[3]);
+    _fillDescPose(list, mainPoint[4]);
+    _fillDescPose(list, mainPoint[5]);
+    ExaxisPos mainExaxisPos[6];
+    for (int i = 0; i < 6; i++) {
+      mainExaxisPos[i].ePos[0] = std::stod(list.front().c_str());
+      list.pop_front();
+      mainExaxisPos[i].ePos[1] = std::stod(list.front().c_str());
+      list.pop_front();
+      mainExaxisPos[i].ePos[2] = std::stod(list.front().c_str());
+      list.pop_front();
+      mainExaxisPos[i].ePos[3] = std::stod(list.front().c_str());
+      list.pop_front();
     }
-    else
-    {
-        DescPose mainPoint[6];
-        _fillDescPose(list,mainPoint[0]);
-        _fillDescPose(list,mainPoint[1]);
-        _fillDescPose(list,mainPoint[2]);
-        _fillDescPose(list,mainPoint[3]);
-        _fillDescPose(list,mainPoint[4]);
-        _fillDescPose(list,mainPoint[5]);
-        DescPose piecePoint[6];
-        _fillDescPose(list,piecePoint[0]);
-        _fillDescPose(list,piecePoint[1]);
-        _fillDescPose(list,piecePoint[2]);
-        _fillDescPose(list,piecePoint[3]);
-        _fillDescPose(list,piecePoint[4]);
-        _fillDescPose(list,piecePoint[5]);
-        int tool = std::stoi(list.front());list.pop_front();
-        int wobj = std::stoi(list.front());list.pop_front();
-        double vel = std::stod(list.front());list.pop_front();
-        double acc = std::stod(list.front());list.pop_front();
-        double ovl = std::stod(list.front());list.pop_front();
-        double oacc = std::stod(list.front());list.pop_front();
-        int moveType = std::stoi(list.front());list.pop_front();
+    DescPose piecePoint[6];
+    _fillDescPose(list, piecePoint[0]);
+    _fillDescPose(list, piecePoint[1]);
+    _fillDescPose(list, piecePoint[2]);
+    _fillDescPose(list, piecePoint[3]);
+    _fillDescPose(list, piecePoint[4]);
+    _fillDescPose(list, piecePoint[5]);
+    ExaxisPos pieceExaxisPos[6];
+    for (int i = 0; i < 6; i++) {
+      pieceExaxisPos[i].ePos[0] = std::stod(list.front().c_str());
+      list.pop_front();
+      pieceExaxisPos[i].ePos[1] = std::stod(list.front().c_str());
+      list.pop_front();
+      pieceExaxisPos[i].ePos[2] = std::stod(list.front().c_str());
+      list.pop_front();
+      pieceExaxisPos[i].ePos[3] = std::stod(list.front().c_str());
+      list.pop_front();
+    }
+    int extAxisFlag = std::stoi(list.front());
+    list.pop_front();
+    ExaxisPos exaxisPos;
+    exaxisPos.ePos[0] = std::stod(list.front().c_str());
+    list.pop_front();
+    exaxisPos.ePos[1] = std::stod(list.front().c_str());
+    list.pop_front();
+    exaxisPos.ePos[2] = std::stod(list.front().c_str());
+    list.pop_front();
+    exaxisPos.ePos[3] = std::stod(list.front().c_str());
+    list.pop_front();
+    int tool = std::stoi(list.front());
+    list.pop_front();
+    int wobj = std::stoi(list.front());
+    list.pop_front();
+    double vel = std::stod(list.front());
+    list.pop_front();
+    double acc = std::stod(list.front());
+    list.pop_front();
+    double ovl = std::stod(list.front());
+    list.pop_front();
+    double oacc = std::stod(list.front());
+    list.pop_front();
+    int moveType = std::stoi(list.front());
+    list.pop_front();
+    int moveDirection = std::stoi(list.front());
+    list.pop_front();
+    DescPose offset;
+    _fillDescPose(list, offset);
 
-        int res = _ptr_robot->MoveToIntersectLineStart(mainPoint,piecePoint,tool,wobj,vel,acc,ovl,oacc,moveType);
-        return std::string(std::to_string(res));   
-    }         
-} 
+    int res = _ptr_robot->MoveToIntersectLineStart(
+      mainPoint, mainExaxisPos, piecePoint, pieceExaxisPos, extAxisFlag, exaxisPos, tool, wobj, vel,
+      acc, ovl, oacc, moveType, moveDirection, offset);
+    return std::string(std::to_string(res));
+  } else {
+    DescPose mainPoint[6];
+    _fillDescPose(list, mainPoint[0]);
+    _fillDescPose(list, mainPoint[1]);
+    _fillDescPose(list, mainPoint[2]);
+    _fillDescPose(list, mainPoint[3]);
+    _fillDescPose(list, mainPoint[4]);
+    _fillDescPose(list, mainPoint[5]);
+    DescPose piecePoint[6];
+    _fillDescPose(list, piecePoint[0]);
+    _fillDescPose(list, piecePoint[1]);
+    _fillDescPose(list, piecePoint[2]);
+    _fillDescPose(list, piecePoint[3]);
+    _fillDescPose(list, piecePoint[4]);
+    _fillDescPose(list, piecePoint[5]);
+    int tool = std::stoi(list.front());
+    list.pop_front();
+    int wobj = std::stoi(list.front());
+    list.pop_front();
+    double vel = std::stod(list.front());
+    list.pop_front();
+    double acc = std::stod(list.front());
+    list.pop_front();
+    double ovl = std::stod(list.front());
+    list.pop_front();
+    double oacc = std::stod(list.front());
+    list.pop_front();
+    int moveType = std::stoi(list.front());
+    list.pop_front();
+
+    int res = _ptr_robot->MoveToIntersectLineStart(
+      mainPoint, piecePoint, tool, wobj, vel, acc, ovl, oacc, moveType);
+    return std::string(std::to_string(res));
+  }
+}
 
 /**
  * @brief 相贯线运动
@@ -10691,107 +12375,134 @@ std::string robot_command_thread::MoveToIntersectLineStart(std::string para){
  * @param [in] moveDirection 运动方向; 0-顺时针；1-逆时针
  * @return 错误码
  */
-std::string robot_command_thread::MoveIntersectLine(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MoveIntersectLine(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int parameters_count = list.size();
+  int parameters_count = list.size();
 
-    if(parameters_count == 150)
-    {
-        DescPose mainPoint[6];
-        _fillDescPose(list,mainPoint[0]);
-        _fillDescPose(list,mainPoint[1]);
-        _fillDescPose(list,mainPoint[2]);
-        _fillDescPose(list,mainPoint[3]);
-        _fillDescPose(list,mainPoint[4]);
-        _fillDescPose(list,mainPoint[5]);
-        ExaxisPos mainExaxisPos[6];
-        for(int i = 0;i < 6; i++)
-        {
-            mainExaxisPos[i].ePos[0] = std::stod(list.front().c_str());list.pop_front();
-            mainExaxisPos[i].ePos[1] = std::stod(list.front().c_str());list.pop_front();
-            mainExaxisPos[i].ePos[2] = std::stod(list.front().c_str());list.pop_front();
-            mainExaxisPos[i].ePos[3] = std::stod(list.front().c_str());list.pop_front();
-        }
-        DescPose piecePoint[6];
-        _fillDescPose(list,piecePoint[0]);
-        _fillDescPose(list,piecePoint[1]);
-        _fillDescPose(list,piecePoint[2]);
-        _fillDescPose(list,piecePoint[3]);
-        _fillDescPose(list,piecePoint[4]);
-        _fillDescPose(list,piecePoint[5]);
-        ExaxisPos pieceExaxisPos[6];
-        for(int i = 0;i < 6; i++)
-        {
-            pieceExaxisPos[i].ePos[0] = std::stod(list.front().c_str());list.pop_front();
-            pieceExaxisPos[i].ePos[1] = std::stod(list.front().c_str());list.pop_front();
-            pieceExaxisPos[i].ePos[2] = std::stod(list.front().c_str());list.pop_front();
-            pieceExaxisPos[i].ePos[3] = std::stod(list.front().c_str());list.pop_front();
-        }
-        int extAxisFlag = std::stoi(list.front());list.pop_front();
-        ExaxisPos exaxisPos[4];
-        for(int i = 0;i < 4; i++)
-        {
-            exaxisPos[i].ePos[0] = std::stod(list.front().c_str());list.pop_front();
-            exaxisPos[i].ePos[1] = std::stod(list.front().c_str());list.pop_front();
-            exaxisPos[i].ePos[2] = std::stod(list.front().c_str());list.pop_front();
-            exaxisPos[i].ePos[3] = std::stod(list.front().c_str());list.pop_front();
-        }
-        int tool = std::stoi(list.front());list.pop_front();
-        int wobj = std::stoi(list.front());list.pop_front();
-        double vel = std::stod(list.front());list.pop_front();
-        double acc = std::stod(list.front());list.pop_front();
-        double ovl = std::stod(list.front());list.pop_front();
-        double oacc = std::stod(list.front());list.pop_front();
-        int moveDirection = std::stoi(list.front());list.pop_front();
-        DescPose offset;
-        _fillDescPose(list,offset);
-
-        int res = _ptr_robot->MoveIntersectLine(mainPoint,mainExaxisPos,piecePoint,pieceExaxisPos,extAxisFlag,exaxisPos,tool,wobj,vel,acc,ovl,oacc,moveDirection,offset);
-        return std::string(std::to_string(res));
+  if (parameters_count == 150) {
+    DescPose mainPoint[6];
+    _fillDescPose(list, mainPoint[0]);
+    _fillDescPose(list, mainPoint[1]);
+    _fillDescPose(list, mainPoint[2]);
+    _fillDescPose(list, mainPoint[3]);
+    _fillDescPose(list, mainPoint[4]);
+    _fillDescPose(list, mainPoint[5]);
+    ExaxisPos mainExaxisPos[6];
+    for (int i = 0; i < 6; i++) {
+      mainExaxisPos[i].ePos[0] = std::stod(list.front().c_str());
+      list.pop_front();
+      mainExaxisPos[i].ePos[1] = std::stod(list.front().c_str());
+      list.pop_front();
+      mainExaxisPos[i].ePos[2] = std::stod(list.front().c_str());
+      list.pop_front();
+      mainExaxisPos[i].ePos[3] = std::stod(list.front().c_str());
+      list.pop_front();
     }
-    else
-    {
-        DescPose mainPoint[6];
-        _fillDescPose(list,mainPoint[0]);
-        _fillDescPose(list,mainPoint[1]);
-        _fillDescPose(list,mainPoint[2]);
-        _fillDescPose(list,mainPoint[3]);
-        _fillDescPose(list,mainPoint[4]);
-        _fillDescPose(list,mainPoint[5]);
-        DescPose piecePoint[6];
-        _fillDescPose(list,piecePoint[0]);
-        _fillDescPose(list,piecePoint[1]);
-        _fillDescPose(list,piecePoint[2]);
-        _fillDescPose(list,piecePoint[3]);
-        _fillDescPose(list,piecePoint[4]);
-        _fillDescPose(list,piecePoint[5]);
-        int tool = std::stoi(list.front());list.pop_front();
-        int wobj = std::stoi(list.front());list.pop_front();
-        double vel = std::stod(list.front());list.pop_front();
-        double acc = std::stod(list.front());list.pop_front();
-        double ovl = std::stod(list.front());list.pop_front();
-        double oacc = std::stod(list.front());list.pop_front();
-        int moveDirection = std::stoi(list.front());list.pop_front();
+    DescPose piecePoint[6];
+    _fillDescPose(list, piecePoint[0]);
+    _fillDescPose(list, piecePoint[1]);
+    _fillDescPose(list, piecePoint[2]);
+    _fillDescPose(list, piecePoint[3]);
+    _fillDescPose(list, piecePoint[4]);
+    _fillDescPose(list, piecePoint[5]);
+    ExaxisPos pieceExaxisPos[6];
+    for (int i = 0; i < 6; i++) {
+      pieceExaxisPos[i].ePos[0] = std::stod(list.front().c_str());
+      list.pop_front();
+      pieceExaxisPos[i].ePos[1] = std::stod(list.front().c_str());
+      list.pop_front();
+      pieceExaxisPos[i].ePos[2] = std::stod(list.front().c_str());
+      list.pop_front();
+      pieceExaxisPos[i].ePos[3] = std::stod(list.front().c_str());
+      list.pop_front();
+    }
+    int extAxisFlag = std::stoi(list.front());
+    list.pop_front();
+    ExaxisPos exaxisPos[4];
+    for (int i = 0; i < 4; i++) {
+      exaxisPos[i].ePos[0] = std::stod(list.front().c_str());
+      list.pop_front();
+      exaxisPos[i].ePos[1] = std::stod(list.front().c_str());
+      list.pop_front();
+      exaxisPos[i].ePos[2] = std::stod(list.front().c_str());
+      list.pop_front();
+      exaxisPos[i].ePos[3] = std::stod(list.front().c_str());
+      list.pop_front();
+    }
+    int tool = std::stoi(list.front());
+    list.pop_front();
+    int wobj = std::stoi(list.front());
+    list.pop_front();
+    double vel = std::stod(list.front());
+    list.pop_front();
+    double acc = std::stod(list.front());
+    list.pop_front();
+    double ovl = std::stod(list.front());
+    list.pop_front();
+    double oacc = std::stod(list.front());
+    list.pop_front();
+    int moveDirection = std::stoi(list.front());
+    list.pop_front();
+    DescPose offset;
+    _fillDescPose(list, offset);
 
-        int res = _ptr_robot->MoveIntersectLine(mainPoint,piecePoint,tool,wobj,vel,acc,ovl,oacc,moveDirection);
-        return std::string(std::to_string(res));   
-    }         
+    int res = _ptr_robot->MoveIntersectLine(
+      mainPoint, mainExaxisPos, piecePoint, pieceExaxisPos, extAxisFlag, exaxisPos, tool, wobj, vel,
+      acc, ovl, oacc, moveDirection, offset);
+    return std::string(std::to_string(res));
+  } else {
+    DescPose mainPoint[6];
+    _fillDescPose(list, mainPoint[0]);
+    _fillDescPose(list, mainPoint[1]);
+    _fillDescPose(list, mainPoint[2]);
+    _fillDescPose(list, mainPoint[3]);
+    _fillDescPose(list, mainPoint[4]);
+    _fillDescPose(list, mainPoint[5]);
+    DescPose piecePoint[6];
+    _fillDescPose(list, piecePoint[0]);
+    _fillDescPose(list, piecePoint[1]);
+    _fillDescPose(list, piecePoint[2]);
+    _fillDescPose(list, piecePoint[3]);
+    _fillDescPose(list, piecePoint[4]);
+    _fillDescPose(list, piecePoint[5]);
+    int tool = std::stoi(list.front());
+    list.pop_front();
+    int wobj = std::stoi(list.front());
+    list.pop_front();
+    double vel = std::stod(list.front());
+    list.pop_front();
+    double acc = std::stod(list.front());
+    list.pop_front();
+    double ovl = std::stod(list.front());
+    list.pop_front();
+    double oacc = std::stod(list.front());
+    list.pop_front();
+    int moveDirection = std::stoi(list.front());
+    list.pop_front();
+
+    int res = _ptr_robot->MoveIntersectLine(
+      mainPoint, piecePoint, tool, wobj, vel, acc, ovl, oacc, moveDirection);
+    return std::string(std::to_string(res));
+  }
 }
 /**
  * @brief 获取关节扭矩传感器迟滞误差
  * @param [out] hysteresisError j1~j6关节迟滞误差
  * @return 错误码
  */
-std::string robot_command_thread::JointHysteresisError(std::string para){
-    double hysteresisError[6];
+std::string robot_command_thread::JointHysteresisError(std::string para)
+{
+  double hysteresisError[6];
 
-    int res = _ptr_robot->JointHysteresisError(hysteresisError);
-    return std::string(std::to_string(res)  + "," +\
-                std::to_string(hysteresisError[0]) + "," + std::to_string(hysteresisError[1]) + "," +\
-                std::to_string(hysteresisError[2]) + "," + std::to_string(hysteresisError[3]) + "," +\
-                std::to_string(hysteresisError[4]) + "," + std::to_string(hysteresisError[5]));            
+  int res = _ptr_robot->JointHysteresisError(hysteresisError);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(hysteresisError[0]) + "," +
+    std::to_string(hysteresisError[1]) + "," + std::to_string(hysteresisError[2]) + "," +
+    std::to_string(hysteresisError[3]) + "," + std::to_string(hysteresisError[4]) + "," +
+    std::to_string(hysteresisError[5]));
 }
 
 /**
@@ -10799,14 +12510,16 @@ std::string robot_command_thread::JointHysteresisError(std::string para){
  * @param [out] repeatability j1~j6关节扭矩传感器重复精度
  * @return 错误码
  */
-std::string robot_command_thread::JointRepeatability(std::string para){
-    double repeatability[6];
+std::string robot_command_thread::JointRepeatability(std::string para)
+{
+  double repeatability[6];
 
-    int res = _ptr_robot->JointRepeatability(repeatability);
-    return std::string(std::to_string(res)  + "," +\
-                std::to_string(repeatability[0]) + "," + std::to_string(repeatability[1]) + "," +\
-                std::to_string(repeatability[2]) + "," + std::to_string(repeatability[3]) + "," +\
-                std::to_string(repeatability[4]) + "," + std::to_string(repeatability[5]));            
+  int res = _ptr_robot->JointRepeatability(repeatability);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(repeatability[0]) + "," +
+    std::to_string(repeatability[1]) + "," + std::to_string(repeatability[2]) + "," +
+    std::to_string(repeatability[3]) + "," + std::to_string(repeatability[4]) + "," +
+    std::to_string(repeatability[5]));
 }
 
 /**
@@ -10820,50 +12533,82 @@ std::string robot_command_thread::JointRepeatability(std::string para){
  * @return 错误码
  */
 
-std::string robot_command_thread::SetAdmittanceParams(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAdmittanceParams(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    double M[6];
-    M[0] = std::stod(list.front());list.pop_front();
-    M[1] = std::stod(list.front());list.pop_front();
-    M[2] = std::stod(list.front());list.pop_front();
-    M[3] = std::stod(list.front());list.pop_front();
-    M[4] = std::stod(list.front());list.pop_front();
-    M[5] = std::stod(list.front());list.pop_front();
-    double B[6];
-    B[0] = std::stod(list.front());list.pop_front();
-    B[1] = std::stod(list.front());list.pop_front();
-    B[2] = std::stod(list.front());list.pop_front();
-    B[3] = std::stod(list.front());list.pop_front();
-    B[4] = std::stod(list.front());list.pop_front();
-    B[5] = std::stod(list.front());list.pop_front();
-    double K[6];
-    K[0] = std::stod(list.front());list.pop_front();
-    K[1] = std::stod(list.front());list.pop_front();
-    K[2] = std::stod(list.front());list.pop_front();
-    K[3] = std::stod(list.front());list.pop_front();
-    K[4] = std::stod(list.front());list.pop_front();
-    K[5] = std::stod(list.front());list.pop_front();
-    double threshold[6];
-    threshold[0] = std::stod(list.front());list.pop_front();
-    threshold[1] = std::stod(list.front());list.pop_front();
-    threshold[2] = std::stod(list.front());list.pop_front();
-    threshold[3] = std::stod(list.front());list.pop_front();
-    threshold[4] = std::stod(list.front());list.pop_front();
-    threshold[5] = std::stod(list.front());list.pop_front();
-    double sensitivity[6];
-    sensitivity[0] = std::stod(list.front());list.pop_front();
-    sensitivity[1] = std::stod(list.front());list.pop_front();
-    sensitivity[2] = std::stod(list.front());list.pop_front();
-    sensitivity[3] = std::stod(list.front());list.pop_front();
-    sensitivity[4] = std::stod(list.front());list.pop_front();
-    sensitivity[5] = std::stod(list.front());list.pop_front();
+  double M[6];
+  M[0] = std::stod(list.front());
+  list.pop_front();
+  M[1] = std::stod(list.front());
+  list.pop_front();
+  M[2] = std::stod(list.front());
+  list.pop_front();
+  M[3] = std::stod(list.front());
+  list.pop_front();
+  M[4] = std::stod(list.front());
+  list.pop_front();
+  M[5] = std::stod(list.front());
+  list.pop_front();
+  double B[6];
+  B[0] = std::stod(list.front());
+  list.pop_front();
+  B[1] = std::stod(list.front());
+  list.pop_front();
+  B[2] = std::stod(list.front());
+  list.pop_front();
+  B[3] = std::stod(list.front());
+  list.pop_front();
+  B[4] = std::stod(list.front());
+  list.pop_front();
+  B[5] = std::stod(list.front());
+  list.pop_front();
+  double K[6];
+  K[0] = std::stod(list.front());
+  list.pop_front();
+  K[1] = std::stod(list.front());
+  list.pop_front();
+  K[2] = std::stod(list.front());
+  list.pop_front();
+  K[3] = std::stod(list.front());
+  list.pop_front();
+  K[4] = std::stod(list.front());
+  list.pop_front();
+  K[5] = std::stod(list.front());
+  list.pop_front();
+  double threshold[6];
+  threshold[0] = std::stod(list.front());
+  list.pop_front();
+  threshold[1] = std::stod(list.front());
+  list.pop_front();
+  threshold[2] = std::stod(list.front());
+  list.pop_front();
+  threshold[3] = std::stod(list.front());
+  list.pop_front();
+  threshold[4] = std::stod(list.front());
+  list.pop_front();
+  threshold[5] = std::stod(list.front());
+  list.pop_front();
+  double sensitivity[6];
+  sensitivity[0] = std::stod(list.front());
+  list.pop_front();
+  sensitivity[1] = std::stod(list.front());
+  list.pop_front();
+  sensitivity[2] = std::stod(list.front());
+  list.pop_front();
+  sensitivity[3] = std::stod(list.front());
+  list.pop_front();
+  sensitivity[4] = std::stod(list.front());
+  list.pop_front();
+  sensitivity[5] = std::stod(list.front());
+  list.pop_front();
 
-    int setZeroFlag = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetAdmittanceParams(M,B,K,threshold,sensitivity,setZeroFlag);
-    return std::string(std::to_string(res));            
+  int setZeroFlag = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetAdmittanceParams(M, B, K, threshold, sensitivity, setZeroFlag);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -10872,21 +12617,29 @@ std::string robot_command_thread::SetAdmittanceParams(std::string para){
  * @param [in] torqueCoeff J1-J6力矩补偿系数[0-1]
  * @return 错误码
  */
-std::string robot_command_thread::SetCoderCompenParams(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetCoderCompenParams(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
-    double torqueCoeff[6];
-    torqueCoeff[0] = std::stod(list.front());list.pop_front();
-    torqueCoeff[1] = std::stod(list.front());list.pop_front();
-    torqueCoeff[2] = std::stod(list.front());list.pop_front();
-    torqueCoeff[3] = std::stod(list.front());list.pop_front();
-    torqueCoeff[4] = std::stod(list.front());list.pop_front();
-    torqueCoeff[5] = std::stod(list.front());list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
+  double torqueCoeff[6];
+  torqueCoeff[0] = std::stod(list.front());
+  list.pop_front();
+  torqueCoeff[1] = std::stod(list.front());
+  list.pop_front();
+  torqueCoeff[2] = std::stod(list.front());
+  list.pop_front();
+  torqueCoeff[3] = std::stod(list.front());
+  list.pop_front();
+  torqueCoeff[4] = std::stod(list.front());
+  list.pop_front();
+  torqueCoeff[5] = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetCoderCompenParams(status,torqueCoeff);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetCoderCompenParams(status, torqueCoeff);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -10899,23 +12652,27 @@ std::string robot_command_thread::SetCoderCompenParams(std::string para){
  * @param [out] TCPRPY 工具RPY数值
  * @return 错误码
  */
-std::string robot_command_thread::TCPComputeRPY(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::TCPComputeRPY(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    DescPose Btool;
-    _fillDescPose(list,Btool);
-    DescPose Etool;
-    _fillDescPose(list,Etool);
-    DescPose sensor;
-    _fillDescPose(list,sensor);
-    double radius = std::stod(list.front());list.pop_front();
-    double dz = std::stod(list.front());list.pop_front();
-    Rpy TCPRPY;
+  DescPose Btool;
+  _fillDescPose(list, Btool);
+  DescPose Etool;
+  _fillDescPose(list, Etool);
+  DescPose sensor;
+  _fillDescPose(list, sensor);
+  double radius = std::stod(list.front());
+  list.pop_front();
+  double dz = std::stod(list.front());
+  list.pop_front();
+  Rpy TCPRPY;
 
-    int res = _ptr_robot->TCPComputeRPY(Btool, Etool, sensor, radius, dz, TCPRPY);
-    return std::string(std::to_string(res)  + "," + std::to_string(TCPRPY.rx) + "," +\
-            std::to_string(TCPRPY.ry) + "," + std::to_string(TCPRPY.rz));         
+  int res = _ptr_robot->TCPComputeRPY(Btool, Etool, sensor, radius, dz, TCPRPY);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(TCPRPY.rx) + "," + std::to_string(TCPRPY.ry) + "," +
+    std::to_string(TCPRPY.rz));
 }
 
 /**
@@ -10929,93 +12686,114 @@ std::string robot_command_thread::TCPComputeRPY(std::string para){
  * @param [out] TCP 工具XYZ数值
  * @return 错误码
  */
-std::string robot_command_thread::TCPComputeXYZ(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::TCPComputeXYZ(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int select = std::stoi(list.front());list.pop_front();
-    double originDirection = std::stod(list.front());list.pop_front();
+  int select = std::stoi(list.front());
+  list.pop_front();
+  double originDirection = std::stod(list.front());
+  list.pop_front();
 
-    DescTran pos1;
-    pos1.x = std::stod(list.front().c_str());list.pop_front();
-    pos1.y = std::stod(list.front().c_str());list.pop_front();
-    pos1.z = std::stod(list.front().c_str());list.pop_front();
-    DescTran pos2;
-    pos2.x = std::stod(list.front().c_str());list.pop_front();
-    pos2.y = std::stod(list.front().c_str());list.pop_front();
-    pos2.z = std::stod(list.front().c_str());list.pop_front();
-    DescTran pos3;
-    pos3.x = std::stod(list.front().c_str());list.pop_front();
-    pos3.y = std::stod(list.front().c_str());list.pop_front();
-    pos3.z = std::stod(list.front().c_str());list.pop_front();
-    DescTran pos4;
-    pos4.x = std::stod(list.front().c_str());list.pop_front();
-    pos4.y = std::stod(list.front().c_str());list.pop_front();
-    pos4.z = std::stod(list.front().c_str());list.pop_front();
+  DescTran pos1;
+  pos1.x = std::stod(list.front().c_str());
+  list.pop_front();
+  pos1.y = std::stod(list.front().c_str());
+  list.pop_front();
+  pos1.z = std::stod(list.front().c_str());
+  list.pop_front();
+  DescTran pos2;
+  pos2.x = std::stod(list.front().c_str());
+  list.pop_front();
+  pos2.y = std::stod(list.front().c_str());
+  list.pop_front();
+  pos2.z = std::stod(list.front().c_str());
+  list.pop_front();
+  DescTran pos3;
+  pos3.x = std::stod(list.front().c_str());
+  list.pop_front();
+  pos3.y = std::stod(list.front().c_str());
+  list.pop_front();
+  pos3.z = std::stod(list.front().c_str());
+  list.pop_front();
+  DescTran pos4;
+  pos4.x = std::stod(list.front().c_str());
+  list.pop_front();
+  pos4.y = std::stod(list.front().c_str());
+  list.pop_front();
+  pos4.z = std::stod(list.front().c_str());
+  list.pop_front();
 
-    DescTran TCP;
+  DescTran TCP;
 
-    int res = _ptr_robot->TCPComputeXYZ(select, originDirection, pos1, pos2, pos3, pos4, TCP);
-    return std::string(std::to_string(res)  + "," + std::to_string(TCP.x) + "," +\
-            std::to_string(TCP.y) + "," + std::to_string(TCP.z));         
+  int res = _ptr_robot->TCPComputeXYZ(select, originDirection, pos1, pos2, pos3, pos4, TCP);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(TCP.x) + "," + std::to_string(TCP.y) + "," +
+    std::to_string(TCP.z));
 }
 
-	/**
+/**
 	 * @brief 光电传感器TCP标定-开始记录末端法兰中心位置
 	 * @return 错误码
 	 */
-std::string robot_command_thread::TCPRecordFlangePosStart(std::string para){
-    para.clear();
+std::string robot_command_thread::TCPRecordFlangePosStart(std::string para)
+{
+  para.clear();
 
-    int res = _ptr_robot->TCPRecordFlangePosStart();
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->TCPRecordFlangePosStart();
+  return std::string(std::to_string(res));
 }
 
-
-	/**
+/**
 	 * @brief 光电传感器TCP标定-停止记录末端法兰中心位置
 	 * @return 错误码
 	 */
-std::string robot_command_thread::TCPRecordFlangePosEnd(std::string para){
-    para.clear();
-    
-    int res = _ptr_robot->TCPRecordFlangePosEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::TCPRecordFlangePosEnd(std::string para)
+{
+  para.clear();
+
+  int res = _ptr_robot->TCPRecordFlangePosEnd();
+  return std::string(std::to_string(res));
 }
 
-	/**
+/**
 	 * @brief 光电传感器TCP标定-获取末端工具中心点位置
 	 * @param [out] TCP 工具中心点位置(x,y,z)
 	 * @return 错误码
 	 */
-std::string robot_command_thread::TCPGetRecordFlangePos(std::string para){
-    DescTran TCP;
-    
-    int res = _ptr_robot->TCPGetRecordFlangePos(TCP);
-    return std::string(std::to_string(res)  + "," + std::to_string(TCP.x) + "," +\
-            std::to_string(TCP.y) + "," + std::to_string(TCP.z));   
+std::string robot_command_thread::TCPGetRecordFlangePos(std::string para)
+{
+  DescTran TCP;
+
+  int res = _ptr_robot->TCPGetRecordFlangePos(TCP);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(TCP.x) + "," + std::to_string(TCP.y) + "," +
+    std::to_string(TCP.z));
 }
 
 /**
  * @brief 原地空运动
  * @return 错误码
  */
-std::string robot_command_thread::MoveStationary(std::string para){
-    para.clear();
-    
-    int res = _ptr_robot->MoveStationary();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::MoveStationary(std::string para)
+{
+  para.clear();
+
+  int res = _ptr_robot->MoveStationary();
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 等待原地空运动完成
  * @return 错误码
  */
-std::string robot_command_thread::WaitStationaryMotionDone(std::string para){
-    para.clear();
+std::string robot_command_thread::WaitStationaryMotionDone(std::string para)
+{
+  para.clear();
 
-    int res = _ptr_robot->WaitStationaryMotionDone();
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->WaitStationaryMotionDone();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11024,13 +12802,15 @@ std::string robot_command_thread::WaitStationaryMotionDone(std::string para){
  * @param [out] luaErrCode lua程序执行错误码
  * @return 错误码
  */
-std::string robot_command_thread::GetProgramRunErrCode(std::string para){
-    para.clear();
-    
-    int errLinNum;
-    int luaErrCode;
-    int res = _ptr_robot->GetProgramRunErrCode(errLinNum, luaErrCode);
-    return std::string(std::to_string(res) + ","  + std::to_string(errLinNum) + ","  + std::to_string(luaErrCode));
+std::string robot_command_thread::GetProgramRunErrCode(std::string para)
+{
+  para.clear();
+
+  int errLinNum;
+  int luaErrCode;
+  int res = _ptr_robot->GetProgramRunErrCode(errLinNum, luaErrCode);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(errLinNum) + "," + std::to_string(luaErrCode));
 }
 
 /**
@@ -11038,14 +12818,16 @@ std::string robot_command_thread::GetProgramRunErrCode(std::string para){
  * @param [in] 使能，0-关闭，1-开启
  * @return  错误码
  */
-std::string robot_command_thread::SetAxleGenComEnable(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetAxleGenComEnable(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int mode = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetAxleGenComEnable(mode);
-    return std::string(std::to_string(res));
+  int mode = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetAxleGenComEnable(mode);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11053,19 +12835,22 @@ std::string robot_command_thread::SetAxleGenComEnable(std::string para){
  * @param [in] len，返回的长度
  * @return  错误码
  */
-std::string robot_command_thread::GetAxleGenComCycleData(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetAxleGenComCycleData(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t len = std::stoi(list.front());list.pop_front();
+  uint8_t len = std::stoi(list.front());
+  list.pop_front();
 
-    int cycleData[len];
-    for(int i = 0;i < len;i++){
-        cycleData[i] = std::stoi(list.front());list.pop_front();
-    }
-    
-    int res = _ptr_robot->GetAxleGenComCycleData(len,cycleData);
-    return std::string(std::to_string(res));
+  int cycleData[len];
+  for (int i = 0; i < len; i++) {
+    cycleData[i] = std::stoi(list.front());
+    list.pop_front();
+  }
+
+  int res = _ptr_robot->GetAxleGenComCycleData(len, cycleData);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11076,29 +12861,33 @@ std::string robot_command_thread::GetAxleGenComCycleData(std::string para){
  * @param [out] rcvBuff 应答的数据
  * @return  错误码
  */
-std::string robot_command_thread::SndRcvAxleGenComCmdData(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SndRcvAxleGenComCmdData(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    uint8_t lenSnd = std::stoi(list.front());list.pop_front();
+  uint8_t lenSnd = std::stoi(list.front());
+  list.pop_front();
 
-    int sndBuff[lenSnd];
-    for(int i = 0;i < lenSnd;i++){
-        sndBuff[i] = std::stoi(list.front());list.pop_front();
-    }
-    
-    uint8_t lenRcv = std::stoi(list.front());list.pop_front();
+  int sndBuff[lenSnd];
+  for (int i = 0; i < lenSnd; i++) {
+    sndBuff[i] = std::stoi(list.front());
+    list.pop_front();
+  }
 
-    int rcvData[lenRcv];
+  uint8_t lenRcv = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SndRcvAxleGenComCmdData(lenSnd,sndBuff,lenRcv,rcvData);
+  int rcvData[lenRcv];
 
-    std::string tmp;
-    tmp = std::string(std::to_string(res) + "," + std::to_string(rcvData[0]));
-    for(int i = 1;i < lenRcv;i++){
-        tmp = std::string(tmp + "," + std::to_string(rcvData[i]));
-    }
-    return std::string(tmp);
+  int res = _ptr_robot->SndRcvAxleGenComCmdData(lenSnd, sndBuff, lenRcv, rcvData);
+
+  std::string tmp;
+  tmp = std::string(std::to_string(res) + "," + std::to_string(rcvData[0]));
+  for (int i = 1; i < lenRcv; i++) {
+    tmp = std::string(tmp + "," + std::to_string(rcvData[i]));
+  }
+  return std::string(tmp);
 }
 
 /**
@@ -11107,16 +12896,20 @@ std::string robot_command_thread::SndRcvAxleGenComCmdData(std::string para){
  * @param [in] enable 0-关闭；1-开启
  * @param [in] confirmTime 通讯中断确认时长(ms)[0-5000]
  */
-std::string robot_command_thread::SetRobotStopOnComDisc(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetRobotStopOnComDisc(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int pordID = std::stoi(list.front());list.pop_front();
-    int enable = std::stoi(list.front());list.pop_front();
-    int confirmTime = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetRobotStopOnComDisc(pordID,enable,confirmTime);
-    return std::string(std::to_string(res));
+  int pordID = std::stoi(list.front());
+  list.pop_front();
+  int enable = std::stoi(list.front());
+  list.pop_front();
+  int confirmTime = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetRobotStopOnComDisc(pordID, enable, confirmTime);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11126,17 +12919,19 @@ std::string robot_command_thread::SetRobotStopOnComDisc(std::string para){
  * @param [out] confirmTime 通讯中断确认时长(ms)[0-5000]
  * @return  错误码
  */
-std::string robot_command_thread::GetRobotStopOnComDisc(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetRobotStopOnComDisc(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int pordID = std::stoi(list.front());list.pop_front();
-    bool enable;
-    int confirmTime;
-    
-    int res = _ptr_robot->GetRobotStopOnComDisc(pordID,enable,confirmTime);
-    return std::string(std::to_string(res) + "," + std::to_string(enable) + "," +\
-            std::to_string(confirmTime));
+  int pordID = std::stoi(list.front());
+  list.pop_front();
+  bool enable;
+  int confirmTime;
+
+  int res = _ptr_robot->GetRobotStopOnComDisc(pordID, enable, confirmTime);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(enable) + "," + std::to_string(confirmTime));
 }
 
 /**
@@ -11144,14 +12939,16 @@ std::string robot_command_thread::GetRobotStopOnComDisc(std::string para){
  * @param [in] frame 发送数据帧字符串如：/f/bIII20III303III7IIIMode(0)III/b/f
  * @return 错误码
  */
-std::string robot_command_thread::SendUDPFrame(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SendUDPFrame(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    std::string frame = list.front();list.pop_front();
+  std::string frame = list.front();
+  list.pop_front();
 
-    int res = _ptr_robot->SendUDPFrame(frame);
-    return std::string(std::to_string(res));            
+  int res = _ptr_robot->SendUDPFrame(frame);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11162,27 +12959,31 @@ std::string robot_command_thread::SendUDPFrame(std::string para){
  * @param [in] maxJointVel 6个关节最大速度(°/s) 默认为45°/s(可选参数)
  * @return 错误码
  */
-std::string robot_command_thread::SetVelReducePara(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetVelReducePara(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int enable = std::stoi(list.front());list.pop_front();
-    double maxTCPVel = std::stod(list.front());list.pop_front();
-    int strategy = std::stoi(list.front());list.pop_front();
+  int enable = std::stoi(list.front());
+  list.pop_front();
+  double maxTCPVel = std::stod(list.front());
+  list.pop_front();
+  int strategy = std::stoi(list.front());
+  list.pop_front();
 
-    int res;
-    if(list.size() >= 6){
-        std::vector<double> maxJointVel;
-        for(int i = 0; i < 6; i++){
-            maxJointVel.push_back(std::stod(list.front()));list.pop_front();
-        }
-        res = _ptr_robot->SetVelReducePara(enable,maxTCPVel,strategy,maxJointVel);
+  int res;
+  if (list.size() >= 6) {
+    std::vector<double> maxJointVel;
+    for (int i = 0; i < 6; i++) {
+      maxJointVel.push_back(std::stod(list.front()));
+      list.pop_front();
     }
-    else{
-        res = _ptr_robot->SetVelReducePara(enable,maxTCPVel,strategy);
-    }
-    return std::string(std::to_string(res));
-} 
+    res = _ptr_robot->SetVelReducePara(enable, maxTCPVel, strategy, maxJointVel);
+  } else {
+    res = _ptr_robot->SetVelReducePara(enable, maxTCPVel, strategy);
+  }
+  return std::string(std::to_string(res));
+}
 
 /**
  * @brief 定点摆动开始
@@ -11192,30 +12993,35 @@ std::string robot_command_thread::SetVelReducePara(std::string para){
  * @param [in] weaveTime 摆动时间[s]
  * @return 错误码
  */
-std::string robot_command_thread::OriginPointWeaveStart(std::string para){
-    DescPose refPoint;
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::OriginPointWeaveStart(std::string para)
+{
+  DescPose refPoint;
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int weaveNum = std::stoi(list.front());list.pop_front();
-    int mode = std::stoi(list.front());list.pop_front();
+  int weaveNum = std::stoi(list.front());
+  list.pop_front();
+  int mode = std::stoi(list.front());
+  list.pop_front();
 
-    _fillDescPose(list,refPoint);
+  _fillDescPose(list, refPoint);
 
-    double weaveTime = std::stod(list.front());list.pop_front();
+  double weaveTime = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->OriginPointWeaveStart(weaveNum,mode,refPoint,weaveTime);
-    return std::string(std::to_string(res));            
-} 
+  int res = _ptr_robot->OriginPointWeaveStart(weaveNum, mode, refPoint, weaveTime);
+  return std::string(std::to_string(res));
+}
 
 /**
  * @brief 定点摆动结束
  * @return 错误码
  */
-std::string robot_command_thread::OriginPointWeaveEnd(std::string para){
-    int res = _ptr_robot->OriginPointWeaveEnd();
-    return std::string(std::to_string(res));            
-} 
+std::string robot_command_thread::OriginPointWeaveEnd(std::string para)
+{
+  int res = _ptr_robot->OriginPointWeaveEnd();
+  return std::string(std::to_string(res));
+}
 
 /**
  * @brief 设置用户自定义机器人末端灯色
@@ -11224,16 +13030,20 @@ std::string robot_command_thread::OriginPointWeaveEnd(std::string para){
  * @param [in] b 末端蓝灯控制；0-灭；1-亮
  * @return 错误码
  */
-std::string robot_command_thread::SetUserLEDColor(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetUserLEDColor(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int r = std::stoi(list.front());list.pop_front();
-    int g = std::stoi(list.front());list.pop_front();
-    int b = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetUserLEDColor(r,g,b);
-    return std::string(std::to_string(res));
+  int r = std::stoi(list.front());
+  list.pop_front();
+  int g = std::stoi(list.front());
+  list.pop_front();
+  int b = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetUserLEDColor(r, g, b);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11243,17 +13053,21 @@ std::string robot_command_thread::SetUserLEDColor(std::string para){
  * @param [in] ovl 速度缩放百分比，范围[0~100]
  * @return 错误码
  */
-std::string robot_command_thread::MoveToTPDStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::MoveToTPDStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    char name[30];
-    list.front().copy(name,list.front().size());list.pop_front();
-    uint8_t moveType = std::stoi(list.front());list.pop_front();
-    float ovl = std::stod(list.front());list.pop_front();
-    
-    int res = _ptr_robot->MoveToTPDStart(name,moveType,ovl);
-    return std::string(std::to_string(res));
+  char name[30];
+  list.front().copy(name, list.front().size());
+  list.pop_front();
+  uint8_t moveType = std::stoi(list.front());
+  list.pop_front();
+  float ovl = std::stod(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->MoveToTPDStart(name, moveType, ovl);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11261,14 +13075,16 @@ std::string robot_command_thread::MoveToTPDStart(std::string para){
  * @param [in] period 可配置状态反馈周期 4-1000ms
  * @return 错误码
  */
-std::string robot_command_thread::SetRobotRealtimeStatePeriod(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetRobotRealtimeStatePeriod(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int period = std::stoi(list.front());list.pop_front();
-    
-    int res = _ptr_robot->SetRobotRealtimeStatePeriod(period);
-    return std::string(std::to_string(res));
+  int period = std::stoi(list.front());
+  list.pop_front();
+
+  int res = _ptr_robot->SetRobotRealtimeStatePeriod(period);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11284,24 +13100,35 @@ std::string robot_command_thread::SetRobotRealtimeStatePeriod(std::string para){
  * @param[in] comType 指令下发类型；0-xmlrpc；1-UDP(对应机器人20007端口)
  * @return  错误码
  */
-std::string robot_command_thread::ServoJV(std::string para){
-    std::list<std::string> datalist;
-    _splitString2List(para,datalist);
-    double jointVel[6];
-    jointVel[0] = std::stod(datalist.front().c_str());datalist.pop_front();
-    jointVel[1] = std::stod(datalist.front().c_str());datalist.pop_front();
-    jointVel[2] = std::stod(datalist.front().c_str());datalist.pop_front();
-    jointVel[3] = std::stod(datalist.front().c_str());datalist.pop_front();
-    jointVel[4] = std::stod(datalist.front().c_str());datalist.pop_front();
-    jointVel[5] = std::stod(datalist.front().c_str());datalist.pop_front();
-    double exisVel[4];
-    exisVel[0] = std::stod(datalist.front().c_str());datalist.pop_front();
-    exisVel[1] = std::stod(datalist.front().c_str());datalist.pop_front();
-    exisVel[2] = std::stod(datalist.front().c_str());datalist.pop_front();
-    exisVel[3] = std::stod(datalist.front().c_str());datalist.pop_front();
+std::string robot_command_thread::ServoJV(std::string para)
+{
+  std::list<std::string> datalist;
+  _splitString2List(para, datalist);
+  double jointVel[6];
+  jointVel[0] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  jointVel[1] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  jointVel[2] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  jointVel[3] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  jointVel[4] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  jointVel[5] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  double exisVel[4];
+  exisVel[0] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  exisVel[1] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  exisVel[2] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  exisVel[3] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
 
-    double cmdT = std::stod(datalist.front().c_str());
-    return std::to_string(_ptr_robot->ServoJV(jointVel,exisVel,0,0,cmdT,0,0));
+  double cmdT = std::stod(datalist.front().c_str());
+  return std::to_string(_ptr_robot->ServoJV(jointVel, exisVel, 0, 0, cmdT, 0, 0));
 }
 
 /**
@@ -11309,11 +13136,12 @@ std::string robot_command_thread::ServoJV(std::string para){
  * @param [in]  comType 指令下发类型；0-xmlrpc；1-UDP(对应机器人20007端口)
  * @return  错误码
  */
-std::string robot_command_thread::ServoMITStart(std::string para){
-    std::list<std::string> datalist;
-    _splitString2List(para,datalist);
-    int comType = std::stoi(datalist.front().c_str());
-    return std::to_string(_ptr_robot->ServoMITStart(comType));
+std::string robot_command_thread::ServoMITStart(std::string para)
+{
+  std::list<std::string> datalist;
+  _splitString2List(para, datalist);
+  int comType = std::stoi(datalist.front().c_str());
+  return std::to_string(_ptr_robot->ServoMITStart(comType));
 }
 
 /**
@@ -11321,11 +13149,12 @@ std::string robot_command_thread::ServoMITStart(std::string para){
  * @param [in]  comType 指令下发类型；0-xmlrpc；1-UDP(对应机器人20007端口)
  * @return  错误码
  */
-std::string robot_command_thread::ServoMITEnd(std::string para){
-    std::list<std::string> datalist;
-    _splitString2List(para,datalist);
-    int comType = std::stoi(datalist.front().c_str());
-    return std::to_string(_ptr_robot->ServoMITEnd(comType));
+std::string robot_command_thread::ServoMITEnd(std::string para)
+{
+  std::list<std::string> datalist;
+  _splitString2List(para, datalist);
+  int comType = std::stoi(datalist.front().c_str());
+  return std::to_string(_ptr_robot->ServoMITEnd(comType));
 }
 
 /**
@@ -11339,50 +13168,82 @@ std::string robot_command_thread::ServoMITEnd(std::string para){
  * @param [in]  comType 指令下发类型；0-xmlrpc；1-UDP(对应机器人20007端口)
  * @return 错误码
  */
-std::string robot_command_thread::ServoMIT(std::string para){
-    std::list<std::string> datalist;
-    _splitString2List(para,datalist);
-    double posGain[6];
-    posGain[0] = std::stod(datalist.front().c_str());datalist.pop_front();
-    posGain[1] = std::stod(datalist.front().c_str());datalist.pop_front();
-    posGain[2] = std::stod(datalist.front().c_str());datalist.pop_front();
-    posGain[3] = std::stod(datalist.front().c_str());datalist.pop_front();
-    posGain[4] = std::stod(datalist.front().c_str());datalist.pop_front();
-    posGain[5] = std::stod(datalist.front().c_str());datalist.pop_front();
-    double desPos[6];
-    desPos[0] = std::stod(datalist.front().c_str());datalist.pop_front();
-    desPos[1] = std::stod(datalist.front().c_str());datalist.pop_front();
-    desPos[2] = std::stod(datalist.front().c_str());datalist.pop_front();
-    desPos[3] = std::stod(datalist.front().c_str());datalist.pop_front();
-    desPos[4] = std::stod(datalist.front().c_str());datalist.pop_front();
-    desPos[5] = std::stod(datalist.front().c_str());datalist.pop_front();
-    double velGain[6];
-    velGain[0] = std::stod(datalist.front().c_str());datalist.pop_front();
-    velGain[1] = std::stod(datalist.front().c_str());datalist.pop_front();
-    velGain[2] = std::stod(datalist.front().c_str());datalist.pop_front();
-    velGain[3] = std::stod(datalist.front().c_str());datalist.pop_front();
-    velGain[4] = std::stod(datalist.front().c_str());datalist.pop_front();
-    velGain[5] = std::stod(datalist.front().c_str());datalist.pop_front();
-    double desVel[6];
-    desVel[0] = std::stod(datalist.front().c_str());datalist.pop_front();
-    desVel[1] = std::stod(datalist.front().c_str());datalist.pop_front();
-    desVel[2] = std::stod(datalist.front().c_str());datalist.pop_front();
-    desVel[3] = std::stod(datalist.front().c_str());datalist.pop_front();
-    desVel[4] = std::stod(datalist.front().c_str());datalist.pop_front();
-    desVel[5] = std::stod(datalist.front().c_str());datalist.pop_front();
-    double torque_ff[6];
-    torque_ff[0] = std::stod(datalist.front().c_str());datalist.pop_front();
-    torque_ff[1] = std::stod(datalist.front().c_str());datalist.pop_front();
-    torque_ff[2] = std::stod(datalist.front().c_str());datalist.pop_front();
-    torque_ff[3] = std::stod(datalist.front().c_str());datalist.pop_front();
-    torque_ff[4] = std::stod(datalist.front().c_str());datalist.pop_front();
-    torque_ff[5] = std::stod(datalist.front().c_str());datalist.pop_front();
+std::string robot_command_thread::ServoMIT(std::string para)
+{
+  std::list<std::string> datalist;
+  _splitString2List(para, datalist);
+  double posGain[6];
+  posGain[0] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  posGain[1] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  posGain[2] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  posGain[3] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  posGain[4] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  posGain[5] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  double desPos[6];
+  desPos[0] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  desPos[1] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  desPos[2] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  desPos[3] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  desPos[4] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  desPos[5] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  double velGain[6];
+  velGain[0] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  velGain[1] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  velGain[2] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  velGain[3] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  velGain[4] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  velGain[5] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  double desVel[6];
+  desVel[0] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  desVel[1] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  desVel[2] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  desVel[3] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  desVel[4] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  desVel[5] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  double torque_ff[6];
+  torque_ff[0] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  torque_ff[1] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  torque_ff[2] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  torque_ff[3] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  torque_ff[4] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  torque_ff[5] = std::stod(datalist.front().c_str());
+  datalist.pop_front();
 
-    double interval = std::stod(datalist.front().c_str());datalist.pop_front();
-    int comType = std::stoi(datalist.front().c_str());
-    return std::to_string(_ptr_robot->ServoMIT(posGain,desPos,velGain,desVel,torque_ff,interval,comType));
+  double interval = std::stod(datalist.front().c_str());
+  datalist.pop_front();
+  int comType = std::stoi(datalist.front().c_str());
+  return std::to_string(
+    _ptr_robot->ServoMIT(posGain, desPos, velGain, desVel, torque_ff, interval, comType));
 }
-
 
 /**
  * @brief 写入激光焊机10个工艺组中某一个的配置参数并配置给焊机
@@ -11395,20 +13256,29 @@ std::string robot_command_thread::ServoMIT(std::string para){
  * @param[in] freq 频率
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::SetLaserWeldingParam(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLaserWeldingParam(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int io_type = std::stoi(list.front());list.pop_front();
-    int num = std::stoi(list.front());list.pop_front();
-    int scanSpeed = std::stoi(list.front());list.pop_front();
-    int scanWidth = std::stoi(list.front());list.pop_front();
-    int peakPower = std::stoi(list.front());list.pop_front();
-    int dutyCycle = std::stoi(list.front());list.pop_front();
-    int freq = std::stoi(list.front());list.pop_front();
+  int io_type = std::stoi(list.front());
+  list.pop_front();
+  int num = std::stoi(list.front());
+  list.pop_front();
+  int scanSpeed = std::stoi(list.front());
+  list.pop_front();
+  int scanWidth = std::stoi(list.front());
+  list.pop_front();
+  int peakPower = std::stoi(list.front());
+  list.pop_front();
+  int dutyCycle = std::stoi(list.front());
+  list.pop_front();
+  int freq = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetLaserWeldingParam(io_type,num,scanSpeed,scanWidth,peakPower,dutyCycle,freq);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetLaserWeldingParam(
+    io_type, num, scanSpeed, scanWidth, peakPower, dutyCycle, freq);
+  return std::string(std::to_string(res));
 }
 /**
  * @brief 设置激光焊机开启关闭
@@ -11417,16 +13287,20 @@ std::string robot_command_thread::SetLaserWeldingParam(std::string para){
  * @param[in] max_waittime 最大等待时间，单位毫秒，默认10000
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::SetLaserWeldingStartEnd(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLaserWeldingStartEnd(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int io_type = std::stoi(list.front());list.pop_front();
-    int status = std::stoi(list.front());list.pop_front();
-    int max_waittime = std::stoi(list.front());list.pop_front();
+  int io_type = std::stoi(list.front());
+  list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
+  int max_waittime = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetLaserWeldingStartEnd(io_type,status,max_waittime);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetLaserWeldingStartEnd(io_type, status, max_waittime);
+  return std::string(std::to_string(res));
 }
 /**
  * @brief 激光焊机使能去使能
@@ -11434,15 +13308,18 @@ std::string robot_command_thread::SetLaserWeldingStartEnd(std::string para){
  * @param[in] status 0-去使能 1-使能
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::SetLaserWeldingEnable(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLaserWeldingEnable(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int io_type = std::stoi(list.front());list.pop_front();
-    int status = std::stoi(list.front());list.pop_front();
+  int io_type = std::stoi(list.front());
+  list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetLaserWeldingEnable(io_type,status);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetLaserWeldingEnable(io_type, status);
+  return std::string(std::to_string(res));
 }
 /**
  * @brief 激光焊机故障复位
@@ -11450,15 +13327,18 @@ std::string robot_command_thread::SetLaserWeldingEnable(std::string para){
  * @param[in] status 控制字 0-无效 1-故障复位
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::ResetLaserWeldingErr(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ResetLaserWeldingErr(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int io_type = std::stoi(list.front());list.pop_front();
-    int status = std::stoi(list.front());list.pop_front();
+  int io_type = std::stoi(list.front());
+  list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ResetLaserWeldingErr(io_type,status);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ResetLaserWeldingErr(io_type, status);
+  return std::string(std::to_string(res));
 }
 /**
  * @brief 获取激光焊机运行状态
@@ -11466,15 +13346,17 @@ std::string robot_command_thread::ResetLaserWeldingErr(std::string para){
  * @param[out] status 控制字 0-停机 1-运行
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::GetLaserWeldingRunningState(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetLaserWeldingRunningState(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int io_type = std::stoi(list.front());list.pop_front();
-    int status;
+  int io_type = std::stoi(list.front());
+  list.pop_front();
+  int status;
 
-    int res = _ptr_robot->GetLaserWeldingRunningState(io_type,status);
-    return std::string(std::to_string(res) + "," + std::to_string(status));
+  int res = _ptr_robot->GetLaserWeldingRunningState(io_type, status);
+  return std::string(std::to_string(res) + "," + std::to_string(status));
 }
 /**
  * @brief 获取激光焊机故障状态
@@ -11482,15 +13364,17 @@ std::string robot_command_thread::GetLaserWeldingRunningState(std::string para){
  * @param[out] status 0-无故障 1-存在故障
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::GetLaserWeldingErrState(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetLaserWeldingErrState(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int io_type = std::stoi(list.front());list.pop_front();
-    int status;
+  int io_type = std::stoi(list.front());
+  list.pop_front();
+  int status;
 
-    int res = _ptr_robot->GetLaserWeldingErrState(io_type,status);
-    return std::string(std::to_string(res) + "," + std::to_string(status));
+  int res = _ptr_robot->GetLaserWeldingErrState(io_type, status);
+  return std::string(std::to_string(res) + "," + std::to_string(status));
 }
 /**
  * @brief 获取激光焊机10个工艺组中某一个的配置参数
@@ -11502,21 +13386,24 @@ std::string robot_command_thread::GetLaserWeldingErrState(std::string para){
  * @param[out] freq 频率
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::GetLaserWeldingParamTarget(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetLaserWeldingParamTarget(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int num = std::stoi(list.front());list.pop_front();
-    int scanSpeed;
-    int scanWidth;
-    int peakPower;
-    int dutyCycle;
-    int freq;
+  int num = std::stoi(list.front());
+  list.pop_front();
+  int scanSpeed;
+  int scanWidth;
+  int peakPower;
+  int dutyCycle;
+  int freq;
 
-    int res = _ptr_robot->GetLaserWeldingParamTarget(num,scanSpeed,scanWidth,peakPower,dutyCycle,freq);
-    return std::string(std::to_string(res) + "," + std::to_string(scanSpeed) + "," + \
-                        std::to_string(scanWidth) + "," + std::to_string(peakPower) + "," + \
-                        std::to_string(dutyCycle) + "," + std::to_string(freq));
+  int res =
+    _ptr_robot->GetLaserWeldingParamTarget(num, scanSpeed, scanWidth, peakPower, dutyCycle, freq);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(scanSpeed) + "," + std::to_string(scanWidth) + "," +
+    std::to_string(peakPower) + "," + std::to_string(dutyCycle) + "," + std::to_string(freq));
 }
 /**
  * @brief 获取当前激光焊机生效的配置参数
@@ -11528,91 +13415,104 @@ std::string robot_command_thread::GetLaserWeldingParamTarget(std::string para){
  * @param[out] freq 频率
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::GetLaserWeldingParamActual(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetLaserWeldingParamActual(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int io_type = std::stoi(list.front());list.pop_front();
-    int scanSpeed;
-    int scanWidth;
-    int peakPower;
-    int dutyCycle;
-    int freq;
+  int io_type = std::stoi(list.front());
+  list.pop_front();
+  int scanSpeed;
+  int scanWidth;
+  int peakPower;
+  int dutyCycle;
+  int freq;
 
-    int res = _ptr_robot->GetLaserWeldingParamActual(io_type,scanSpeed,scanWidth,peakPower,dutyCycle,freq);
-    return std::string(std::to_string(res) + "," + std::to_string(scanSpeed) + "," + \
-                        std::to_string(scanWidth) + "," + std::to_string(peakPower) + "," + \
-                        std::to_string(dutyCycle) + "," + std::to_string(freq));
+  int res = _ptr_robot->GetLaserWeldingParamActual(
+    io_type, scanSpeed, scanWidth, peakPower, dutyCycle, freq);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(scanSpeed) + "," + std::to_string(scanWidth) + "," +
+    std::to_string(peakPower) + "," + std::to_string(dutyCycle) + "," + std::to_string(freq));
 }
 /**
  * @brief 激光焊机设置扩展IO，使能的DO端口
  * @param[in] ctrlModeDONum 激光焊机使能的扩展DO端口号
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::SetLaserWeldingEnableExtDoNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLaserWeldingEnableExtDoNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int ctrlModeDONum = std::stoi(list.front());list.pop_front();
+  int ctrlModeDONum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetLaserWeldingEnableExtDoNum(ctrlModeDONum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetLaserWeldingEnableExtDoNum(ctrlModeDONum);
+  return std::string(std::to_string(res));
 }
 /**
  * @brief 激光焊机设置扩展IO，启动的DO端口
  * @param[in] ctrlModeDONum 激光焊机启动（出光收光）的扩展DO端口号
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::SetLaserWeldingStartExtDoNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLaserWeldingStartExtDoNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int ctrlModeDONum = std::stoi(list.front());list.pop_front();
+  int ctrlModeDONum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetLaserWeldingStartExtDoNum(ctrlModeDONum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetLaserWeldingStartExtDoNum(ctrlModeDONum);
+  return std::string(std::to_string(res));
 }
 /**
  * @brief 激光焊机设置扩展IO，故障复位的DO端口
  * @param[in] ctrlModeDONum 激光焊机故障复位的扩展DO端口号
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::SetLaserWeldingErrResetExtDoNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLaserWeldingErrResetExtDoNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int ctrlModeDONum = std::stoi(list.front());list.pop_front();
+  int ctrlModeDONum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetLaserWeldingErrResetExtDoNum(ctrlModeDONum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetLaserWeldingErrResetExtDoNum(ctrlModeDONum);
+  return std::string(std::to_string(res));
 }
 /**
  * @brief 配置激光焊机运行状态（出光状态）扩展DI
  * @param[in] diNum 配置激光焊机运行状态（出光状态）扩展DI端口
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::SetLaserWeldingRunningStateExtDiNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLaserWeldingRunningStateExtDiNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int diNum = std::stoi(list.front());list.pop_front();
+  int diNum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetLaserWeldingRunningStateExtDiNum(diNum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetLaserWeldingRunningStateExtDiNum(diNum);
+  return std::string(std::to_string(res));
 }
 /**
  * @brief 配置激光焊机故障状态扩展DI
  * @param[in] diNum 配置激光焊机故障状态扩展DI端口
  * @return 错误码，0表示成功，非0表示失败
  */
-std::string robot_command_thread::SetLaserWeldingErrStateExtDiNum(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetLaserWeldingErrStateExtDiNum(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int diNum = std::stoi(list.front());list.pop_front();
+  int diNum = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetLaserWeldingErrStateExtDiNum(diNum);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetLaserWeldingErrStateExtDiNum(diNum);
+  return std::string(std::to_string(res));
 }
 /**
  * @brief UDP扩展轴参数获取
@@ -11631,46 +13531,46 @@ std::string robot_command_thread::SetLaserWeldingErrStateExtDiNum(std::string pa
  * @param [out] axisEncType 编码器类型  0-增量；1-绝对值
  * @return 错误码
  */
-std::string robot_command_thread::ExtAxisGetParamConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ExtAxisGetParamConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int axisID = std::stoi(list.front());list.pop_front();
-    int axisType;
-    int axisDirection;
-    double axisMax;
-    double axisMin;
-    double axisVel;
-    double axisAcc;
-    double axisLead;
-    int encResolution;
-    double axisOffect;
-    int axisCompany;
-    int axisModel;
-    int axisEncType;
+  int axisID = std::stoi(list.front());
+  list.pop_front();
+  int axisType;
+  int axisDirection;
+  double axisMax;
+  double axisMin;
+  double axisVel;
+  double axisAcc;
+  double axisLead;
+  int encResolution;
+  double axisOffect;
+  int axisCompany;
+  int axisModel;
+  int axisEncType;
 
-    int res = _ptr_robot->ExtAxisGetParamConfig(axisID,axisType,axisDirection,axisMax,axisMin,axisVel,axisAcc,axisLead,encResolution,axisOffect,axisCompany,axisModel,axisEncType);
-    return std::string(std::to_string(res) + "," + std::to_string(axisType) + "," + \
-                        std::to_string(axisDirection) + "," + std::to_string(axisMax) + "," + \
-                        std::to_string(axisMin) + "," + std::to_string(axisVel) + "," + \
-                        std::to_string(axisAcc) + "," + std::to_string(axisLead) + "," + \
-                        std::to_string(encResolution) + "," + std::to_string(axisOffect) + "," + \
-                        std::to_string(axisCompany) + "," + std::to_string(axisModel) + "," + \
-                        std::to_string(axisEncType));
+  int res = _ptr_robot->ExtAxisGetParamConfig(
+    axisID, axisType, axisDirection, axisMax, axisMin, axisVel, axisAcc, axisLead, encResolution,
+    axisOffect, axisCompany, axisModel, axisEncType);
+  return std::string(
+    std::to_string(res) + "," + std::to_string(axisType) + "," + std::to_string(axisDirection) +
+    "," + std::to_string(axisMax) + "," + std::to_string(axisMin) + "," + std::to_string(axisVel) +
+    "," + std::to_string(axisAcc) + "," + std::to_string(axisLead) + "," +
+    std::to_string(encResolution) + "," + std::to_string(axisOffect) + "," +
+    std::to_string(axisCompany) + "," + std::to_string(axisModel) + "," +
+    std::to_string(axisEncType));
 }
-
-
-
-
-
 
 /**
  * @brief 关闭RPC连接
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::CloseRPC(std::string para){
-    int res = _ptr_robot->CloseRPC();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::CloseRPC(std::string para)
+{
+  int res = _ptr_robot->CloseRPC();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11680,13 +13580,15 @@ std::string robot_command_thread::CloseRPC(std::string para){
  * @param[out] controllerVersion 控制器版本
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::GetSoftwareVersion(std::string para){
-    char robotModel[64];
-    char webVersion[64];
-    char controllerVersion[64];
-    int res = _ptr_robot->GetSoftwareVersion(robotModel, webVersion, controllerVersion);
-    return std::string(std::to_string(res) + "," + std::string(robotModel) + "," +
-                       std::string(webVersion) + "," + std::string(controllerVersion));
+std::string robot_command_thread::GetSoftwareVersion(std::string para)
+{
+  char robotModel[64];
+  char webVersion[64];
+  char controllerVersion[64];
+  int res = _ptr_robot->GetSoftwareVersion(robotModel, webVersion, controllerVersion);
+  return std::string(
+    std::to_string(res) + "," + std::string(robotModel) + "," + std::string(webVersion) + "," +
+    std::string(controllerVersion));
 }
 
 /**
@@ -11694,18 +13596,20 @@ std::string robot_command_thread::GetSoftwareVersion(std::string para){
  * @param [in] para-第一个参数为周期(ms)，后续参数为RobotState枚举值序列
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::SetRobotRealtimeStateConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetRobotRealtimeStateConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int period = std::stoi(list.front());list.pop_front();
-    std::vector<RobotState> states;
-    while(!list.empty()){
-        states.push_back(static_cast<RobotState>(std::stoi(list.front())));
-        list.pop_front();
-    }
-    int res = _ptr_robot->SetRobotRealtimeStateConfig(states, period);
-    return std::string(std::to_string(res));
+  int period = std::stoi(list.front());
+  list.pop_front();
+  std::vector<RobotState> states;
+  while (!list.empty()) {
+    states.push_back(static_cast<RobotState>(std::stoi(list.front())));
+    list.pop_front();
+  }
+  int res = _ptr_robot->SetRobotRealtimeStateConfig(states, period);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11714,15 +13618,16 @@ std::string robot_command_thread::SetRobotRealtimeStateConfig(std::string para){
  * @param[out] states RobotState枚举值序列
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::GetRobotRealtimeStateConfig(std::string para){
-    std::vector<RobotState> states;
-    int period;
-    int res = _ptr_robot->GetRobotRealtimeStateConfig(states, period);
-    std::string result = std::to_string(res) + "," + std::to_string(period);
-    for(auto& s : states){
-        result += "," + std::to_string(static_cast<int>(s));
-    }
-    return result;
+std::string robot_command_thread::GetRobotRealtimeStateConfig(std::string para)
+{
+  std::vector<RobotState> states;
+  int period;
+  int res = _ptr_robot->GetRobotRealtimeStateConfig(states, period);
+  std::string result = std::to_string(res) + "," + std::to_string(period);
+  for (auto & s : states) {
+    result += "," + std::to_string(static_cast<int>(s));
+  }
+  return result;
 }
 
 /**
@@ -11730,20 +13635,21 @@ std::string robot_command_thread::GetRobotRealtimeStateConfig(std::string para){
  * @return 错误码+关节当前位置6个+工具当前位置6个+关节当前扭矩6个
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::GetRobotRealTimeState(std::string para){
-    ROBOT_STATE_PKG pkg;
-    int res = _ptr_robot->GetRobotRealTimeState(&pkg);
-    std::string result = std::to_string(res);
-    for(int i = 0; i < 6; i++){
-        result += "," + std::to_string(pkg.jt_cur_pos[i]);
-    }
-    for(int i = 0; i < 6; i++){
-        result += "," + std::to_string(pkg.tl_cur_pos[i]);
-    }
-    for(int i = 0; i < 6; i++){
-        result += "," + std::to_string(pkg.jt_cur_tor[i]);
-    }
-    return result;
+std::string robot_command_thread::GetRobotRealTimeState(std::string para)
+{
+  ROBOT_STATE_PKG pkg;
+  int res = _ptr_robot->GetRobotRealTimeState(&pkg);
+  std::string result = std::to_string(res);
+  for (int i = 0; i < 6; i++) {
+    result += "," + std::to_string(pkg.jt_cur_pos[i]);
+  }
+  for (int i = 0; i < 6; i++) {
+    result += "," + std::to_string(pkg.tl_cur_pos[i]);
+  }
+  for (int i = 0; i < 6; i++) {
+    result += "," + std::to_string(pkg.jt_cur_tor[i]);
+  }
+  return result;
 }
 
 /**
@@ -11751,10 +13657,11 @@ std::string robot_command_thread::GetRobotRealTimeState(std::string para){
  * @param [in] para-RobotState枚举值
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::AddRobotRealtimeState(std::string para){
-    RobotState state = static_cast<RobotState>(std::stoi(para));
-    int res = _ptr_robot->AddRobotRealtimeState(state);
-    return std::string(std::to_string(res));
+std::string robot_command_thread::AddRobotRealtimeState(std::string para)
+{
+  RobotState state = static_cast<RobotState>(std::stoi(para));
+  int res = _ptr_robot->AddRobotRealtimeState(state);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11762,10 +13669,11 @@ std::string robot_command_thread::AddRobotRealtimeState(std::string para){
  * @param [in] para-RobotState枚举值
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::DeleteRobotRealtimeState(std::string para){
-    RobotState state = static_cast<RobotState>(std::stoi(para));
-    int res = _ptr_robot->DeleteRobotRealtimeState(state);
-    return std::string(std::to_string(res));
+std::string robot_command_thread::DeleteRobotRealtimeState(std::string para)
+{
+  RobotState state = static_cast<RobotState>(std::stoi(para));
+  int res = _ptr_robot->DeleteRobotRealtimeState(state);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11773,30 +13681,39 @@ std::string robot_command_thread::DeleteRobotRealtimeState(std::string para){
  * @param [in] para-status(状态), impedanceFlag(阻抗标志), lamdeDain[6], KGain[6], BGain[6], dragMaxTcpVel, dragMaxTcpOriVel
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::ForceAndJointImpedanceStartStop(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::ForceAndJointImpedanceStartStop(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int status = std::stoi(list.front());list.pop_front();
-    int impedanceFlag = std::stoi(list.front());list.pop_front();
+  int status = std::stoi(list.front());
+  list.pop_front();
+  int impedanceFlag = std::stoi(list.front());
+  list.pop_front();
 
-    std::vector<double> lamdeDain(6);
-    for(int i = 0; i < 6; i++){
-        lamdeDain[i] = std::stod(list.front());list.pop_front();
-    }
-    std::vector<double> KGain(6);
-    for(int i = 0; i < 6; i++){
-        KGain[i] = std::stod(list.front());list.pop_front();
-    }
-    std::vector<double> BGain(6);
-    for(int i = 0; i < 6; i++){
-        BGain[i] = std::stod(list.front());list.pop_front();
-    }
-    double dragMaxTcpVel = std::stod(list.front());list.pop_front();
-    double dragMaxTcpOriVel = std::stod(list.front());list.pop_front();
+  std::vector<double> lamdeDain(6);
+  for (int i = 0; i < 6; i++) {
+    lamdeDain[i] = std::stod(list.front());
+    list.pop_front();
+  }
+  std::vector<double> KGain(6);
+  for (int i = 0; i < 6; i++) {
+    KGain[i] = std::stod(list.front());
+    list.pop_front();
+  }
+  std::vector<double> BGain(6);
+  for (int i = 0; i < 6; i++) {
+    BGain[i] = std::stod(list.front());
+    list.pop_front();
+  }
+  double dragMaxTcpVel = std::stod(list.front());
+  list.pop_front();
+  double dragMaxTcpOriVel = std::stod(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->ForceAndJointImpedanceStartStop(status, impedanceFlag, lamdeDain, KGain, BGain, dragMaxTcpVel, dragMaxTcpOriVel);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->ForceAndJointImpedanceStartStop(
+    status, impedanceFlag, lamdeDain, KGain, BGain, dragMaxTcpVel, dragMaxTcpOriVel);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11804,50 +13721,65 @@ std::string robot_command_thread::ForceAndJointImpedanceStartStop(std::string pa
  * @param [in] para-devAddr(设备地址),regHAddr(寄存器高地址),regLAddr(寄存器低地址),regNum(寄存器数量),data1(数据1),data2(数据2),isNoBlock(是否非阻塞)
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::AxleSensorRegWrite(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::AxleSensorRegWrite(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int devAddr = std::stoi(list.front());list.pop_front();
-    int regHAddr = std::stoi(list.front());list.pop_front();
-    int regLAddr = std::stoi(list.front());list.pop_front();
-    int regNum = std::stoi(list.front());list.pop_front();
-    int data1 = std::stoi(list.front());list.pop_front();
-    int data2 = std::stoi(list.front());list.pop_front();
-    int isNoBlock = std::stoi(list.front());list.pop_front();
+  int devAddr = std::stoi(list.front());
+  list.pop_front();
+  int regHAddr = std::stoi(list.front());
+  list.pop_front();
+  int regLAddr = std::stoi(list.front());
+  list.pop_front();
+  int regNum = std::stoi(list.front());
+  list.pop_front();
+  int data1 = std::stoi(list.front());
+  list.pop_front();
+  int data2 = std::stoi(list.front());
+  list.pop_front();
+  int isNoBlock = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->AxleSensorRegWrite(devAddr, regHAddr, regLAddr, regNum, data1, data2, isNoBlock);
-    return std::string(std::to_string(res));
+  int res =
+    _ptr_robot->AxleSensorRegWrite(devAddr, regHAddr, regLAddr, regNum, data1, data2, isNoBlock);
+  return std::string(std::to_string(res));
 }
-
 
 /**
  * @brief 灵巧手运动控制
  * @param [in] para-idstart(起始ID),slaveNum(从站数量),pos[16](位置),speed[16](速度),force[16](力矩),max_time(最大时间)
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::SetDexterousHandsMove(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetDexterousHandsMove(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int idstart = std::stoi(list.front());list.pop_front();
-    int slaveNum = std::stoi(list.front());list.pop_front();
-    double pos[16];
-    for(int i = 0; i < 16; i++){
-        pos[i] = std::stod(list.front());list.pop_front();
-    }
-    int speed[16];
-    for(int i = 0; i < 16; i++){
-        speed[i] = std::stoi(list.front());list.pop_front();
-    }
-    int force[16];
-    for(int i = 0; i < 16; i++){
-        force[i] = std::stoi(list.front());list.pop_front();
-    }
-    int max_time = std::stoi(list.front());list.pop_front();
+  int idstart = std::stoi(list.front());
+  list.pop_front();
+  int slaveNum = std::stoi(list.front());
+  list.pop_front();
+  double pos[16];
+  for (int i = 0; i < 16; i++) {
+    pos[i] = std::stod(list.front());
+    list.pop_front();
+  }
+  int speed[16];
+  for (int i = 0; i < 16; i++) {
+    speed[i] = std::stoi(list.front());
+    list.pop_front();
+  }
+  int force[16];
+  for (int i = 0; i < 16; i++) {
+    force[i] = std::stoi(list.front());
+    list.pop_front();
+  }
+  int max_time = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetDexterousHandsMove(idstart, slaveNum, pos, speed, force, max_time);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetDexterousHandsMove(idstart, slaveNum, pos, speed, force, max_time);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11855,24 +13787,28 @@ std::string robot_command_thread::SetDexterousHandsMove(std::string para){
  * @param [in] para-id(灵巧手ID),act(动作)
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::SetDexterousHandsAct(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetDexterousHandsAct(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    int act = std::stoi(list.front());list.pop_front();
+  int id = std::stoi(list.front());
+  list.pop_front();
+  int act = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->SetDexterousHandsAct(id, act);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetDexterousHandsAct(id, act);
+  return std::string(std::to_string(res));
 }
 
 /**
  * @brief 清除灵巧手错误
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::ClearDexterousHandsError(std::string para){
-    int res = _ptr_robot->ClearDexterousHandsError();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::ClearDexterousHandsError(std::string para)
+{
+  int res = _ptr_robot->ClearDexterousHandsError();
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11880,18 +13816,21 @@ std::string robot_command_thread::ClearDexterousHandsError(std::string para){
  * @param [in] para-id(灵巧手ID),func[32](功能数组)
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::SetDexterousHandsFunc(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetDexterousHandsFunc(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    int func[32];
-    for(int i = 0; i < 32; i++){
-        func[i] = std::stoi(list.front());list.pop_front();
-    }
+  int id = std::stoi(list.front());
+  list.pop_front();
+  int func[32];
+  for (int i = 0; i < 32; i++) {
+    func[i] = std::stoi(list.front());
+    list.pop_front();
+  }
 
-    int res = _ptr_robot->SetDexterousHandsFunc(id, func);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetDexterousHandsFunc(id, func);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11900,30 +13839,32 @@ std::string robot_command_thread::SetDexterousHandsFunc(std::string para){
  * @param[out] func[32] 功能数组
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::GetDexterousHandsFunc(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::GetDexterousHandsFunc(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int id = std::stoi(list.front());list.pop_front();
-    int func[32] = {0};
+  int id = std::stoi(list.front());
+  list.pop_front();
+  int func[32] = {0};
 
-    int res = _ptr_robot->GetDexterousHandsFunc(id, func);
-    std::string result = std::to_string(res);
-    for(int i = 0; i < 32; i++){
-        result += "," + std::to_string(func[i]);
-    }
-    return result;
+  int res = _ptr_robot->GetDexterousHandsFunc(id, func);
+  std::string result = std::to_string(res);
+  for (int i = 0; i < 32; i++) {
+    result += "," + std::to_string(func[i]);
+  }
+  return result;
 }
-
 
 /**
  * @brief 设置即时速度
  * @param [in] para-vel(速度值)
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::SetSpeedInstant(std::string para){
-    int res = _ptr_robot->SetSpeedInstant(std::stoi(para));
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetSpeedInstant(std::string para)
+{
+  int res = _ptr_robot->SetSpeedInstant(std::stoi(para));
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11931,10 +13872,11 @@ std::string robot_command_thread::SetSpeedInstant(std::string para){
  * @param[out] flag 回中心标志
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::GetWeaveBackCenterConfig(std::string para){
-    int flag;
-    int res = _ptr_robot->GetWeaveBackCenterConfig(flag);
-    return std::string(std::to_string(res) + "," + std::to_string(flag));
+std::string robot_command_thread::GetWeaveBackCenterConfig(std::string para)
+{
+  int flag;
+  int res = _ptr_robot->GetWeaveBackCenterConfig(flag);
+  return std::string(std::to_string(res) + "," + std::to_string(flag));
 }
 
 /**
@@ -11942,9 +13884,10 @@ std::string robot_command_thread::GetWeaveBackCenterConfig(std::string para){
  * @param [in] para-flag(回中心标志)
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::SetWeaveBackCenterConfig(std::string para){
-    int res = _ptr_robot->SetWeaveBackCenterConfig(std::stoi(para));
-    return std::string(std::to_string(res));
+std::string robot_command_thread::SetWeaveBackCenterConfig(std::string para)
+{
+  int res = _ptr_robot->SetWeaveBackCenterConfig(std::stoi(para));
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11952,15 +13895,16 @@ std::string robot_command_thread::SetWeaveBackCenterConfig(std::string para){
  * @param [in] para-x,y,z,rx,ry,rz(偏移量)
  * @retval 0-成功，其他-错误码
  */
-std::string robot_command_thread::SetWeaveOffsetRT(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::SetWeaveOffsetRT(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    DescPose offset;
-    _fillDescPose(list,offset);
+  DescPose offset;
+  _fillDescPose(list, offset);
 
-    int res = _ptr_robot->SetWeaveOffsetRT(offset);
-    return std::string(std::to_string(res));
+  int res = _ptr_robot->SetWeaveOffsetRT(offset);
+  return std::string(std::to_string(res));
 }
 
 /**
@@ -11968,26 +13912,28 @@ std::string robot_command_thread::SetWeaveOffsetRT(std::string para){
  * @param [in] workpieceID 工件号[0-14]
  * @return 错误码，成功返回0
  */
-std::string robot_command_thread::WorkPieceTrsfStart(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para,list);
+std::string robot_command_thread::WorkPieceTrsfStart(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
 
-    int workpieceID = std::stoi(list.front());list.pop_front();
+  int workpieceID = std::stoi(list.front());
+  list.pop_front();
 
-    int res = _ptr_robot->WorkPieceTrsfStart(workpieceID);
-    std::string result = std::to_string(res);
-    return result;
+  int res = _ptr_robot->WorkPieceTrsfStart(workpieceID);
+  std::string result = std::to_string(res);
+  return result;
 }
 
 /**
  * @brief 工件坐标系点位转换结束
  * @return 错误码，成功返回0
  */
-std::string robot_command_thread::WorkPieceTrsfEnd(std::string para){
-    int res = _ptr_robot->WorkPieceTrsfEnd();
-    return std::string(std::to_string(res));
+std::string robot_command_thread::WorkPieceTrsfEnd(std::string para)
+{
+  int res = _ptr_robot->WorkPieceTrsfEnd();
+  return std::string(std::to_string(res));
 }
-
 
 /**
  * @brief 等待夹爪运动状态
@@ -11997,25 +13943,31 @@ std::string robot_command_thread::WorkPieceTrsfEnd(std::string para){
  * @param [in] type 0-平行夹爪，1-旋转夹爪
  * @return 错误码
  */
-std::string robot_command_thread::GripperWaitMotionDone(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para, list);
-    int staus = std::stoi(list.front().c_str()); list.pop_front();
-    int timeout = std::stoi(list.front().c_str()); list.pop_front();
-    int strategy = std::stoi(list.front().c_str()); list.pop_front();
-    int type = std::stoi(list.front().c_str()); list.pop_front();
+std::string robot_command_thread::GripperWaitMotionDone(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  int staus = std::stoi(list.front().c_str());
+  list.pop_front();
+  int timeout = std::stoi(list.front().c_str());
+  list.pop_front();
+  int strategy = std::stoi(list.front().c_str());
+  list.pop_front();
+  int type = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->GripperWaitMotionDone(staus, timeout, strategy, type);
-    return std::to_string(res);
+  int res = _ptr_robot->GripperWaitMotionDone(staus, timeout, strategy, type);
+  return std::to_string(res);
 }
 
 /**
  * @brief 获取当前上位机系统时间并发送给机器人，同步系统时间（由于QNX系统限制，同步精度为分钟级）
  * @return 错误码
  */
-std::string robot_command_thread::SetRobotTime(std::string para){
-    int res = _ptr_robot->SetRobotTime();
-    return std::to_string(res);
+std::string robot_command_thread::SetRobotTime(std::string para)
+{
+  int res = _ptr_robot->SetRobotTime();
+  return std::to_string(res);
 }
 
 /**
@@ -12024,14 +13976,17 @@ std::string robot_command_thread::SetRobotTime(std::string para){
  * @param [in] config 功能配置; 0-无配置; 201-外部急停输入信号1; 202-外部急停输入信号2; 203-一级缩减模式; 204-二级缩减模式; 205-三级缩减模式; 206-常规停止; 207-安全墙1; 208-安全墙2; 209-安全墙3; 210-安全墙4; 211-安全墙5; 212-安全墙6; 213-安全墙7; 214-安全墙8; 215-安全停止重置;
  * @return 错误码
  */
-std::string robot_command_thread::SetSafetyDIConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para, list);
-    int ID = std::stoi(list.front().c_str()); list.pop_front();
-    int config = std::stoi(list.front().c_str()); list.pop_front();
+std::string robot_command_thread::SetSafetyDIConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  int ID = std::stoi(list.front().c_str());
+  list.pop_front();
+  int config = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->SetSafetyDIConfig(ID, config);
-    return std::to_string(res);
+  int res = _ptr_robot->SetSafetyDIConfig(ID, config);
+  return std::to_string(res);
 }
 
 /**
@@ -12040,14 +13995,17 @@ std::string robot_command_thread::SetSafetyDIConfig(std::string para){
  * @param [in] config 功能配置; 0-无配置; 201-急停输出信号1; 202-急停输出信号2; 203-安全状态输出; 204-保护性停止状态输出; 205-机器人运动中; 206-机器人缩减模式; 207-机器人非缩减模式;
  * @return 错误码
  */
-std::string robot_command_thread::SetSafetyDOConfig(std::string para){
-    std::list<std::string> list;
-    _splitString2List(para, list);
-    int ID = std::stoi(list.front().c_str()); list.pop_front();
-    int config = std::stoi(list.front().c_str()); list.pop_front();
+std::string robot_command_thread::SetSafetyDOConfig(std::string para)
+{
+  std::list<std::string> list;
+  _splitString2List(para, list);
+  int ID = std::stoi(list.front().c_str());
+  list.pop_front();
+  int config = std::stoi(list.front().c_str());
+  list.pop_front();
 
-    int res = _ptr_robot->SetSafetyDOConfig(ID, config);
-    return std::to_string(res);
+  int res = _ptr_robot->SetSafetyDOConfig(ID, config);
+  return std::to_string(res);
 }
 
 /**
@@ -12055,276 +14013,277 @@ std::string robot_command_thread::SetSafetyDOConfig(std::string para){
  * @param [in] state 0-退出手动高速；1-进入手动高速
  * @return 错误码
  */
-std::string robot_command_thread::HiSpeedManualSwitch(std::string para){
-    int state = std::stoi(para);
-    int res = _ptr_robot->HiSpeedManualSwitch(state);
-    return std::to_string(res);
+std::string robot_command_thread::HiSpeedManualSwitch(std::string para)
+{
+  int state = std::stoi(para);
+  int res = _ptr_robot->HiSpeedManualSwitch(state);
+  return std::to_string(res);
 }
-
 
 /**
  * @brief 数据端口topic监听回调函数
 */
-void robot_command_thread::_state_recv_callback(){
-    auto msg = robot_feedback_msg();
-    static ROBOT_STATE_PKG ctrl_state;
+void robot_command_thread::_state_recv_callback()
+{
+  auto msg = robot_feedback_msg();
+  static ROBOT_STATE_PKG ctrl_state;
 
-    int state;
-    int tmpres = _ptr_robot->GetSDKComState(&state);
-    if(state == 0){
-        int res = _ptr_robot->GetRobotRealTimeState(&ctrl_state);
-        if(res == 0){
-            msg.j1_cur_pos = ctrl_state.jt_cur_pos[0];
-            msg.j2_cur_pos = ctrl_state.jt_cur_pos[1];
-            msg.j3_cur_pos = ctrl_state.jt_cur_pos[2];
-            msg.j4_cur_pos = ctrl_state.jt_cur_pos[3];
-            msg.j5_cur_pos = ctrl_state.jt_cur_pos[4];
-            msg.j6_cur_pos = ctrl_state.jt_cur_pos[5];
-            msg.j1_cur_tor = ctrl_state.jt_cur_tor[0];
-            msg.j2_cur_tor = ctrl_state.jt_cur_tor[1];
-            msg.j3_cur_tor = ctrl_state.jt_cur_tor[2];
-            msg.j4_cur_tor = ctrl_state.jt_cur_tor[3];
-            msg.j5_cur_tor = ctrl_state.jt_cur_tor[4];
-            msg.j6_cur_tor = ctrl_state.jt_cur_tor[5];
-            msg.cart_x_cur_pos = ctrl_state.tl_cur_pos[0];
-            msg.cart_y_cur_pos = ctrl_state.tl_cur_pos[1];
-            msg.cart_z_cur_pos = ctrl_state.tl_cur_pos[2];
-            msg.cart_a_cur_pos = ctrl_state.tl_cur_pos[3];
-            msg.cart_b_cur_pos = ctrl_state.tl_cur_pos[4];
-            msg.cart_c_cur_pos = ctrl_state.tl_cur_pos[5];
-            msg.flange_x_cur_pos = ctrl_state.flange_cur_pos[0];
-            msg.flange_y_cur_pos = ctrl_state.flange_cur_pos[1];
-            msg.flange_z_cur_pos = ctrl_state.flange_cur_pos[2];
-            msg.flange_a_cur_pos = ctrl_state.flange_cur_pos[3];
-            msg.flange_b_cur_pos = ctrl_state.flange_cur_pos[4];
-            msg.flange_c_cur_pos = ctrl_state.flange_cur_pos[5];
-            msg.exaxispos1 = ctrl_state.extAxisStatus[0].pos;
-            exaxis_1 = ctrl_state.extAxisStatus[0].pos;
-            msg.exaxistatus1[0] = ctrl_state.extAxisStatus[0].errorCode;
-            msg.exaxistatus1[1] = ctrl_state.extAxisStatus[0].ready;      
-            msg.exaxistatus1[2] = ctrl_state.extAxisStatus[0].inPos;      
-            msg.exaxistatus1[3] = ctrl_state.extAxisStatus[0].alarm;      
-            msg.exaxistatus1[4] = ctrl_state.extAxisStatus[0].flerr;      
-            msg.exaxistatus1[5] = ctrl_state.extAxisStatus[0].nlimit;     
-            msg.exaxistatus1[6] = ctrl_state.extAxisStatus[0].pLimit;     
-            msg.exaxistatus1[7] = ctrl_state.extAxisStatus[0].mdbsOffLine;
-            msg.exaxistatus1[8] = ctrl_state.extAxisStatus[0].mdbsTimeout;
-            msg.exaxistatus1[9] = ctrl_state.extAxisStatus[0].homingStatus;
-            msg.exaxispos2 = ctrl_state.extAxisStatus[1].pos;
-            exaxis_2 = ctrl_state.extAxisStatus[1].pos;
-            msg.exaxistatus2[0] = ctrl_state.extAxisStatus[1].errorCode;
-            msg.exaxistatus2[1] = ctrl_state.extAxisStatus[1].ready;      
-            msg.exaxistatus2[2] = ctrl_state.extAxisStatus[1].inPos;      
-            msg.exaxistatus2[3] = ctrl_state.extAxisStatus[1].alarm;      
-            msg.exaxistatus2[4] = ctrl_state.extAxisStatus[1].flerr;      
-            msg.exaxistatus2[5] = ctrl_state.extAxisStatus[1].nlimit;     
-            msg.exaxistatus2[6] = ctrl_state.extAxisStatus[1].pLimit;     
-            msg.exaxistatus2[7] = ctrl_state.extAxisStatus[1].mdbsOffLine;
-            msg.exaxistatus2[8] = ctrl_state.extAxisStatus[1].mdbsTimeout;
-            msg.exaxistatus2[9] = ctrl_state.extAxisStatus[1].homingStatus;
-            msg.exaxispos3 = ctrl_state.extAxisStatus[2].pos;
-            exaxis_3 = ctrl_state.extAxisStatus[2].pos;
-            msg.exaxistatus3[0] = ctrl_state.extAxisStatus[2].errorCode;
-            msg.exaxistatus3[1] = ctrl_state.extAxisStatus[2].ready;      
-            msg.exaxistatus3[2] = ctrl_state.extAxisStatus[2].inPos;      
-            msg.exaxistatus3[3] = ctrl_state.extAxisStatus[2].alarm;      
-            msg.exaxistatus3[4] = ctrl_state.extAxisStatus[2].flerr;      
-            msg.exaxistatus3[5] = ctrl_state.extAxisStatus[2].nlimit;     
-            msg.exaxistatus3[6] = ctrl_state.extAxisStatus[2].pLimit;     
-            msg.exaxistatus3[7] = ctrl_state.extAxisStatus[2].mdbsOffLine;
-            msg.exaxistatus3[8] = ctrl_state.extAxisStatus[2].mdbsTimeout;
-            msg.exaxistatus3[9] = ctrl_state.extAxisStatus[2].homingStatus;
-            msg.exaxispos4 = ctrl_state.extAxisStatus[3].pos;
-            exaxis_4 = ctrl_state.extAxisStatus[3].pos;
-            msg.exaxistatus4[0] = ctrl_state.extAxisStatus[3].errorCode;
-            msg.exaxistatus4[1] = ctrl_state.extAxisStatus[3].ready;      
-            msg.exaxistatus4[2] = ctrl_state.extAxisStatus[3].inPos;      
-            msg.exaxistatus4[3] = ctrl_state.extAxisStatus[3].alarm;      
-            msg.exaxistatus4[4] = ctrl_state.extAxisStatus[3].flerr;      
-            msg.exaxistatus4[5] = ctrl_state.extAxisStatus[3].nlimit;     
-            msg.exaxistatus4[6] = ctrl_state.extAxisStatus[3].pLimit;     
-            msg.exaxistatus4[7] = ctrl_state.extAxisStatus[3].mdbsOffLine;
-            msg.exaxistatus4[8] = ctrl_state.extAxisStatus[3].mdbsTimeout;
-            msg.exaxistatus4[9] = ctrl_state.extAxisStatus[3].homingStatus;
-            msg.ft_fx_data = ctrl_state.ft_sensor_data[0];
-            msg.ft_fy_data = ctrl_state.ft_sensor_data[1];
-            msg.ft_fz_data = ctrl_state.ft_sensor_data[2];
-            msg.ft_tx_data = ctrl_state.ft_sensor_data[3];
-            msg.ft_ty_data = ctrl_state.ft_sensor_data[4];
-            msg.ft_tz_data = ctrl_state.ft_sensor_data[5];
-            msg.ft_actstatus = ctrl_state.ft_sensor_active;
-            msg.robot_mode = ctrl_state.robot_mode;
-            msg.tool_num = ctrl_state.tool;
-            msg.work_num = ctrl_state.user;
-            msg.prg_state = ctrl_state.program_state;
-            msg.abnormal_stop = ctrl_state.abnomalStop;
-            msg.prg_name = std::string(ctrl_state.currentLuaFileName);
-            msg.prg_total_line = ctrl_state.programTotalLine;
-            msg.prg_cur_line = ctrl_state.luaLineNum;
-            msg.dgt_output_h = ctrl_state.cl_dgt_output_h;
-            msg.dgt_output_l = ctrl_state.cl_dgt_output_l;
-            msg.dgt_input_h = ctrl_state.cl_dgt_input_h;
-            msg.dgt_input_l = ctrl_state.cl_dgt_input_l;
-            msg.tl_dgt_output_l = ctrl_state.tl_dgt_output_l;
-            msg.tl_dgt_input_l = ctrl_state.tl_dgt_input_l;
-            msg.emg = ctrl_state.EmergencyStop;
-            msg.safetyboxsig[0] = ctrl_state.safetyBoxSingal[0];
-            msg.safetyboxsig[1] = ctrl_state.safetyBoxSingal[1];
-            msg.safetyboxsig[2] = ctrl_state.safetyBoxSingal[2];
-            msg.safetyboxsig[3] = ctrl_state.safetyBoxSingal[3];
-            msg.safetyboxsig[4] = ctrl_state.safetyBoxSingal[4];
-            msg.safetyboxsig[5] = ctrl_state.safetyBoxSingal[5];
-            msg.robot_motion_done = ctrl_state.motion_done;
-            msg.grip_motion_done = ctrl_state.gripper_motiondone;
-            msg.weldbreakoffstate = ctrl_state.weldingBreakOffState.breakOffState;
-            msg.weldarcstate = ctrl_state.weldingBreakOffState.weldArcState;
-            msg.welding_voltage = ctrl_state.weldVoltage;
-            msg.welding_current = ctrl_state.weldCurrent;
-            msg.weldtrackspeed = ctrl_state.weldTrackVel;
-            msg.main_error_code = ctrl_state.main_code;
-            msg.sub_error_code = ctrl_state.sub_code;
-            // msg.check_sum
-            msg.version = "V" + std::to_string(VERSION_MSG_MARJOR) + "." + \
-                        std::to_string(VERSION_MSG_MINOR) + std::to_string(VERSION_MSG_MINOR2);
-            auto cur_clock = rclcpp::Clock();//使用系统时钟作为时间戳
-            msg.timestamp = RCL_NS_TO_S(cur_clock.now().nanoseconds());
-            msg.tpd_exception = ctrl_state.tpdException;
-            msg.alarm_reboot_robot = ctrl_state.alarmRebootRobot;
-            msg.modbusmasterconnectstate = ctrl_state.modbusMasterConnect;
-            msg.mdbsslaveconnect = ctrl_state.modbusSlaveConnect;
-            msg.socket_conn_timeout = ctrl_state.socketConnTimeout;
-            msg.socket_read_timeout = ctrl_state.socketReadTimeout;
+  int state;
+  int tmpres = _ptr_robot->GetSDKComState(&state);
+  if (state == 0) {
+    int res = _ptr_robot->GetRobotRealTimeState(&ctrl_state);
+    if (res == 0) {
+      msg.j1_cur_pos = ctrl_state.jt_cur_pos[0];
+      msg.j2_cur_pos = ctrl_state.jt_cur_pos[1];
+      msg.j3_cur_pos = ctrl_state.jt_cur_pos[2];
+      msg.j4_cur_pos = ctrl_state.jt_cur_pos[3];
+      msg.j5_cur_pos = ctrl_state.jt_cur_pos[4];
+      msg.j6_cur_pos = ctrl_state.jt_cur_pos[5];
+      msg.j1_cur_tor = ctrl_state.jt_cur_tor[0];
+      msg.j2_cur_tor = ctrl_state.jt_cur_tor[1];
+      msg.j3_cur_tor = ctrl_state.jt_cur_tor[2];
+      msg.j4_cur_tor = ctrl_state.jt_cur_tor[3];
+      msg.j5_cur_tor = ctrl_state.jt_cur_tor[4];
+      msg.j6_cur_tor = ctrl_state.jt_cur_tor[5];
+      msg.cart_x_cur_pos = ctrl_state.tl_cur_pos[0];
+      msg.cart_y_cur_pos = ctrl_state.tl_cur_pos[1];
+      msg.cart_z_cur_pos = ctrl_state.tl_cur_pos[2];
+      msg.cart_a_cur_pos = ctrl_state.tl_cur_pos[3];
+      msg.cart_b_cur_pos = ctrl_state.tl_cur_pos[4];
+      msg.cart_c_cur_pos = ctrl_state.tl_cur_pos[5];
+      msg.flange_x_cur_pos = ctrl_state.flange_cur_pos[0];
+      msg.flange_y_cur_pos = ctrl_state.flange_cur_pos[1];
+      msg.flange_z_cur_pos = ctrl_state.flange_cur_pos[2];
+      msg.flange_a_cur_pos = ctrl_state.flange_cur_pos[3];
+      msg.flange_b_cur_pos = ctrl_state.flange_cur_pos[4];
+      msg.flange_c_cur_pos = ctrl_state.flange_cur_pos[5];
+      msg.exaxispos1 = ctrl_state.extAxisStatus[0].pos;
+      exaxis_1 = ctrl_state.extAxisStatus[0].pos;
+      msg.exaxistatus1[0] = ctrl_state.extAxisStatus[0].errorCode;
+      msg.exaxistatus1[1] = ctrl_state.extAxisStatus[0].ready;
+      msg.exaxistatus1[2] = ctrl_state.extAxisStatus[0].inPos;
+      msg.exaxistatus1[3] = ctrl_state.extAxisStatus[0].alarm;
+      msg.exaxistatus1[4] = ctrl_state.extAxisStatus[0].flerr;
+      msg.exaxistatus1[5] = ctrl_state.extAxisStatus[0].nlimit;
+      msg.exaxistatus1[6] = ctrl_state.extAxisStatus[0].pLimit;
+      msg.exaxistatus1[7] = ctrl_state.extAxisStatus[0].mdbsOffLine;
+      msg.exaxistatus1[8] = ctrl_state.extAxisStatus[0].mdbsTimeout;
+      msg.exaxistatus1[9] = ctrl_state.extAxisStatus[0].homingStatus;
+      msg.exaxispos2 = ctrl_state.extAxisStatus[1].pos;
+      exaxis_2 = ctrl_state.extAxisStatus[1].pos;
+      msg.exaxistatus2[0] = ctrl_state.extAxisStatus[1].errorCode;
+      msg.exaxistatus2[1] = ctrl_state.extAxisStatus[1].ready;
+      msg.exaxistatus2[2] = ctrl_state.extAxisStatus[1].inPos;
+      msg.exaxistatus2[3] = ctrl_state.extAxisStatus[1].alarm;
+      msg.exaxistatus2[4] = ctrl_state.extAxisStatus[1].flerr;
+      msg.exaxistatus2[5] = ctrl_state.extAxisStatus[1].nlimit;
+      msg.exaxistatus2[6] = ctrl_state.extAxisStatus[1].pLimit;
+      msg.exaxistatus2[7] = ctrl_state.extAxisStatus[1].mdbsOffLine;
+      msg.exaxistatus2[8] = ctrl_state.extAxisStatus[1].mdbsTimeout;
+      msg.exaxistatus2[9] = ctrl_state.extAxisStatus[1].homingStatus;
+      msg.exaxispos3 = ctrl_state.extAxisStatus[2].pos;
+      exaxis_3 = ctrl_state.extAxisStatus[2].pos;
+      msg.exaxistatus3[0] = ctrl_state.extAxisStatus[2].errorCode;
+      msg.exaxistatus3[1] = ctrl_state.extAxisStatus[2].ready;
+      msg.exaxistatus3[2] = ctrl_state.extAxisStatus[2].inPos;
+      msg.exaxistatus3[3] = ctrl_state.extAxisStatus[2].alarm;
+      msg.exaxistatus3[4] = ctrl_state.extAxisStatus[2].flerr;
+      msg.exaxistatus3[5] = ctrl_state.extAxisStatus[2].nlimit;
+      msg.exaxistatus3[6] = ctrl_state.extAxisStatus[2].pLimit;
+      msg.exaxistatus3[7] = ctrl_state.extAxisStatus[2].mdbsOffLine;
+      msg.exaxistatus3[8] = ctrl_state.extAxisStatus[2].mdbsTimeout;
+      msg.exaxistatus3[9] = ctrl_state.extAxisStatus[2].homingStatus;
+      msg.exaxispos4 = ctrl_state.extAxisStatus[3].pos;
+      exaxis_4 = ctrl_state.extAxisStatus[3].pos;
+      msg.exaxistatus4[0] = ctrl_state.extAxisStatus[3].errorCode;
+      msg.exaxistatus4[1] = ctrl_state.extAxisStatus[3].ready;
+      msg.exaxistatus4[2] = ctrl_state.extAxisStatus[3].inPos;
+      msg.exaxistatus4[3] = ctrl_state.extAxisStatus[3].alarm;
+      msg.exaxistatus4[4] = ctrl_state.extAxisStatus[3].flerr;
+      msg.exaxistatus4[5] = ctrl_state.extAxisStatus[3].nlimit;
+      msg.exaxistatus4[6] = ctrl_state.extAxisStatus[3].pLimit;
+      msg.exaxistatus4[7] = ctrl_state.extAxisStatus[3].mdbsOffLine;
+      msg.exaxistatus4[8] = ctrl_state.extAxisStatus[3].mdbsTimeout;
+      msg.exaxistatus4[9] = ctrl_state.extAxisStatus[3].homingStatus;
+      msg.ft_fx_data = ctrl_state.ft_sensor_data[0];
+      msg.ft_fy_data = ctrl_state.ft_sensor_data[1];
+      msg.ft_fz_data = ctrl_state.ft_sensor_data[2];
+      msg.ft_tx_data = ctrl_state.ft_sensor_data[3];
+      msg.ft_ty_data = ctrl_state.ft_sensor_data[4];
+      msg.ft_tz_data = ctrl_state.ft_sensor_data[5];
+      msg.ft_actstatus = ctrl_state.ft_sensor_active;
+      msg.robot_mode = ctrl_state.robot_mode;
+      msg.tool_num = ctrl_state.tool;
+      msg.work_num = ctrl_state.user;
+      msg.prg_state = ctrl_state.program_state;
+      msg.abnormal_stop = ctrl_state.abnomalStop;
+      msg.prg_name = std::string(ctrl_state.currentLuaFileName);
+      msg.prg_total_line = ctrl_state.programTotalLine;
+      msg.prg_cur_line = ctrl_state.luaLineNum;
+      msg.dgt_output_h = ctrl_state.cl_dgt_output_h;
+      msg.dgt_output_l = ctrl_state.cl_dgt_output_l;
+      msg.dgt_input_h = ctrl_state.cl_dgt_input_h;
+      msg.dgt_input_l = ctrl_state.cl_dgt_input_l;
+      msg.tl_dgt_output_l = ctrl_state.tl_dgt_output_l;
+      msg.tl_dgt_input_l = ctrl_state.tl_dgt_input_l;
+      msg.emg = ctrl_state.EmergencyStop;
+      msg.safetyboxsig[0] = ctrl_state.safetyBoxSingal[0];
+      msg.safetyboxsig[1] = ctrl_state.safetyBoxSingal[1];
+      msg.safetyboxsig[2] = ctrl_state.safetyBoxSingal[2];
+      msg.safetyboxsig[3] = ctrl_state.safetyBoxSingal[3];
+      msg.safetyboxsig[4] = ctrl_state.safetyBoxSingal[4];
+      msg.safetyboxsig[5] = ctrl_state.safetyBoxSingal[5];
+      msg.robot_motion_done = ctrl_state.motion_done;
+      msg.grip_motion_done = ctrl_state.gripper_motiondone;
+      msg.weldbreakoffstate = ctrl_state.weldingBreakOffState.breakOffState;
+      msg.weldarcstate = ctrl_state.weldingBreakOffState.weldArcState;
+      msg.welding_voltage = ctrl_state.weldVoltage;
+      msg.welding_current = ctrl_state.weldCurrent;
+      msg.weldtrackspeed = ctrl_state.weldTrackVel;
+      msg.main_error_code = ctrl_state.main_code;
+      msg.sub_error_code = ctrl_state.sub_code;
+      // msg.check_sum
+      msg.version = "V" + std::to_string(VERSION_MSG_MARJOR) + "." +
+                    std::to_string(VERSION_MSG_MINOR) + std::to_string(VERSION_MSG_MINOR2);
+      auto cur_clock = rclcpp::Clock();  //使用系统时钟作为时间戳
+      msg.timestamp = RCL_NS_TO_S(cur_clock.now().nanoseconds());
+      msg.tpd_exception = ctrl_state.tpdException;
+      msg.alarm_reboot_robot = ctrl_state.alarmRebootRobot;
+      msg.modbusmasterconnectstate = ctrl_state.modbusMasterConnect;
+      msg.mdbsslaveconnect = ctrl_state.modbusSlaveConnect;
+      msg.socket_conn_timeout = ctrl_state.socketConnTimeout;
+      msg.socket_read_timeout = ctrl_state.socketReadTimeout;
 
-            msg.btn_box_stop_signa = ctrl_state.btnBoxStopSignal;
-            msg.strangeposflag = ctrl_state.strangePosFlag;
-            msg.drag_alarm = ctrl_state.dragAlarm;
-            msg.alarm = ctrl_state.alarm;
-            msg.safetydoor_alarm = ctrl_state.safetyDoorAlarm;
-            msg.safetyplanealarm = ctrl_state.safetyPlaneAlarm;
-            msg.motionalarm = ctrl_state.motonAlarm;
-            msg.interferealarm = ctrl_state.interfaceAlarm;
-            msg.endluaerrcode = ctrl_state.endLuaErrCode;
-            msg.dr_alarm = ctrl_state.driverAlarm;
-            msg.udpcmdstate = ctrl_state.udpCmdState;
-            msg.aliveslavenumerror = ctrl_state.aliveSlaveNumError;
-            msg.gripperfaultnum = ctrl_state.gripper_fault_id;
-            msg.slavecomerror[0] = ctrl_state.slaveComError[0];
-            msg.slavecomerror[1] = ctrl_state.slaveComError[1];
-            msg.slavecomerror[2] = ctrl_state.slaveComError[2];
-            msg.slavecomerror[3] = ctrl_state.slaveComError[3];
-            msg.slavecomerror[4] = ctrl_state.slaveComError[4];
-            msg.slavecomerror[5] = ctrl_state.slaveComError[5];
-            msg.slavecomerror[6] = ctrl_state.slaveComError[6];
-            msg.slavecomerror[7] = ctrl_state.slaveComError[7];
-            msg.cmdpointerror = ctrl_state.cmdPointError;
-            msg.ioerror = ctrl_state.IOError;
-            msg.grippererro = ctrl_state.gripperError;
-            msg.fileerror = ctrl_state.fileError;
-            msg.paraerror = ctrl_state.paraError;
-            msg.exaxis_out_slimit_error = ctrl_state.exaxisOutLimitError;
-            msg.dr_com_err[0] = ctrl_state.driverComError[0];
-            msg.dr_com_err[1] = ctrl_state.driverComError[1];
-            msg.dr_com_err[2] = ctrl_state.driverComError[2];
-            msg.dr_com_err[3] = ctrl_state.driverComError[3];
-            msg.dr_com_err[4] = ctrl_state.driverComError[4];
-            msg.dr_com_err[5] = ctrl_state.driverComError[5];
-            msg.dr_err = ctrl_state.driverError;
-            msg.out_sflimit_err = ctrl_state.outSoftLimitError;
-            msg.collision_err = ctrl_state.collisionState;
-            msg.weld_readystate = ctrl_state.weldReadyState;
-            msg.alarm_check_emerg_stop_btn = ctrl_state.alarmCheckEmergStopBtn;
-            msg.ts_web_state_com_error = ctrl_state.tsWebStateComErr;
-            msg.ts_tm_cmd_com_error = ctrl_state.tsTmCmdComError;
-            msg.ts_tm_state_com_error = ctrl_state.tsTmStateComError;
-            msg.ctrlboxerror = ctrl_state.ctrlBoxError;
-            msg.safety_data_state = ctrl_state.safetyDataState;
-            msg.forcesensorerrstate = ctrl_state.forceSensorErrState;
-            msg.ctrlopenluaerrcode[0] = ctrl_state.ctrlOpenLuaErrCode[0];
-            msg.ctrlopenluaerrcode[1] = ctrl_state.ctrlOpenLuaErrCode[1];
-            msg.ctrlopenluaerrcode[2] = ctrl_state.ctrlOpenLuaErrCode[2];
-            msg.ctrlopenluaerrcode[3] = ctrl_state.ctrlOpenLuaErrCode[3];
-            msg.auxservoservoid = ctrl_state.aux_state.servoId;
-            msg.auxservoerrcode = ctrl_state.aux_state.servoErrCode;
-            msg.auxservostate = ctrl_state.aux_state.servoState;
-            msg.auxservoactualpos = ctrl_state.aux_state.servoPos;
-            msg.auxservoctualspeed = ctrl_state.aux_state.servoVel;
-            msg.auxservoactualtorque = ctrl_state.aux_state.servoTorque;
-            msg.extpioinput[0] = ctrl_state.extDIState[0];
-            msg.extpioinput[1] = ctrl_state.extDIState[1];
-            msg.extpioinput[2] = ctrl_state.extDIState[2];
-            msg.extpioinput[3] = ctrl_state.extDIState[3];
-            msg.extpioinput[4] = ctrl_state.extDIState[4];
-            msg.extpioinput[5] = ctrl_state.extDIState[5];
-            msg.extpioinput[6] = ctrl_state.extDIState[6];
-            msg.extpioinput[7] = ctrl_state.extDIState[7];
-            msg.extpiooutput[0] = ctrl_state.extDOState[0];
-            msg.extpiooutput[1] = ctrl_state.extDOState[1];
-            msg.extpiooutput[2] = ctrl_state.extDOState[2];
-            msg.extpiooutput[3] = ctrl_state.extDOState[3];
-            msg.extpiooutput[4] = ctrl_state.extDOState[4];
-            msg.extpiooutput[5] = ctrl_state.extDOState[5];
-            msg.extpiooutput[6] = ctrl_state.extDOState[6];
-            msg.extpiooutput[7] = ctrl_state.extDOState[7];
-            msg.extadcinput[0] = ctrl_state.extAIState[0];
-            msg.extadcinput[1] = ctrl_state.extAIState[1];
-            msg.extadcinput[2] = ctrl_state.extAIState[2];
-            msg.extadcinput[3] = ctrl_state.extAIState[3];
-            msg.extadcoutput[0] = ctrl_state.extAOState[0];
-            msg.extadcoutput[1] = ctrl_state.extAOState[1];
-            msg.extadcoutput[2] = ctrl_state.extAOState[2];
-            msg.extadcoutput[3] = ctrl_state.extAOState[3];
-            msg.reconnect_flag = res;
-            msg.exaxiscoordid = ctrl_state.exaxisCoordID;
-            msg.slave_status_1 = 0;
-            msg.slave_status_2 = 0;
-            msg.slave_domain_id = 0;
-            msg.program_run_state = ctrl_state.programRunState;
-            msg.speed_scale_manual = ctrl_state.speedScaleManual;
-            msg.speed_scale_auto = ctrl_state.speedScaleAuto;
-            msg.slave1_reconnect_flag = 0;
-            msg.slave2_reconnect_flag = 0;
-            msg.slave1_exaxistatus_errorcode = 0;
-            msg.slave2_exaxistatus_errorcode = 0;
+      msg.btn_box_stop_signa = ctrl_state.btnBoxStopSignal;
+      msg.strangeposflag = ctrl_state.strangePosFlag;
+      msg.drag_alarm = ctrl_state.dragAlarm;
+      msg.alarm = ctrl_state.alarm;
+      msg.safetydoor_alarm = ctrl_state.safetyDoorAlarm;
+      msg.safetyplanealarm = ctrl_state.safetyPlaneAlarm;
+      msg.motionalarm = ctrl_state.motonAlarm;
+      msg.interferealarm = ctrl_state.interfaceAlarm;
+      msg.endluaerrcode = ctrl_state.endLuaErrCode;
+      msg.dr_alarm = ctrl_state.driverAlarm;
+      msg.udpcmdstate = ctrl_state.udpCmdState;
+      msg.aliveslavenumerror = ctrl_state.aliveSlaveNumError;
+      msg.gripperfaultnum = ctrl_state.gripper_fault_id;
+      msg.slavecomerror[0] = ctrl_state.slaveComError[0];
+      msg.slavecomerror[1] = ctrl_state.slaveComError[1];
+      msg.slavecomerror[2] = ctrl_state.slaveComError[2];
+      msg.slavecomerror[3] = ctrl_state.slaveComError[3];
+      msg.slavecomerror[4] = ctrl_state.slaveComError[4];
+      msg.slavecomerror[5] = ctrl_state.slaveComError[5];
+      msg.slavecomerror[6] = ctrl_state.slaveComError[6];
+      msg.slavecomerror[7] = ctrl_state.slaveComError[7];
+      msg.cmdpointerror = ctrl_state.cmdPointError;
+      msg.ioerror = ctrl_state.IOError;
+      msg.grippererro = ctrl_state.gripperError;
+      msg.fileerror = ctrl_state.fileError;
+      msg.paraerror = ctrl_state.paraError;
+      msg.exaxis_out_slimit_error = ctrl_state.exaxisOutLimitError;
+      msg.dr_com_err[0] = ctrl_state.driverComError[0];
+      msg.dr_com_err[1] = ctrl_state.driverComError[1];
+      msg.dr_com_err[2] = ctrl_state.driverComError[2];
+      msg.dr_com_err[3] = ctrl_state.driverComError[3];
+      msg.dr_com_err[4] = ctrl_state.driverComError[4];
+      msg.dr_com_err[5] = ctrl_state.driverComError[5];
+      msg.dr_err = ctrl_state.driverError;
+      msg.out_sflimit_err = ctrl_state.outSoftLimitError;
+      msg.collision_err = ctrl_state.collisionState;
+      msg.weld_readystate = ctrl_state.weldReadyState;
+      msg.alarm_check_emerg_stop_btn = ctrl_state.alarmCheckEmergStopBtn;
+      msg.ts_web_state_com_error = ctrl_state.tsWebStateComErr;
+      msg.ts_tm_cmd_com_error = ctrl_state.tsTmCmdComError;
+      msg.ts_tm_state_com_error = ctrl_state.tsTmStateComError;
+      msg.ctrlboxerror = ctrl_state.ctrlBoxError;
+      msg.safety_data_state = ctrl_state.safetyDataState;
+      msg.forcesensorerrstate = ctrl_state.forceSensorErrState;
+      msg.ctrlopenluaerrcode[0] = ctrl_state.ctrlOpenLuaErrCode[0];
+      msg.ctrlopenluaerrcode[1] = ctrl_state.ctrlOpenLuaErrCode[1];
+      msg.ctrlopenluaerrcode[2] = ctrl_state.ctrlOpenLuaErrCode[2];
+      msg.ctrlopenluaerrcode[3] = ctrl_state.ctrlOpenLuaErrCode[3];
+      msg.auxservoservoid = ctrl_state.aux_state.servoId;
+      msg.auxservoerrcode = ctrl_state.aux_state.servoErrCode;
+      msg.auxservostate = ctrl_state.aux_state.servoState;
+      msg.auxservoactualpos = ctrl_state.aux_state.servoPos;
+      msg.auxservoctualspeed = ctrl_state.aux_state.servoVel;
+      msg.auxservoactualtorque = ctrl_state.aux_state.servoTorque;
+      msg.extpioinput[0] = ctrl_state.extDIState[0];
+      msg.extpioinput[1] = ctrl_state.extDIState[1];
+      msg.extpioinput[2] = ctrl_state.extDIState[2];
+      msg.extpioinput[3] = ctrl_state.extDIState[3];
+      msg.extpioinput[4] = ctrl_state.extDIState[4];
+      msg.extpioinput[5] = ctrl_state.extDIState[5];
+      msg.extpioinput[6] = ctrl_state.extDIState[6];
+      msg.extpioinput[7] = ctrl_state.extDIState[7];
+      msg.extpiooutput[0] = ctrl_state.extDOState[0];
+      msg.extpiooutput[1] = ctrl_state.extDOState[1];
+      msg.extpiooutput[2] = ctrl_state.extDOState[2];
+      msg.extpiooutput[3] = ctrl_state.extDOState[3];
+      msg.extpiooutput[4] = ctrl_state.extDOState[4];
+      msg.extpiooutput[5] = ctrl_state.extDOState[5];
+      msg.extpiooutput[6] = ctrl_state.extDOState[6];
+      msg.extpiooutput[7] = ctrl_state.extDOState[7];
+      msg.extadcinput[0] = ctrl_state.extAIState[0];
+      msg.extadcinput[1] = ctrl_state.extAIState[1];
+      msg.extadcinput[2] = ctrl_state.extAIState[2];
+      msg.extadcinput[3] = ctrl_state.extAIState[3];
+      msg.extadcoutput[0] = ctrl_state.extAOState[0];
+      msg.extadcoutput[1] = ctrl_state.extAOState[1];
+      msg.extadcoutput[2] = ctrl_state.extAOState[2];
+      msg.extadcoutput[3] = ctrl_state.extAOState[3];
+      msg.reconnect_flag = res;
+      msg.exaxiscoordid = ctrl_state.exaxisCoordID;
+      msg.slave_status_1 = 0;
+      msg.slave_status_2 = 0;
+      msg.slave_domain_id = 0;
+      msg.program_run_state = ctrl_state.programRunState;
+      msg.speed_scale_manual = ctrl_state.speedScaleManual;
+      msg.speed_scale_auto = ctrl_state.speedScaleAuto;
+      msg.slave1_reconnect_flag = 0;
+      msg.slave2_reconnect_flag = 0;
+      msg.slave1_exaxistatus_errorcode = 0;
+      msg.slave2_exaxistatus_errorcode = 0;
 
-
-            // _state_publisher->publish(msg);
-            // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"exaxistatus1=%d",msg.exaxistatus1[0]);
-            // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j1_cur_pos=%f",msg.j1_cur_pos);
-            // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j2_cur_pos=%f",msg.j2_cur_pos);
-            // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j3_cur_pos=%f",msg.j3_cur_pos);
-            // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j4_cur_pos=%f",msg.j4_cur_pos);
-            // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j5_cur_pos=%f",msg.j5_cur_pos);
-            // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j6_cur_pos=%f",msg.j6_cur_pos);
-        }else{
-            RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"state feedback error: error_code=%d",res);
-            msg.reconnect_flag = 1;
-        }
-    }else{
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"connect error: error_code=%d",state);
-        msg.reconnect_flag = 1;
+      // _state_publisher->publish(msg);
+      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"exaxistatus1=%d",msg.exaxistatus1[0]);
+      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j1_cur_pos=%f",msg.j1_cur_pos);
+      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j2_cur_pos=%f",msg.j2_cur_pos);
+      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j3_cur_pos=%f",msg.j3_cur_pos);
+      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j4_cur_pos=%f",msg.j4_cur_pos);
+      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j5_cur_pos=%f",msg.j5_cur_pos);
+      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j6_cur_pos=%f",msg.j6_cur_pos);
+    } else {
+      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "state feedback error: error_code=%d", res);
+      msg.reconnect_flag = 1;
     }
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "connect error: error_code=%d", state);
+    msg.reconnect_flag = 1;
+  }
+  _state_publisher->publish(msg);
+}
+
+/**
+ * @brief 数据端口topic监听回调函数
+*/
+void robot_command_thread::_ping_recv_callback()
+{
+  auto msg = robot_feedback_msg();
+  static ROBOT_STATE_PKG ctrl_state;
+  bool current_ping_status = _check_ping("192.168.58.2");
+  int state;
+  int tmpres = _ptr_robot->GetSDKComState(&state);
+  if ((!current_ping_status) || (state != 0)) {
+    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "192.168.58.2 is error: error_code=%d", state);
+    msg.reconnect_flag = 1;
     _state_publisher->publish(msg);
+  }
 }
 
-/**
- * @brief 数据端口topic监听回调函数
-*/
-void robot_command_thread::_ping_recv_callback(){
-    auto msg = robot_feedback_msg();
-    static ROBOT_STATE_PKG ctrl_state;
-    bool current_ping_status = _check_ping("192.168.58.2");
-    int state;
-    int tmpres = _ptr_robot->GetSDKComState(&state);
-    if((!current_ping_status) || (state != 0)){
-        RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"192.168.58.2 is error: error_code=%d",state);
-        msg.reconnect_flag = 1;
-        _state_publisher->publish(msg);
-        
-    }
-}
-
-bool robot_command_thread::_check_ping(const std::string& ip_address) {
-    std::string cmd = "ping -c 1 -W 1 " + ip_address + " > /dev/null 2>&1";
-    int result = system(cmd.c_str());
-    return (result == 0);
+bool robot_command_thread::_check_ping(const std::string & ip_address)
+{
+  std::string cmd = "ping -c 1 -W 1 " + ip_address + " > /dev/null 2>&1";
+  int result = system(cmd.c_str());
+  return (result == 0);
 }
