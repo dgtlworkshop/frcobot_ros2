@@ -3,6 +3,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include <set>
+
 #include "fairino_hardware/version_control.h"
 #include "sys/mman.h"
 
@@ -142,8 +144,12 @@ typedef enum _msg_id {
  * @brief 构造函数，用于初始化参数服务器中的变量，加载SDK库并连接机械臂
  * @param[in] node_name-节点名称，构建ros2 node必须的参数
  */
-robot_command_thread::robot_command_thread(const std::string node_name)
-: rclcpp::Node(node_name, rclcpp::NodeOptions().use_intra_process_comms(true))
+robot_command_thread::robot_command_thread(
+  const std::string node_name, std::shared_ptr<fairino_hardware::RobotSession> session,
+  const std::string & robot_ip)
+: rclcpp::Node(node_name),
+  _session(session ? session : std::make_shared<fairino_hardware::RobotSession>()),
+  _hardware_managed(session != nullptr)
 {
   using namespace std::chrono_literals;
 
@@ -199,8 +205,9 @@ robot_command_thread::robot_command_thread(const std::string node_name)
   /*********************************************************************************************/
 
   /********************************尝试使用SDK库连接机械臂******************************************/
-  _controller_ip = CONTROLLER_IP;  //控制器默认ip地址
-  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Robot ip:%s", CONTROLLER_IP);
+  _controller_ip =
+    this->declare_parameter<std::string>("robot_ip", robot_ip.empty() ? CONTROLLER_IP : robot_ip);
+  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Robot ip:%s", _controller_ip.c_str());
 
   //打印输出版本信息及其他前置信息
   RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(hello)]);
@@ -217,13 +224,6 @@ robot_command_thread::robot_command_thread(const std::string node_name)
     (std::string(msgout[msg_id(build_time)]) + std::string("%s,%s")).c_str(), __TIME__, __DATE__);
 
   //开始初始化
-  int connect_count = 0;
-  _ptr_robot = std::make_unique<FRRobot>();
-  // _ptr_robot->SetReConnectParam(true,86400000,500);
-  _ptr_robot->SetReConnectParam(true, 86400000, 500);
-  _ptr_robot->LoggerInit(0, "/home/fairino/ros2_ws/fairino_SDK_log/cppsdk.log", 5);
-  _ptr_robot->SetLoggerLevel(3);
-
   std::vector<RobotState> states = {// RobotState::FrameHead,
                                     // RobotState::FrameCnt,
                                     // RobotState::DataLen,
@@ -358,40 +358,37 @@ robot_command_thread::robot_command_thread(const std::string node_name)
                                     RobotState::TsWebStateComErr,
                                     RobotState::ExaxisCoordID,
                                     RobotState::ProgramRunState};
-  int rnt = _ptr_robot->SetRobotRealtimeStateConfig(states, 8);
-  while (connect_count < _connect_retry_SDK) {
-    error_t returncode = _ptr_robot->RPC(_controller_ip.c_str());
-    if (returncode != 0) {
-      connect_count++;
-    } else {  //正常情况
-      break;
-    }
-    if (connect_count == _connect_retry_SDK) {
-      RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(connect_failed)]);
-      exit(0);
-    }
-  }
+  _session->connect(_controller_ip, states);
+  _ptr_robot = _session->sdk();
+  _session->start_monitor();
 
   // _locktimer = this->create_wall_timer(100ms,std::bind(&robot_command_thread::_getRobotRTState,this));
-  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(connect_success)]);
+  RCLCPP_INFO(
+    this->get_logger(), "SDK monitoring started; inspect fairino/diagnostics for readiness");
   /*********************************************************************************************/
-  _state_publisher = this->create_publisher<robot_feedback_msg>("nonrt_state_data", 1);
+  _state_publisher = this->create_publisher<robot_feedback_msg>(
+    "nonrt_state_data", rclcpp::QoS(1).reliable().transient_local());
+  _diagnostics = this->create_publisher<diagnostic_msgs::msg::DiagnosticArray>(
+    "fairino/diagnostics", rclcpp::QoS(1).reliable().transient_local());
+  _recover_service = this->create_service<std_srvs::srv::Trigger>(
+    "fairino/recover", [this](
+                         const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+                         std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+      response->success = _session->recover(response->message);
+      if (!response->success) {
+        RCLCPP_ERROR(this->get_logger(), "Recovery refused: %s", response->message.c_str());
+      }
+    });
   _locktimer1 = this->create_wall_timer(
     10ms, std::bind(
             &robot_command_thread::_state_recv_callback,
             this));  //创建一个定时器任务用于获取非实时状态数据,触发间隔为100ms
-  _locktimer2 =
-    this->create_wall_timer(100ms, std::bind(&robot_command_thread::_ping_recv_callback, this));
 }
 
 /**
  * @brief 析构函数，关闭xmlrpc连接并销毁SDK实例对象
  */
-robot_command_thread::~robot_command_thread()
-{
-  //_ptr_robot->CloseRPC();
-  _ptr_robot->~FRRobot();
-}
+robot_command_thread::~robot_command_thread() { _locktimer1.reset(); }
 
 /**
  * @brief 私有函数，service的回调函数，用于解析字符串指令，跳转对应的处理函数
@@ -408,6 +405,59 @@ void robot_command_thread::_parseROSCommandData_callback(
   if (std::regex_match(req->cmd_str, func_match, func_reg)) {
     std::string func_name = func_match[1];
     std::string para_list = func_match[2];
+    if (func_name == "StopMotion") {
+      res->cmd_res = _session->stop_motion() ? "0" : "-1";
+      return;
+    }
+    std::unique_lock<std::mutex> sdk_guard(_session->sdk_mutex(), std::try_to_lock);
+    if (!sdk_guard.owns_lock()) {
+      RCLCPP_ERROR(this->get_logger(), "SDK busy; command '%s' refused", func_name.c_str());
+      res->cmd_res = "-1";
+      return;
+    }
+    const auto snapshot = _session->snapshot();
+    // Only explicitly reviewed commands may bypass ros2_control ownership.
+    static const std::set<std::string> shared_commands = {
+      "GetSDKVersion", "GetErrorCode", "GetControllerIP", "GetRobotVersion", "ResetAllError",
+      "RobotEnable",   "Mode",         "SetDO",           "SetToolDO",       "SetAO",
+      "SetToolAO"};
+    static const std::set<std::string> connection_commands = {
+      "CloseRPC",
+      "SetReConnectParam",
+      "SetRobotRealtimeStateConfig",
+      "SetRobotRealtimeStatePeriod",
+      "AddRobotRealtimeState",
+      "DeleteRobotRealtimeState"};
+    if (
+      snapshot.claimed || !snapshot.connected || connection_commands.count(func_name) ||
+      (_hardware_managed && !shared_commands.count(func_name))) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Command '%s' refused: controller owns motion, SDK disconnected, or command is not "
+        "allowed on a shared session; use nonrt_state_data for feedback",
+        func_name.c_str());
+      res->cmd_res = "-1";
+      return;
+    }
+    if (_hardware_managed) {
+      std::string pattern;
+      if (func_name == "RobotEnable" || func_name == "Mode") {
+        pattern = "[01]";
+      } else if (func_name == "SetDO") {
+        pattern = "([0-9]|1[0-5]),[01]";
+      } else if (func_name == "SetToolDO") {
+        pattern = "[01],[01]";
+      } else if (func_name == "SetAO" || func_name == "SetToolAO") {
+        pattern = (func_name == "SetAO" ? "[01]," : "0,") +
+                  std::string("(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)");
+      }
+      if (!std::regex_match(para_list, std::regex(pattern))) {
+        RCLCPP_ERROR(
+          this->get_logger(), "Invalid arguments for shared command '%s'", func_name.c_str());
+        res->cmd_res = "-1";
+        return;
+      }
+    }
     RCLCPP_INFO(
       rclcpp::get_logger(LOGGER_NAME),
       (std::string(msgout[msg_id(receive_cmd)]) + std::string("%s,%s")).c_str(), func_name.c_str(),
@@ -2641,8 +2691,12 @@ std::string robot_command_thread::GetMsgVersion(std::string para)
  */
 std::string robot_command_thread::GetRobotVersion(std::string para)
 {
-  char robotmodel[64], softversion[64], ctrversion[64];
+  char robotmodel[64]{}, softversion[64]{}, ctrversion[64]{};
   int res = _ptr_robot->GetSoftwareVersion(robotmodel, softversion, ctrversion);
+  if (res != 0) {
+    RCLCPP_ERROR(this->get_logger(), "GetSoftwareVersion failed: %d", res);
+    return std::to_string(res);
+  }
   return std::string(std::to_string(res) + ",robot:" + std::string(softversion));
 }
 
@@ -2712,8 +2766,12 @@ std::string robot_command_thread::GetWeldingBreakOffState(std::string para)
  */
 std::string robot_command_thread::GetErrorCode(std::string para)
 {
-  int maincode, subcode;
-  _ptr_robot->GetRobotErrorCode(&maincode, &subcode);
+  int maincode = 0, subcode = 0;
+  const int result = _ptr_robot->GetRobotErrorCode(&maincode, &subcode);
+  if (result != 0) {
+    RCLCPP_ERROR(this->get_logger(), "GetRobotErrorCode failed: %d", result);
+    return std::to_string(result);
+  }
   return std::string(std::to_string(maincode) + "," + std::to_string(subcode));
 }
 
@@ -4533,9 +4591,13 @@ std::string robot_command_thread::AllOpenLuaDelete(std::string para)
  */
 std::string robot_command_thread::GetSDKVersion(std::string para)
 {
-  char version;
-  int res = _ptr_robot->GetSDKVersion(&version);
-  return std::string(std::to_string(res) + ",SDKVersion:" + std::to_string(version));
+  char version[64]{};
+  const int res = _ptr_robot->GetSDKVersion(version);
+  if (res != 0) {
+    RCLCPP_ERROR(this->get_logger(), "GetSDKVersion failed: %d", res);
+    return std::to_string(res);
+  }
+  return std::to_string(res) + ",SDKVersion:" + std::string(version);
 }
 
 /**
@@ -4545,9 +4607,13 @@ std::string robot_command_thread::GetSDKVersion(std::string para)
  */
 std::string robot_command_thread::GetControllerIP(std::string para)
 {
-  char ip;
-  int res = _ptr_robot->GetControllerIP(&ip);
-  return std::string(std::to_string(res) + ",ControllerIP:" + std::to_string(ip));
+  char ip[64]{};
+  const int res = _ptr_robot->GetControllerIP(ip);
+  if (res != 0) {
+    RCLCPP_ERROR(this->get_logger(), "GetControllerIP failed: %d", res);
+    return std::to_string(res);
+  }
+  return std::to_string(res) + ",ControllerIP:" + std::string(ip);
 }
 
 /**
@@ -14026,264 +14092,258 @@ std::string robot_command_thread::HiSpeedManualSwitch(std::string para)
 void robot_command_thread::_state_recv_callback()
 {
   auto msg = robot_feedback_msg();
-  static ROBOT_STATE_PKG ctrl_state;
+  const auto snapshot = _session->snapshot();
+  const auto & ctrl_state = snapshot.state;
+  if (snapshot.valid) {
+    msg.j1_cur_pos = ctrl_state.jt_cur_pos[0];
+    msg.j2_cur_pos = ctrl_state.jt_cur_pos[1];
+    msg.j3_cur_pos = ctrl_state.jt_cur_pos[2];
+    msg.j4_cur_pos = ctrl_state.jt_cur_pos[3];
+    msg.j5_cur_pos = ctrl_state.jt_cur_pos[4];
+    msg.j6_cur_pos = ctrl_state.jt_cur_pos[5];
+    msg.j1_cur_tor = ctrl_state.jt_cur_tor[0];
+    msg.j2_cur_tor = ctrl_state.jt_cur_tor[1];
+    msg.j3_cur_tor = ctrl_state.jt_cur_tor[2];
+    msg.j4_cur_tor = ctrl_state.jt_cur_tor[3];
+    msg.j5_cur_tor = ctrl_state.jt_cur_tor[4];
+    msg.j6_cur_tor = ctrl_state.jt_cur_tor[5];
+    msg.cart_x_cur_pos = ctrl_state.tl_cur_pos[0];
+    msg.cart_y_cur_pos = ctrl_state.tl_cur_pos[1];
+    msg.cart_z_cur_pos = ctrl_state.tl_cur_pos[2];
+    msg.cart_a_cur_pos = ctrl_state.tl_cur_pos[3];
+    msg.cart_b_cur_pos = ctrl_state.tl_cur_pos[4];
+    msg.cart_c_cur_pos = ctrl_state.tl_cur_pos[5];
+    msg.flange_x_cur_pos = ctrl_state.flange_cur_pos[0];
+    msg.flange_y_cur_pos = ctrl_state.flange_cur_pos[1];
+    msg.flange_z_cur_pos = ctrl_state.flange_cur_pos[2];
+    msg.flange_a_cur_pos = ctrl_state.flange_cur_pos[3];
+    msg.flange_b_cur_pos = ctrl_state.flange_cur_pos[4];
+    msg.flange_c_cur_pos = ctrl_state.flange_cur_pos[5];
+    msg.exaxispos1 = ctrl_state.extAxisStatus[0].pos;
+    exaxis_1 = ctrl_state.extAxisStatus[0].pos;
+    msg.exaxistatus1[0] = ctrl_state.extAxisStatus[0].errorCode;
+    msg.exaxistatus1[1] = ctrl_state.extAxisStatus[0].ready;
+    msg.exaxistatus1[2] = ctrl_state.extAxisStatus[0].inPos;
+    msg.exaxistatus1[3] = ctrl_state.extAxisStatus[0].alarm;
+    msg.exaxistatus1[4] = ctrl_state.extAxisStatus[0].flerr;
+    msg.exaxistatus1[5] = ctrl_state.extAxisStatus[0].nlimit;
+    msg.exaxistatus1[6] = ctrl_state.extAxisStatus[0].pLimit;
+    msg.exaxistatus1[7] = ctrl_state.extAxisStatus[0].mdbsOffLine;
+    msg.exaxistatus1[8] = ctrl_state.extAxisStatus[0].mdbsTimeout;
+    msg.exaxistatus1[9] = ctrl_state.extAxisStatus[0].homingStatus;
+    msg.exaxispos2 = ctrl_state.extAxisStatus[1].pos;
+    exaxis_2 = ctrl_state.extAxisStatus[1].pos;
+    msg.exaxistatus2[0] = ctrl_state.extAxisStatus[1].errorCode;
+    msg.exaxistatus2[1] = ctrl_state.extAxisStatus[1].ready;
+    msg.exaxistatus2[2] = ctrl_state.extAxisStatus[1].inPos;
+    msg.exaxistatus2[3] = ctrl_state.extAxisStatus[1].alarm;
+    msg.exaxistatus2[4] = ctrl_state.extAxisStatus[1].flerr;
+    msg.exaxistatus2[5] = ctrl_state.extAxisStatus[1].nlimit;
+    msg.exaxistatus2[6] = ctrl_state.extAxisStatus[1].pLimit;
+    msg.exaxistatus2[7] = ctrl_state.extAxisStatus[1].mdbsOffLine;
+    msg.exaxistatus2[8] = ctrl_state.extAxisStatus[1].mdbsTimeout;
+    msg.exaxistatus2[9] = ctrl_state.extAxisStatus[1].homingStatus;
+    msg.exaxispos3 = ctrl_state.extAxisStatus[2].pos;
+    exaxis_3 = ctrl_state.extAxisStatus[2].pos;
+    msg.exaxistatus3[0] = ctrl_state.extAxisStatus[2].errorCode;
+    msg.exaxistatus3[1] = ctrl_state.extAxisStatus[2].ready;
+    msg.exaxistatus3[2] = ctrl_state.extAxisStatus[2].inPos;
+    msg.exaxistatus3[3] = ctrl_state.extAxisStatus[2].alarm;
+    msg.exaxistatus3[4] = ctrl_state.extAxisStatus[2].flerr;
+    msg.exaxistatus3[5] = ctrl_state.extAxisStatus[2].nlimit;
+    msg.exaxistatus3[6] = ctrl_state.extAxisStatus[2].pLimit;
+    msg.exaxistatus3[7] = ctrl_state.extAxisStatus[2].mdbsOffLine;
+    msg.exaxistatus3[8] = ctrl_state.extAxisStatus[2].mdbsTimeout;
+    msg.exaxistatus3[9] = ctrl_state.extAxisStatus[2].homingStatus;
+    msg.exaxispos4 = ctrl_state.extAxisStatus[3].pos;
+    exaxis_4 = ctrl_state.extAxisStatus[3].pos;
+    msg.exaxistatus4[0] = ctrl_state.extAxisStatus[3].errorCode;
+    msg.exaxistatus4[1] = ctrl_state.extAxisStatus[3].ready;
+    msg.exaxistatus4[2] = ctrl_state.extAxisStatus[3].inPos;
+    msg.exaxistatus4[3] = ctrl_state.extAxisStatus[3].alarm;
+    msg.exaxistatus4[4] = ctrl_state.extAxisStatus[3].flerr;
+    msg.exaxistatus4[5] = ctrl_state.extAxisStatus[3].nlimit;
+    msg.exaxistatus4[6] = ctrl_state.extAxisStatus[3].pLimit;
+    msg.exaxistatus4[7] = ctrl_state.extAxisStatus[3].mdbsOffLine;
+    msg.exaxistatus4[8] = ctrl_state.extAxisStatus[3].mdbsTimeout;
+    msg.exaxistatus4[9] = ctrl_state.extAxisStatus[3].homingStatus;
+    msg.ft_fx_data = ctrl_state.ft_sensor_data[0];
+    msg.ft_fy_data = ctrl_state.ft_sensor_data[1];
+    msg.ft_fz_data = ctrl_state.ft_sensor_data[2];
+    msg.ft_tx_data = ctrl_state.ft_sensor_data[3];
+    msg.ft_ty_data = ctrl_state.ft_sensor_data[4];
+    msg.ft_tz_data = ctrl_state.ft_sensor_data[5];
+    msg.ft_actstatus = ctrl_state.ft_sensor_active;
+    msg.robot_mode = ctrl_state.robot_mode;
+    msg.tool_num = ctrl_state.tool;
+    msg.work_num = ctrl_state.user;
+    msg.prg_state = ctrl_state.program_state;
+    msg.abnormal_stop = ctrl_state.abnomalStop;
+    msg.prg_name = std::string(
+      ctrl_state.currentLuaFileName,
+      strnlen(ctrl_state.currentLuaFileName, sizeof(ctrl_state.currentLuaFileName)));
+    msg.prg_total_line = ctrl_state.programTotalLine;
+    msg.prg_cur_line = ctrl_state.luaLineNum;
+    msg.dgt_output_h = ctrl_state.cl_dgt_output_h;
+    msg.dgt_output_l = ctrl_state.cl_dgt_output_l;
+    msg.dgt_input_h = ctrl_state.cl_dgt_input_h;
+    msg.dgt_input_l = ctrl_state.cl_dgt_input_l;
+    msg.tl_dgt_output_l = ctrl_state.tl_dgt_output_l;
+    msg.tl_dgt_input_l = ctrl_state.tl_dgt_input_l;
+    msg.emg = ctrl_state.EmergencyStop;
+    msg.safetyboxsig[0] = ctrl_state.safetyBoxSingal[0];
+    msg.safetyboxsig[1] = ctrl_state.safetyBoxSingal[1];
+    msg.safetyboxsig[2] = ctrl_state.safetyBoxSingal[2];
+    msg.safetyboxsig[3] = ctrl_state.safetyBoxSingal[3];
+    msg.safetyboxsig[4] = ctrl_state.safetyBoxSingal[4];
+    msg.safetyboxsig[5] = ctrl_state.safetyBoxSingal[5];
+    msg.robot_motion_done = ctrl_state.motion_done;
+    msg.grip_motion_done = ctrl_state.gripper_motiondone;
+    msg.weldbreakoffstate = ctrl_state.weldingBreakOffState.breakOffState;
+    msg.weldarcstate = ctrl_state.weldingBreakOffState.weldArcState;
+    msg.welding_voltage = ctrl_state.weldVoltage;
+    msg.welding_current = ctrl_state.weldCurrent;
+    msg.weldtrackspeed = ctrl_state.weldTrackVel;
+    msg.main_error_code = ctrl_state.main_code;
+    msg.sub_error_code = ctrl_state.sub_code;
+    // msg.check_sum
+    msg.version = "V" + std::to_string(VERSION_MSG_MARJOR) + "." +
+                  std::to_string(VERSION_MSG_MINOR) + std::to_string(VERSION_MSG_MINOR2);
+    msg.timestamp = snapshot.timestamp;
+    msg.tpd_exception = ctrl_state.tpdException;
+    msg.alarm_reboot_robot = ctrl_state.alarmRebootRobot;
+    msg.modbusmasterconnectstate = ctrl_state.modbusMasterConnect;
+    msg.mdbsslaveconnect = ctrl_state.modbusSlaveConnect;
+    msg.socket_conn_timeout = ctrl_state.socketConnTimeout;
+    msg.socket_read_timeout = ctrl_state.socketReadTimeout;
 
-  int state;
-  int tmpres = _ptr_robot->GetSDKComState(&state);
-  if (state == 0) {
-    int res = _ptr_robot->GetRobotRealTimeState(&ctrl_state);
-    if (res == 0) {
-      msg.j1_cur_pos = ctrl_state.jt_cur_pos[0];
-      msg.j2_cur_pos = ctrl_state.jt_cur_pos[1];
-      msg.j3_cur_pos = ctrl_state.jt_cur_pos[2];
-      msg.j4_cur_pos = ctrl_state.jt_cur_pos[3];
-      msg.j5_cur_pos = ctrl_state.jt_cur_pos[4];
-      msg.j6_cur_pos = ctrl_state.jt_cur_pos[5];
-      msg.j1_cur_tor = ctrl_state.jt_cur_tor[0];
-      msg.j2_cur_tor = ctrl_state.jt_cur_tor[1];
-      msg.j3_cur_tor = ctrl_state.jt_cur_tor[2];
-      msg.j4_cur_tor = ctrl_state.jt_cur_tor[3];
-      msg.j5_cur_tor = ctrl_state.jt_cur_tor[4];
-      msg.j6_cur_tor = ctrl_state.jt_cur_tor[5];
-      msg.cart_x_cur_pos = ctrl_state.tl_cur_pos[0];
-      msg.cart_y_cur_pos = ctrl_state.tl_cur_pos[1];
-      msg.cart_z_cur_pos = ctrl_state.tl_cur_pos[2];
-      msg.cart_a_cur_pos = ctrl_state.tl_cur_pos[3];
-      msg.cart_b_cur_pos = ctrl_state.tl_cur_pos[4];
-      msg.cart_c_cur_pos = ctrl_state.tl_cur_pos[5];
-      msg.flange_x_cur_pos = ctrl_state.flange_cur_pos[0];
-      msg.flange_y_cur_pos = ctrl_state.flange_cur_pos[1];
-      msg.flange_z_cur_pos = ctrl_state.flange_cur_pos[2];
-      msg.flange_a_cur_pos = ctrl_state.flange_cur_pos[3];
-      msg.flange_b_cur_pos = ctrl_state.flange_cur_pos[4];
-      msg.flange_c_cur_pos = ctrl_state.flange_cur_pos[5];
-      msg.exaxispos1 = ctrl_state.extAxisStatus[0].pos;
-      exaxis_1 = ctrl_state.extAxisStatus[0].pos;
-      msg.exaxistatus1[0] = ctrl_state.extAxisStatus[0].errorCode;
-      msg.exaxistatus1[1] = ctrl_state.extAxisStatus[0].ready;
-      msg.exaxistatus1[2] = ctrl_state.extAxisStatus[0].inPos;
-      msg.exaxistatus1[3] = ctrl_state.extAxisStatus[0].alarm;
-      msg.exaxistatus1[4] = ctrl_state.extAxisStatus[0].flerr;
-      msg.exaxistatus1[5] = ctrl_state.extAxisStatus[0].nlimit;
-      msg.exaxistatus1[6] = ctrl_state.extAxisStatus[0].pLimit;
-      msg.exaxistatus1[7] = ctrl_state.extAxisStatus[0].mdbsOffLine;
-      msg.exaxistatus1[8] = ctrl_state.extAxisStatus[0].mdbsTimeout;
-      msg.exaxistatus1[9] = ctrl_state.extAxisStatus[0].homingStatus;
-      msg.exaxispos2 = ctrl_state.extAxisStatus[1].pos;
-      exaxis_2 = ctrl_state.extAxisStatus[1].pos;
-      msg.exaxistatus2[0] = ctrl_state.extAxisStatus[1].errorCode;
-      msg.exaxistatus2[1] = ctrl_state.extAxisStatus[1].ready;
-      msg.exaxistatus2[2] = ctrl_state.extAxisStatus[1].inPos;
-      msg.exaxistatus2[3] = ctrl_state.extAxisStatus[1].alarm;
-      msg.exaxistatus2[4] = ctrl_state.extAxisStatus[1].flerr;
-      msg.exaxistatus2[5] = ctrl_state.extAxisStatus[1].nlimit;
-      msg.exaxistatus2[6] = ctrl_state.extAxisStatus[1].pLimit;
-      msg.exaxistatus2[7] = ctrl_state.extAxisStatus[1].mdbsOffLine;
-      msg.exaxistatus2[8] = ctrl_state.extAxisStatus[1].mdbsTimeout;
-      msg.exaxistatus2[9] = ctrl_state.extAxisStatus[1].homingStatus;
-      msg.exaxispos3 = ctrl_state.extAxisStatus[2].pos;
-      exaxis_3 = ctrl_state.extAxisStatus[2].pos;
-      msg.exaxistatus3[0] = ctrl_state.extAxisStatus[2].errorCode;
-      msg.exaxistatus3[1] = ctrl_state.extAxisStatus[2].ready;
-      msg.exaxistatus3[2] = ctrl_state.extAxisStatus[2].inPos;
-      msg.exaxistatus3[3] = ctrl_state.extAxisStatus[2].alarm;
-      msg.exaxistatus3[4] = ctrl_state.extAxisStatus[2].flerr;
-      msg.exaxistatus3[5] = ctrl_state.extAxisStatus[2].nlimit;
-      msg.exaxistatus3[6] = ctrl_state.extAxisStatus[2].pLimit;
-      msg.exaxistatus3[7] = ctrl_state.extAxisStatus[2].mdbsOffLine;
-      msg.exaxistatus3[8] = ctrl_state.extAxisStatus[2].mdbsTimeout;
-      msg.exaxistatus3[9] = ctrl_state.extAxisStatus[2].homingStatus;
-      msg.exaxispos4 = ctrl_state.extAxisStatus[3].pos;
-      exaxis_4 = ctrl_state.extAxisStatus[3].pos;
-      msg.exaxistatus4[0] = ctrl_state.extAxisStatus[3].errorCode;
-      msg.exaxistatus4[1] = ctrl_state.extAxisStatus[3].ready;
-      msg.exaxistatus4[2] = ctrl_state.extAxisStatus[3].inPos;
-      msg.exaxistatus4[3] = ctrl_state.extAxisStatus[3].alarm;
-      msg.exaxistatus4[4] = ctrl_state.extAxisStatus[3].flerr;
-      msg.exaxistatus4[5] = ctrl_state.extAxisStatus[3].nlimit;
-      msg.exaxistatus4[6] = ctrl_state.extAxisStatus[3].pLimit;
-      msg.exaxistatus4[7] = ctrl_state.extAxisStatus[3].mdbsOffLine;
-      msg.exaxistatus4[8] = ctrl_state.extAxisStatus[3].mdbsTimeout;
-      msg.exaxistatus4[9] = ctrl_state.extAxisStatus[3].homingStatus;
-      msg.ft_fx_data = ctrl_state.ft_sensor_data[0];
-      msg.ft_fy_data = ctrl_state.ft_sensor_data[1];
-      msg.ft_fz_data = ctrl_state.ft_sensor_data[2];
-      msg.ft_tx_data = ctrl_state.ft_sensor_data[3];
-      msg.ft_ty_data = ctrl_state.ft_sensor_data[4];
-      msg.ft_tz_data = ctrl_state.ft_sensor_data[5];
-      msg.ft_actstatus = ctrl_state.ft_sensor_active;
-      msg.robot_mode = ctrl_state.robot_mode;
-      msg.tool_num = ctrl_state.tool;
-      msg.work_num = ctrl_state.user;
-      msg.prg_state = ctrl_state.program_state;
-      msg.abnormal_stop = ctrl_state.abnomalStop;
-      msg.prg_name = std::string(ctrl_state.currentLuaFileName);
-      msg.prg_total_line = ctrl_state.programTotalLine;
-      msg.prg_cur_line = ctrl_state.luaLineNum;
-      msg.dgt_output_h = ctrl_state.cl_dgt_output_h;
-      msg.dgt_output_l = ctrl_state.cl_dgt_output_l;
-      msg.dgt_input_h = ctrl_state.cl_dgt_input_h;
-      msg.dgt_input_l = ctrl_state.cl_dgt_input_l;
-      msg.tl_dgt_output_l = ctrl_state.tl_dgt_output_l;
-      msg.tl_dgt_input_l = ctrl_state.tl_dgt_input_l;
-      msg.emg = ctrl_state.EmergencyStop;
-      msg.safetyboxsig[0] = ctrl_state.safetyBoxSingal[0];
-      msg.safetyboxsig[1] = ctrl_state.safetyBoxSingal[1];
-      msg.safetyboxsig[2] = ctrl_state.safetyBoxSingal[2];
-      msg.safetyboxsig[3] = ctrl_state.safetyBoxSingal[3];
-      msg.safetyboxsig[4] = ctrl_state.safetyBoxSingal[4];
-      msg.safetyboxsig[5] = ctrl_state.safetyBoxSingal[5];
-      msg.robot_motion_done = ctrl_state.motion_done;
-      msg.grip_motion_done = ctrl_state.gripper_motiondone;
-      msg.weldbreakoffstate = ctrl_state.weldingBreakOffState.breakOffState;
-      msg.weldarcstate = ctrl_state.weldingBreakOffState.weldArcState;
-      msg.welding_voltage = ctrl_state.weldVoltage;
-      msg.welding_current = ctrl_state.weldCurrent;
-      msg.weldtrackspeed = ctrl_state.weldTrackVel;
-      msg.main_error_code = ctrl_state.main_code;
-      msg.sub_error_code = ctrl_state.sub_code;
-      // msg.check_sum
-      msg.version = "V" + std::to_string(VERSION_MSG_MARJOR) + "." +
-                    std::to_string(VERSION_MSG_MINOR) + std::to_string(VERSION_MSG_MINOR2);
-      auto cur_clock = rclcpp::Clock();  //使用系统时钟作为时间戳
-      msg.timestamp = RCL_NS_TO_S(cur_clock.now().nanoseconds());
-      msg.tpd_exception = ctrl_state.tpdException;
-      msg.alarm_reboot_robot = ctrl_state.alarmRebootRobot;
-      msg.modbusmasterconnectstate = ctrl_state.modbusMasterConnect;
-      msg.mdbsslaveconnect = ctrl_state.modbusSlaveConnect;
-      msg.socket_conn_timeout = ctrl_state.socketConnTimeout;
-      msg.socket_read_timeout = ctrl_state.socketReadTimeout;
+    msg.btn_box_stop_signa = ctrl_state.btnBoxStopSignal;
+    msg.strangeposflag = ctrl_state.strangePosFlag;
+    msg.drag_alarm = ctrl_state.dragAlarm;
+    msg.alarm = ctrl_state.alarm;
+    msg.safetydoor_alarm = ctrl_state.safetyDoorAlarm;
+    msg.safetyplanealarm = ctrl_state.safetyPlaneAlarm;
+    msg.motionalarm = ctrl_state.motonAlarm;
+    msg.interferealarm = ctrl_state.interfaceAlarm;
+    msg.endluaerrcode = ctrl_state.endLuaErrCode;
+    msg.dr_alarm = ctrl_state.driverAlarm;
+    msg.udpcmdstate = ctrl_state.udpCmdState;
+    msg.aliveslavenumerror = ctrl_state.aliveSlaveNumError;
+    msg.gripperfaultnum = ctrl_state.gripper_fault_id;
+    msg.slavecomerror[0] = ctrl_state.slaveComError[0];
+    msg.slavecomerror[1] = ctrl_state.slaveComError[1];
+    msg.slavecomerror[2] = ctrl_state.slaveComError[2];
+    msg.slavecomerror[3] = ctrl_state.slaveComError[3];
+    msg.slavecomerror[4] = ctrl_state.slaveComError[4];
+    msg.slavecomerror[5] = ctrl_state.slaveComError[5];
+    msg.slavecomerror[6] = ctrl_state.slaveComError[6];
+    msg.slavecomerror[7] = ctrl_state.slaveComError[7];
+    msg.cmdpointerror = ctrl_state.cmdPointError;
+    msg.ioerror = ctrl_state.IOError;
+    msg.grippererro = ctrl_state.gripperError;
+    msg.fileerror = ctrl_state.fileError;
+    msg.paraerror = ctrl_state.paraError;
+    msg.exaxis_out_slimit_error = ctrl_state.exaxisOutLimitError;
+    msg.dr_com_err[0] = ctrl_state.driverComError[0];
+    msg.dr_com_err[1] = ctrl_state.driverComError[1];
+    msg.dr_com_err[2] = ctrl_state.driverComError[2];
+    msg.dr_com_err[3] = ctrl_state.driverComError[3];
+    msg.dr_com_err[4] = ctrl_state.driverComError[4];
+    msg.dr_com_err[5] = ctrl_state.driverComError[5];
+    msg.dr_err = ctrl_state.driverError;
+    msg.out_sflimit_err = ctrl_state.outSoftLimitError;
+    msg.collision_err = ctrl_state.collisionState;
+    msg.weld_readystate = ctrl_state.weldReadyState;
+    msg.alarm_check_emerg_stop_btn = ctrl_state.alarmCheckEmergStopBtn;
+    msg.ts_web_state_com_error = ctrl_state.tsWebStateComErr;
+    msg.ts_tm_cmd_com_error = ctrl_state.tsTmCmdComError;
+    msg.ts_tm_state_com_error = ctrl_state.tsTmStateComError;
+    msg.ctrlboxerror = ctrl_state.ctrlBoxError;
+    msg.safety_data_state = ctrl_state.safetyDataState;
+    msg.forcesensorerrstate = ctrl_state.forceSensorErrState;
+    msg.ctrlopenluaerrcode[0] = ctrl_state.ctrlOpenLuaErrCode[0];
+    msg.ctrlopenluaerrcode[1] = ctrl_state.ctrlOpenLuaErrCode[1];
+    msg.ctrlopenluaerrcode[2] = ctrl_state.ctrlOpenLuaErrCode[2];
+    msg.ctrlopenluaerrcode[3] = ctrl_state.ctrlOpenLuaErrCode[3];
+    msg.auxservoservoid = ctrl_state.aux_state.servoId;
+    msg.auxservoerrcode = ctrl_state.aux_state.servoErrCode;
+    msg.auxservostate = ctrl_state.aux_state.servoState;
+    msg.auxservoactualpos = ctrl_state.aux_state.servoPos;
+    msg.auxservoctualspeed = ctrl_state.aux_state.servoVel;
+    msg.auxservoactualtorque = ctrl_state.aux_state.servoTorque;
+    msg.extpioinput[0] = ctrl_state.extDIState[0];
+    msg.extpioinput[1] = ctrl_state.extDIState[1];
+    msg.extpioinput[2] = ctrl_state.extDIState[2];
+    msg.extpioinput[3] = ctrl_state.extDIState[3];
+    msg.extpioinput[4] = ctrl_state.extDIState[4];
+    msg.extpioinput[5] = ctrl_state.extDIState[5];
+    msg.extpioinput[6] = ctrl_state.extDIState[6];
+    msg.extpioinput[7] = ctrl_state.extDIState[7];
+    msg.extpiooutput[0] = ctrl_state.extDOState[0];
+    msg.extpiooutput[1] = ctrl_state.extDOState[1];
+    msg.extpiooutput[2] = ctrl_state.extDOState[2];
+    msg.extpiooutput[3] = ctrl_state.extDOState[3];
+    msg.extpiooutput[4] = ctrl_state.extDOState[4];
+    msg.extpiooutput[5] = ctrl_state.extDOState[5];
+    msg.extpiooutput[6] = ctrl_state.extDOState[6];
+    msg.extpiooutput[7] = ctrl_state.extDOState[7];
+    msg.extadcinput[0] = ctrl_state.extAIState[0];
+    msg.extadcinput[1] = ctrl_state.extAIState[1];
+    msg.extadcinput[2] = ctrl_state.extAIState[2];
+    msg.extadcinput[3] = ctrl_state.extAIState[3];
+    msg.extadcoutput[0] = ctrl_state.extAOState[0];
+    msg.extadcoutput[1] = ctrl_state.extAOState[1];
+    msg.extadcoutput[2] = ctrl_state.extAOState[2];
+    msg.extadcoutput[3] = ctrl_state.extAOState[3];
+    msg.exaxiscoordid = ctrl_state.exaxisCoordID;
+    msg.slave_status_1 = 0;
+    msg.slave_status_2 = 0;
+    msg.slave_domain_id = 0;
+    msg.program_run_state = ctrl_state.programRunState;
+    msg.speed_scale_manual = ctrl_state.speedScaleManual;
+    msg.speed_scale_auto = ctrl_state.speedScaleAuto;
+    msg.slave1_reconnect_flag = 0;
+    msg.slave2_reconnect_flag = 0;
+    msg.slave1_exaxistatus_errorcode = 0;
+    msg.slave2_exaxistatus_errorcode = 0;
 
-      msg.btn_box_stop_signa = ctrl_state.btnBoxStopSignal;
-      msg.strangeposflag = ctrl_state.strangePosFlag;
-      msg.drag_alarm = ctrl_state.dragAlarm;
-      msg.alarm = ctrl_state.alarm;
-      msg.safetydoor_alarm = ctrl_state.safetyDoorAlarm;
-      msg.safetyplanealarm = ctrl_state.safetyPlaneAlarm;
-      msg.motionalarm = ctrl_state.motonAlarm;
-      msg.interferealarm = ctrl_state.interfaceAlarm;
-      msg.endluaerrcode = ctrl_state.endLuaErrCode;
-      msg.dr_alarm = ctrl_state.driverAlarm;
-      msg.udpcmdstate = ctrl_state.udpCmdState;
-      msg.aliveslavenumerror = ctrl_state.aliveSlaveNumError;
-      msg.gripperfaultnum = ctrl_state.gripper_fault_id;
-      msg.slavecomerror[0] = ctrl_state.slaveComError[0];
-      msg.slavecomerror[1] = ctrl_state.slaveComError[1];
-      msg.slavecomerror[2] = ctrl_state.slaveComError[2];
-      msg.slavecomerror[3] = ctrl_state.slaveComError[3];
-      msg.slavecomerror[4] = ctrl_state.slaveComError[4];
-      msg.slavecomerror[5] = ctrl_state.slaveComError[5];
-      msg.slavecomerror[6] = ctrl_state.slaveComError[6];
-      msg.slavecomerror[7] = ctrl_state.slaveComError[7];
-      msg.cmdpointerror = ctrl_state.cmdPointError;
-      msg.ioerror = ctrl_state.IOError;
-      msg.grippererro = ctrl_state.gripperError;
-      msg.fileerror = ctrl_state.fileError;
-      msg.paraerror = ctrl_state.paraError;
-      msg.exaxis_out_slimit_error = ctrl_state.exaxisOutLimitError;
-      msg.dr_com_err[0] = ctrl_state.driverComError[0];
-      msg.dr_com_err[1] = ctrl_state.driverComError[1];
-      msg.dr_com_err[2] = ctrl_state.driverComError[2];
-      msg.dr_com_err[3] = ctrl_state.driverComError[3];
-      msg.dr_com_err[4] = ctrl_state.driverComError[4];
-      msg.dr_com_err[5] = ctrl_state.driverComError[5];
-      msg.dr_err = ctrl_state.driverError;
-      msg.out_sflimit_err = ctrl_state.outSoftLimitError;
-      msg.collision_err = ctrl_state.collisionState;
-      msg.weld_readystate = ctrl_state.weldReadyState;
-      msg.alarm_check_emerg_stop_btn = ctrl_state.alarmCheckEmergStopBtn;
-      msg.ts_web_state_com_error = ctrl_state.tsWebStateComErr;
-      msg.ts_tm_cmd_com_error = ctrl_state.tsTmCmdComError;
-      msg.ts_tm_state_com_error = ctrl_state.tsTmStateComError;
-      msg.ctrlboxerror = ctrl_state.ctrlBoxError;
-      msg.safety_data_state = ctrl_state.safetyDataState;
-      msg.forcesensorerrstate = ctrl_state.forceSensorErrState;
-      msg.ctrlopenluaerrcode[0] = ctrl_state.ctrlOpenLuaErrCode[0];
-      msg.ctrlopenluaerrcode[1] = ctrl_state.ctrlOpenLuaErrCode[1];
-      msg.ctrlopenluaerrcode[2] = ctrl_state.ctrlOpenLuaErrCode[2];
-      msg.ctrlopenluaerrcode[3] = ctrl_state.ctrlOpenLuaErrCode[3];
-      msg.auxservoservoid = ctrl_state.aux_state.servoId;
-      msg.auxservoerrcode = ctrl_state.aux_state.servoErrCode;
-      msg.auxservostate = ctrl_state.aux_state.servoState;
-      msg.auxservoactualpos = ctrl_state.aux_state.servoPos;
-      msg.auxservoctualspeed = ctrl_state.aux_state.servoVel;
-      msg.auxservoactualtorque = ctrl_state.aux_state.servoTorque;
-      msg.extpioinput[0] = ctrl_state.extDIState[0];
-      msg.extpioinput[1] = ctrl_state.extDIState[1];
-      msg.extpioinput[2] = ctrl_state.extDIState[2];
-      msg.extpioinput[3] = ctrl_state.extDIState[3];
-      msg.extpioinput[4] = ctrl_state.extDIState[4];
-      msg.extpioinput[5] = ctrl_state.extDIState[5];
-      msg.extpioinput[6] = ctrl_state.extDIState[6];
-      msg.extpioinput[7] = ctrl_state.extDIState[7];
-      msg.extpiooutput[0] = ctrl_state.extDOState[0];
-      msg.extpiooutput[1] = ctrl_state.extDOState[1];
-      msg.extpiooutput[2] = ctrl_state.extDOState[2];
-      msg.extpiooutput[3] = ctrl_state.extDOState[3];
-      msg.extpiooutput[4] = ctrl_state.extDOState[4];
-      msg.extpiooutput[5] = ctrl_state.extDOState[5];
-      msg.extpiooutput[6] = ctrl_state.extDOState[6];
-      msg.extpiooutput[7] = ctrl_state.extDOState[7];
-      msg.extadcinput[0] = ctrl_state.extAIState[0];
-      msg.extadcinput[1] = ctrl_state.extAIState[1];
-      msg.extadcinput[2] = ctrl_state.extAIState[2];
-      msg.extadcinput[3] = ctrl_state.extAIState[3];
-      msg.extadcoutput[0] = ctrl_state.extAOState[0];
-      msg.extadcoutput[1] = ctrl_state.extAOState[1];
-      msg.extadcoutput[2] = ctrl_state.extAOState[2];
-      msg.extadcoutput[3] = ctrl_state.extAOState[3];
-      msg.reconnect_flag = res;
-      msg.exaxiscoordid = ctrl_state.exaxisCoordID;
-      msg.slave_status_1 = 0;
-      msg.slave_status_2 = 0;
-      msg.slave_domain_id = 0;
-      msg.program_run_state = ctrl_state.programRunState;
-      msg.speed_scale_manual = ctrl_state.speedScaleManual;
-      msg.speed_scale_auto = ctrl_state.speedScaleAuto;
-      msg.slave1_reconnect_flag = 0;
-      msg.slave2_reconnect_flag = 0;
-      msg.slave1_exaxistatus_errorcode = 0;
-      msg.slave2_exaxistatus_errorcode = 0;
-
-      // _state_publisher->publish(msg);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"exaxistatus1=%d",msg.exaxistatus1[0]);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j1_cur_pos=%f",msg.j1_cur_pos);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j2_cur_pos=%f",msg.j2_cur_pos);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j3_cur_pos=%f",msg.j3_cur_pos);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j4_cur_pos=%f",msg.j4_cur_pos);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j5_cur_pos=%f",msg.j5_cur_pos);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j6_cur_pos=%f",msg.j6_cur_pos);
-    } else {
-      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "state feedback error: error_code=%d", res);
-      msg.reconnect_flag = 1;
-    }
-  } else {
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "connect error: error_code=%d", state);
-    msg.reconnect_flag = 1;
+    // _state_publisher->publish(msg);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"exaxistatus1=%d",msg.exaxistatus1[0]);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j1_cur_pos=%f",msg.j1_cur_pos);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j2_cur_pos=%f",msg.j2_cur_pos);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j3_cur_pos=%f",msg.j3_cur_pos);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j4_cur_pos=%f",msg.j4_cur_pos);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j5_cur_pos=%f",msg.j5_cur_pos);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j6_cur_pos=%f",msg.j6_cur_pos);
   }
+  msg.reconnect_flag = (!snapshot.connected || !snapshot.fresh) ? 1 : 0;
   _state_publisher->publish(msg);
-}
-
-/**
- * @brief 数据端口topic监听回调函数
-*/
-void robot_command_thread::_ping_recv_callback()
-{
-  auto msg = robot_feedback_msg();
-  static ROBOT_STATE_PKG ctrl_state;
-  bool current_ping_status = _check_ping("192.168.58.2");
-  int state;
-  int tmpres = _ptr_robot->GetSDKComState(&state);
-  if ((!current_ping_status) || (state != 0)) {
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "192.168.58.2 is error: error_code=%d", state);
-    msg.reconnect_flag = 1;
-    _state_publisher->publish(msg);
-  }
-}
-
-bool robot_command_thread::_check_ping(const std::string & ip_address)
-{
-  std::string cmd = "ping -c 1 -W 1 " + ip_address + " > /dev/null 2>&1";
-  int result = system(cmd.c_str());
-  return (result == 0);
+  diagnostic_msgs::msg::DiagnosticArray diagnostics;
+  diagnostics.header.stamp = this->now();
+  diagnostic_msgs::msg::DiagnosticStatus status;
+  status.name = "fairino/hardware";
+  status.hardware_id = _controller_ip;
+  status.level = snapshot.motion_allowed ? diagnostic_msgs::msg::DiagnosticStatus::OK
+                                         : diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+  status.message = snapshot.reason;
+  const auto add = [&status](const std::string & key, const std::string & value) {
+    diagnostic_msgs::msg::KeyValue item;
+    item.key = key;
+    item.value = value;
+    status.values.push_back(item);
+  };
+  add("connected", std::to_string(snapshot.connected));
+  add("fresh", std::to_string(snapshot.fresh));
+  add("feedback_age_seconds", std::to_string(snapshot.feedback_age));
+  add("fault_latched", std::to_string(snapshot.fault_latched));
+  add("motion_allowed", std::to_string(snapshot.motion_allowed));
+  add("controller_claimed", std::to_string(snapshot.claimed));
+  add("main_error_code", std::to_string(ctrl_state.main_code));
+  add("sub_error_code", std::to_string(ctrl_state.sub_code));
+  add("robot_enabled", std::to_string(ctrl_state.rbtEnableState));
+  add("robot_state", std::to_string(ctrl_state.robot_state));
+  add("safety_stop0", std::to_string(ctrl_state.safety_stop0_state));
+  add("safety_stop1", std::to_string(ctrl_state.safety_stop1_state));
+  diagnostics.status.push_back(status);
+  _diagnostics->publish(diagnostics);
 }

@@ -1,269 +1,300 @@
 #include "fairino_hardware/fairino_hardware_interface.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <set>
+
+#include "fairino_hardware/command_server.hpp"
+#include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "pluginlib/class_list_macros.hpp"
+
 namespace fairino_hardware
 {
+namespace
+{
+const auto logger = rclcpp::get_logger("FairinoHardwareInterface");
+constexpr double degrees_to_radians = 3.14159265358979323846 / 180.0;
+}  // namespace
+
+FairinoHardwareInterface::~FairinoHardwareInterface() { close_session(); }
 
 hardware_interface::CallbackReturn FairinoHardwareInterface::on_init(
-  const hardware_interface::HardwareInfo & sysinfo)
+  const hardware_interface::HardwareInfo & info)
 {
-  if (
-    this->hardware_interface::SystemInterface::on_init(sysinfo) !=
-    hardware_interface::CallbackReturn::SUCCESS) {
+  if (SystemInterface::on_init(info) != hardware_interface::CallbackReturn::SUCCESS) {
     return hardware_interface::CallbackReturn::ERROR;
   }
-  this->info_ = sysinfo;  //info_是父类中定义的变量
-
-  auto it = this->info_.hardware_parameters.find("robot_ip");
-  if (it != this->info_.hardware_parameters.end()) {
-    this->_controller_ip = it->second;
-    RCLCPP_INFO(
-      this->get_logger(), "Found controller IP in URDF: %s", this->_controller_ip.c_str());
-  } else {
-    RCLCPP_WARN(
-      this->get_logger(), "No 'robot_ip' parameter. Falling back to default: %s",
-      CONTROLLER_IP_ADDRESS);
-    this->_controller_ip = CONTROLLER_IP_ADDRESS;
+  if (info_.joints.size() != 6) {
+    RCLCPP_ERROR(logger, "Exactly six joints in SDK axis order are required");
+    return hardware_interface::CallbackReturn::ERROR;
   }
-
-  for (const hardware_interface::ComponentInfo & joint : this->info_.joints) {
-    //指令部分
-    if (joint.command_interfaces.size() != 1) {  //开放servoJ
-      RCLCPP_FATAL(
-        this->get_logger(), "Joint '%s' has %zu command interfaces found. 1 expected.",
-        joint.name.c_str(), joint.command_interfaces.size());
+  for (const auto & joint : info_.joints) {
+    if (
+      joint.command_interfaces.size() != 1 ||
+      joint.command_interfaces.front().name != hardware_interface::HW_IF_POSITION) {
+      RCLCPP_ERROR(logger, "Joint %s requires one position command interface", joint.name.c_str());
       return hardware_interface::CallbackReturn::ERROR;
     }
-
-    if (joint.command_interfaces[0].name != hardware_interface::HW_IF_POSITION) {
-      RCLCPP_FATAL(
-        this->get_logger(),
-        "Joint '%s' have %s command interfaces found as first command interface. '%s' expected.",
-        joint.name.c_str(), joint.command_interfaces[0].name.c_str(),
-        hardware_interface::HW_IF_POSITION);
+    std::set<std::string> states;
+    for (const auto & state : joint.state_interfaces) {
+      if (
+        (state.name != hardware_interface::HW_IF_POSITION &&
+         state.name != hardware_interface::HW_IF_VELOCITY &&
+         state.name != hardware_interface::HW_IF_EFFORT) ||
+        !states.insert(state.name).second) {
+        RCLCPP_ERROR(logger, "Unsupported or duplicate state interface on %s", joint.name.c_str());
+        return hardware_interface::CallbackReturn::ERROR;
+      }
+    }
+    if (!states.count(hardware_interface::HW_IF_POSITION)) {
+      RCLCPP_ERROR(logger, "Joint %s requires measured position state", joint.name.c_str());
       return hardware_interface::CallbackReturn::ERROR;
     }
+  }
+  const auto parameter = [this](const std::string & name, const std::string & fallback) {
+    const auto found = info_.hardware_parameters.find(name);
+    return found == info_.hardware_parameters.end() ? fallback : found->second;
+  };
+  robot_ip_ = parameter("robot_ip", robot_ip_);
+  state_prefix_ = parameter("state_prefix", state_prefix_);
+  try {
+    const auto timeout = [&parameter](const std::string & name) {
+      const auto text = parameter(name, "100");
+      size_t consumed = 0;
+      const int value = std::stoi(text, &consumed);
+      if (consumed != text.size() || value < 16 || value > 1000) {
+        throw std::invalid_argument(name + " must be an integer in [16, 1000] ms");
+      }
+      return std::chrono::milliseconds(value);
+    };
+    feedback_timeout_ = timeout("feedback_timeout_ms");
+    command_timeout_ = timeout("command_timeout_ms");
+  } catch (const std::exception & error) {
+    RCLCPP_ERROR(logger, "Invalid hardware parameter: %s", error.what());
+    return hardware_interface::CallbackReturn::ERROR;
+  }
+  if (robot_ip_.empty() || state_prefix_.empty()) {
+    RCLCPP_ERROR(logger, "robot_ip and state_prefix must not be empty");
+    return hardware_interface::CallbackReturn::ERROR;
+  }
+  positions_.fill(std::numeric_limits<double>::quiet_NaN());
+  velocities_.fill(std::numeric_limits<double>::quiet_NaN());
+  efforts_.fill(std::numeric_limits<double>::quiet_NaN());
+  commands_.fill(std::numeric_limits<double>::quiet_NaN());
+  return hardware_interface::CallbackReturn::SUCCESS;
+}
 
-    // if (joint.command_interfaces[1].name != hardware_interface::HW_IF_EFFORT){//预留，用于关节扭矩直接控制
-    //     RCLCPP_FATAL(this->get_logger(),
-    //            "Joint '%s' have %s command interfaces found as first command interface. '%s' expected.",
-    //            joint.name.c_str(), joint.command_interfaces[1].name.c_str(), hardware_interface::HW_IF_EFFORT);
-    //     return hardware_interface::CallbackReturn::ERROR;
-    // }
-
-    //关节状态部分
-    if (joint.state_interfaces.size() != 1) {
-      RCLCPP_FATAL(
-        this->get_logger(), "Joint '%s' has %zu state interface. 3 expected.", joint.name.c_str(),
-        joint.state_interfaces.size());
-      return hardware_interface::CallbackReturn::ERROR;
-    }
-
-    if (joint.state_interfaces[0].name != hardware_interface::HW_IF_POSITION) {
-      RCLCPP_FATAL(
-        this->get_logger(),
-        "Joint '%s' have %s state interface as first state interface. '%s' expected.",
-        joint.name.c_str(), joint.state_interfaces[0].name.c_str(),
-        hardware_interface::HW_IF_POSITION);
-      return hardware_interface::CallbackReturn::ERROR;
-    }
-
-    // if (joint.state_interfaces[1].name != hardware_interface::HW_IF_VELOCITY) {
-    //     RCLCPP_FATAL(this->get_logger(),
-    //                 "Joint '%s' have %s state interface as second state interface. '%s' expected.", joint.name.c_str(),
-    //                 joint.state_interfaces[1].name.c_str(), hardware_interface::HW_IF_VELOCITY);
-    //     return hardware_interface::CallbackReturn::ERROR;
-    // }
-
-    // if (joint.state_interfaces[2].name != hardware_interface::HW_IF_EFFORT) {
-    //     RCLCPP_FATAL(this->get_logger(),
-    //                 "Joint '%s' have %s state interface as third state interface. '%s' expected.", joint.name.c_str(),
-    //                 joint.state_interfaces[2].name.c_str(), hardware_interface::HW_IF_EFFORT);
-    //     return hardware_interface::CallbackReturn::ERROR;
-    // }
+hardware_interface::CallbackReturn FairinoHardwareInterface::on_configure(
+  const rclcpp_lifecycle::State &)
+{
+  if (session_) {
+    return hardware_interface::CallbackReturn::SUCCESS;
+  }
+  try {
+    session_ =
+      std::make_shared<RobotSession>(create_backend(), feedback_timeout_, command_timeout_);
+    node_ = std::make_shared<robot_command_thread>("fairino_hardware", session_, robot_ip_);
+    executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+    executor_->add_node(node_);
+    executor_running_ = true;
+    executor_thread_ = std::thread([this]() {
+      while (executor_running_ && rclcpp::ok()) {
+        executor_->spin_once(std::chrono::milliseconds(10));
+      }
+    });
+  } catch (const std::exception & error) {
+    RCLCPP_ERROR(logger, "Failed to configure Fairino: %s", error.what());
+    close_session();
+    return hardware_interface::CallbackReturn::ERROR;
   }
   return hardware_interface::CallbackReturn::SUCCESS;
-}  //end on_init
+}
+
+void FairinoHardwareInterface::update_state()
+{
+  const auto status = session_->snapshot();
+  motion_allowed_ = active_ && status.motion_allowed ? 1.0 : 0.0;
+  connected_ = status.connected ? 1.0 : 0.0;
+  fault_latched_ = status.fault_latched ? 1.0 : 0.0;
+  feedback_age_ = status.feedback_age;
+  main_error_ = status.state.main_code;
+  sub_error_ = status.state.sub_code;
+  if (status.valid && status.fresh) {
+    for (size_t i = 0; i < 6; ++i) {
+      positions_[i] = status.state.jt_cur_pos[i] * degrees_to_radians;
+      velocities_[i] = status.state.actual_qd[i] * degrees_to_radians;
+      efforts_[i] = status.state.jt_cur_tor[i];
+    }
+  }
+}
+
+void FairinoHardwareInterface::seed_commands()
+{
+  update_state();
+  commands_ = positions_;
+}
+
+hardware_interface::CallbackReturn FairinoHardwareInterface::on_activate(
+  const rclcpp_lifecycle::State &)
+{
+  if (!session_ || !session_->snapshot().motion_allowed) {
+    RCLCPP_ERROR(logger, "Activation refused: fresh ready feedback and explicit recovery required");
+    return hardware_interface::CallbackReturn::FAILURE;
+  }
+  active_ = true;
+  seed_commands();
+  return hardware_interface::CallbackReturn::SUCCESS;
+}
+
+hardware_interface::CallbackReturn FairinoHardwareInterface::on_deactivate(
+  const rclcpp_lifecycle::State &)
+{
+  active_ = false;
+  motion_allowed_ = 0.0;
+  return !session_ || session_->release() ? hardware_interface::CallbackReturn::SUCCESS
+                                          : hardware_interface::CallbackReturn::ERROR;
+}
+
+void FairinoHardwareInterface::close_session()
+{
+  active_ = false;
+  motion_allowed_ = 0.0;
+  executor_running_ = false;
+  if (executor_) {
+    executor_->cancel();
+  }
+  if (executor_thread_.joinable()) {
+    executor_thread_.join();
+  }
+  executor_.reset();
+  node_.reset();
+  session_.reset();
+}
+
+hardware_interface::CallbackReturn FairinoHardwareInterface::on_cleanup(
+  const rclcpp_lifecycle::State &)
+{
+  close_session();
+  return hardware_interface::CallbackReturn::SUCCESS;
+}
+
+hardware_interface::CallbackReturn FairinoHardwareInterface::on_shutdown(
+  const rclcpp_lifecycle::State &)
+{
+  close_session();
+  return hardware_interface::CallbackReturn::SUCCESS;
+}
+
+hardware_interface::CallbackReturn FairinoHardwareInterface::on_error(
+  const rclcpp_lifecycle::State &)
+{
+  active_ = false;
+  motion_allowed_ = 0.0;
+  if (session_) {
+    session_->fault("Hardware lifecycle error");
+    if (!session_->release()) {
+      RCLCPP_ERROR(logger, "Failed to stop servo control during lifecycle error");
+    }
+  }
+  // The monitoring node deliberately survives lifecycle errors.
+  return hardware_interface::CallbackReturn::SUCCESS;
+}
 
 std::vector<hardware_interface::StateInterface> FairinoHardwareInterface::export_state_interfaces()
 {
-  std::vector<hardware_interface::StateInterface> state_interfaces;
-
-  //导出关节相关的状态接口(位置，速度，扭矩)
-  for (size_t i = 0; i < this->info_.joints.size(); ++i) {
-    state_interfaces.emplace_back(hardware_interface::StateInterface(
-      this->info_.joints[i].name, hardware_interface::HW_IF_POSITION,
-      &this->_jnt_position_state[i]));
-
-    // state_interfaces.emplace_back(hardware_interface::StateInterface(
-    //     info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &_jnt_velocity_state.at(i)));
-
-    // state_interfaces.emplace_back(hardware_interface::StateInterface(
-    //     info_.joints[i].name, hardware_interface::HW_IF_EFFORT, &_jnt_torque_state.at(i)));
+  std::vector<hardware_interface::StateInterface> interfaces;
+  for (size_t i = 0; i < 6; ++i) {
+    for (const auto & state : info_.joints[i].state_interfaces) {
+      double * value = state.name == hardware_interface::HW_IF_POSITION   ? &positions_[i]
+                       : state.name == hardware_interface::HW_IF_VELOCITY ? &velocities_[i]
+                                                                          : &efforts_[i];
+      interfaces.emplace_back(info_.joints[i].name, state.name, value);
+    }
   }
-
-  //导出
-  return state_interfaces;
+  interfaces.emplace_back(state_prefix_, "motion_allowed", &motion_allowed_);
+  interfaces.emplace_back(state_prefix_, "connected", &connected_);
+  interfaces.emplace_back(state_prefix_, "fault_latched", &fault_latched_);
+  interfaces.emplace_back(state_prefix_, "feedback_age", &feedback_age_);
+  interfaces.emplace_back(state_prefix_, "main_error_code", &main_error_);
+  interfaces.emplace_back(state_prefix_, "sub_error_code", &sub_error_);
+  return interfaces;
 }
 
 std::vector<hardware_interface::CommandInterface>
 FairinoHardwareInterface::export_command_interfaces()
 {
-  std::vector<hardware_interface::CommandInterface> command_interfaces;
-  for (size_t i = 0; i < this->info_.joints.size(); ++i) {
-    command_interfaces.emplace_back(hardware_interface::CommandInterface(
-      this->info_.joints[i].name, hardware_interface::HW_IF_POSITION,
-      &this->_jnt_position_command[i]));
-
-    //     command_interfaces.emplace_back(hardware_interface::CommandInterface(//预留的扭矩控制接口
-    //         info_.joints[i].name, hardware_interface::HW_IF_EFFORT, &_jnt_torque_command.at(i)));
+  std::vector<hardware_interface::CommandInterface> interfaces;
+  for (size_t i = 0; i < 6; ++i) {
+    interfaces.emplace_back(
+      info_.joints[i].name, hardware_interface::HW_IF_POSITION, &commands_[i]);
   }
-
-  return command_interfaces;
+  return interfaces;
 }
 
-hardware_interface::CallbackReturn FairinoHardwareInterface::on_activate(
-  const rclcpp_lifecycle::State & previous_state)
+size_t FairinoHardwareInterface::owned_interfaces(const std::vector<std::string> & interfaces) const
 {
-  using namespace std::chrono_literals;
-  RCLCPP_INFO(this->get_logger(), "Starting ...please wait...");
-  //做变量的初始化工作
-  this->_ptr_robot = std::make_unique<FRRobot>();  //创建机器人实例
-  for (int i = 0; i < 6; i++) {                    //初始化变量
-    this->_jnt_position_command[i] = 0;
-    this->_jnt_velocity_command[i] = 0;
-    this->_jnt_torque_command[i] = 0;
-    this->_jnt_position_state[i] = 0;
-    this->_jnt_velocity_state[i] = 0;
-    this->_jnt_torque_state[i] = 0;
-  }
-  this->_control_mode = 0;  //默认是位置控制,0-位置控制，1-扭矩控制 2-速度控制
-  const errno_t rpc_returncode = this->_ptr_robot->RPC(_controller_ip.c_str());  //建立xmlrpc连接
-  if (rpc_returncode != 0) {
-    RCLCPP_FATAL(
-      this->get_logger(), "Failed to intitialize libfairino SDK, code: %d", rpc_returncode);
-    return hardware_interface::CallbackReturn::ERROR;
-  } else {
-    RCLCPP_INFO(this->get_logger(), "Initialized libfairino SDK");
-  }
+  return std::count_if(interfaces.begin(), interfaces.end(), [this](const auto & name) {
+    return std::any_of(info_.joints.begin(), info_.joints.end(), [&name](const auto & joint) {
+      return name == joint.name + "/" + hardware_interface::HW_IF_POSITION;
+    });
+  });
+}
 
-  rclcpp::sleep_for(200ms);  //等待一段时间让控制器的rpc连接建立完毕
+hardware_interface::return_type FairinoHardwareInterface::prepare_command_mode_switch(
+  const std::vector<std::string> & start, const std::vector<std::string> & stop)
+{
+  const auto starting = owned_interfaces(start);
+  const auto stopping = owned_interfaces(stop);
+  if (
+    (starting != 0 && starting != 6) || (stopping != 0 && stopping != 6) ||
+    (starting && (!active_ || !session_ || !session_->snapshot().motion_allowed))) {
+    RCLCPP_ERROR(logger, "Servo control requires all six ready position interfaces");
+    return hardware_interface::return_type::ERROR;
+  }
+  return hardware_interface::return_type::OK;
+}
 
-  //做第一步的工作，读取当前状态数据
-  JointPos jntpos;
-  const auto joint_read_returncode = this->_ptr_robot->GetActualJointPosDegree(0, &jntpos);
-  /*
-    获取反馈位置后同步到指令位置以维持当前状态，如果发现读取失败，那么就无法激活插件，
-    因为错误的反馈位置会导致初始指令位置下发出现严重偏差导致事故
-    */
-  if (joint_read_returncode == 0) {
-    for (int j = 0; j < 6; j++) {
-      this->_jnt_position_command[j] = jntpos.jPos[j] / 180.0 * M_PI;
+hardware_interface::return_type FairinoHardwareInterface::perform_command_mode_switch(
+  const std::vector<std::string> & start, const std::vector<std::string> & stop)
+{
+  if (owned_interfaces(stop) && session_ && !session_->release()) {
+    return hardware_interface::return_type::ERROR;
+  }
+  if (owned_interfaces(start)) {
+    if (!session_ || !session_->claim()) {
+      return hardware_interface::return_type::ERROR;
     }
-    RCLCPP_INFO(
-      this->get_logger(), "Read initial joint positions: %f,%f,%f,%f,%f,%f",
-      this->_jnt_position_command[0], this->_jnt_position_command[1],
-      this->_jnt_position_command[2], this->_jnt_position_command[3],
-      this->_jnt_position_command[4], this->_jnt_position_command[5]);
-    return hardware_interface::CallbackReturn::SUCCESS;
-  } else {
-    RCLCPP_FATAL(
-      this->get_logger(), "Failed to read initial joint positions. Error code: %d",
-      joint_read_returncode);
-    return hardware_interface::CallbackReturn::ERROR;
+    seed_commands();
   }
-}
-
-hardware_interface::CallbackReturn FairinoHardwareInterface::on_deactivate(
-  const rclcpp_lifecycle::State & previous_state)
-{
-  RCLCPP_INFO(this->get_logger(), "Stopping ...please wait...");
-  const auto motion_returncode = this->_ptr_robot->StopMotion();  // 停止机器人
-  if (motion_returncode != 0) {
-    RCLCPP_ERROR(
-      this->get_logger(), "Failed to stop robot motion. Error code: %d", motion_returncode);
-  }
-  const auto rpc_returncode = this->_ptr_robot->CloseRPC();  //销毁实例，连接断开
-  if (rpc_returncode != 0) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to stop robot RPC. Error code: %d", motion_returncode);
-  }
-  this->_ptr_robot.release();
-
-  if (motion_returncode != 0 && rpc_returncode != 0) {
-    RCLCPP_INFO(this->get_logger(), "System successfully stopped!");
-    return hardware_interface::CallbackReturn::SUCCESS;
-  } else {
-    RCLCPP_WARN(this->get_logger(), "System may not have successfully stopped.");
-    return hardware_interface::CallbackReturn::FAILURE;
-  }
+  return hardware_interface::return_type::OK;
 }
 
 hardware_interface::return_type FairinoHardwareInterface::read(
-  const rclcpp::Time & time, const rclcpp::Duration & period)
-{  //从RTDE反馈数据中获取所需的位置，速度和扭矩信息
-  JointPos state_data;
-  error_t returncode = this->_ptr_robot->GetActualJointPosDegree(1, &state_data);
-  if (returncode == 0) {
-    for (int i = 0; i < 6; i++) {
-      this->_jnt_position_state[i] =
-        state_data.jPos[i] / 180.0 * M_PI;  //注意单位转换，moveit统一用弧度
-      //_jnt_torque_state[i] = state_data.jt_cur_tor[i];//注意单位转换
-    }
-  } else {
-    RCLCPP_FATAL(this->get_logger(), "GetActualJointPosDegree error: %d", returncode);
+  const rclcpp::Time &, const rclcpp::Duration &)
+{
+  if (!session_) {
+    RCLCPP_ERROR(logger, "read called without configured SDK session");
     return hardware_interface::return_type::ERROR;
   }
-  //RCLCPP_INFO(this->get_logger(), "System successfully read: %f,%f,%f,%f,%f,%f",_jnt_position_state[0],_jnt_position_state[1],_jnt_position_state[2],_jnt_position_state[3],_jnt_position_state[4],_jnt_position_state[5]);
-
+  update_state();
+  // Keep interfaces readable on faults so the guarded JTC can abort its action.
   return hardware_interface::return_type::OK;
 }
 
 hardware_interface::return_type FairinoHardwareInterface::write(
-  const rclcpp::Time & time, const rclcpp::Duration & period)
+  const rclcpp::Time &, const rclcpp::Duration &)
 {
-  if (_control_mode == 0) {  //位置控制模式
-    if (std::any_of(&this->_jnt_position_command[0], &this->_jnt_position_command[5], [](double c) {
-          return not std::isfinite(c);
-        })) {
-      return hardware_interface::return_type::ERROR;
-    }
-    JointPos cmd;
-    ExaxisPos extcmd{0, 0, 0, 0};
-    for (auto j = 0; j < 6; j++) {
-      cmd.jPos[j] = this->_jnt_position_command[j] / M_PI * 180;  //注意单位转换
-    }
-    //RCLCPP_INFO(this->get_logger(), "ServoJ下发位置:%f,%f,%f,%f,%f,%f",cmd.jPos[0],cmd.jPos[1],cmd.jPos[2],cmd.jPos[3],cmd.jPos[4],cmd.jPos[5]);
-    const auto returncode = this->_ptr_robot->ServoJ(&cmd, &extcmd, 0, 0, 0.008, 0, 0);
-    if (returncode != 0) {
-      RCLCPP_FATAL(this->get_logger(), "ServoJ error: %d", returncode);
-      return hardware_interface::return_type::ERROR;
-    }
-  } else if (_control_mode == 1) {  //扭矩控制模式
-    if (std::any_of(&this->_jnt_torque_command[0], &this->_jnt_torque_command[5], [](double c) {
-          return not std::isfinite(c);
-        })) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "ServoJ is using torque mode, however one or more of the torque values are not finite.");
-      return hardware_interface::return_type::ERROR;
-    }
-    //_ptr_robot->write(_jnt_torque_command);//注意单位转换
-  } else {
-    RCLCPP_INFO(
-      this->get_logger(), "Invalid fairino_hardware_interface::_control_mode is %d",
-      this->_control_mode);
+  if (!session_) {
+    RCLCPP_ERROR(logger, "write called without configured SDK session");
     return hardware_interface::return_type::ERROR;
   }
-
+  if (active_) {
+    session_->command(commands_);
+  }
   return hardware_interface::return_type::OK;
 }
-
-rclcpp::Logger FairinoHardwareInterface::get_logger()
-{
-  return rclcpp::get_logger("FairinoHardwareInterface");
-}
-
 }  // namespace fairino_hardware
 
-#include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(
   fairino_hardware::FairinoHardwareInterface, hardware_interface::SystemInterface)

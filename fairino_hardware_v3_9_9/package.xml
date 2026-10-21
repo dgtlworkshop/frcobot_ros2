@@ -3,7 +3,7 @@
 <package format="3">
   <name>fairino_hardware_v3_9_9</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Fairino SDK session, monitored ros2_control hardware and fault-aware trajectory control.</description>
   <maintainer email="fr@todo.todo">fr</maintainer>
   <license>TODO: License declaration</license>
 
@@ -16,10 +16,21 @@
   <depend>rclcpp_lifecycle</depend>
   <depend>fairino_msgs</depend>
   <depend>libfairino</depend>
+  <depend>std_srvs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>controller_interface</depend>
+  <depend>joint_trajectory_controller</depend>
+  <depend>controller_manager_msgs</depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>joint_state_broadcaster</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>fairino_description</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-  <test_depend>ament_add_gmock</test_depend>
+  <test_depend>ament_cmake_gmock</test_depend>
   <test_depend>hardware_interface</test_depend>
 
   <export>

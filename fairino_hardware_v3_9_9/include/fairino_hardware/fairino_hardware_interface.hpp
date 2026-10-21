@@ -1,77 +1,85 @@
-#ifndef _FR_HARDWARE_INTERFACE_
-#define _FR_HARDWARE_INTERFACE_
+#ifndef FAIRINO_HARDWARE_INTERFACE_HPP_
+#define FAIRINO_HARDWARE_INTERFACE_HPP_
 
-#include <robot.h>
-
-#include <hardware_interface/hardware_info.hpp>
-#include <hardware_interface/system_interface.hpp>
-#include <hardware_interface/types/hardware_interface_return_values.hpp>
+#include <array>
+#include <memory>
+#include <string>
+#include <thread>
 #include <vector>
 
-#include "hardware_interface/types/hardware_interface_type_values.hpp"
-#include "rclcpp/macros.hpp"
+#include "fairino_hardware/robot_session.hpp"
+#include "hardware_interface/system_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "visibility_control.h"
 
-#define CONTROLLER_IP_ADDRESS "192.168.58.2"
+class robot_command_thread;
 
 namespace fairino_hardware
 {
-
 class FairinoHardwareInterface : public hardware_interface::SystemInterface
 {
 public:
-  RCLCPP_SHARED_PTR_DEFINITIONS(FairinoHardwareInterface)
-
+  FAIRINO_HARDWARE_PUBLIC
+  ~FairinoHardwareInterface() override;
   FAIRINO_HARDWARE_PUBLIC
   hardware_interface::CallbackReturn on_init(
     const hardware_interface::HardwareInfo & info) override;
-
-  //FAIRINO_HARDWARE_PUBLIC
-  //hardware_interface::CallbackReturn on_configure(const rclcpp_lifecycle::State &) override;
-
   FAIRINO_HARDWARE_PUBLIC
-  hardware_interface::CallbackReturn on_activate(
-    const rclcpp_lifecycle::State & previous_state) override;
-
+  hardware_interface::CallbackReturn on_configure(const rclcpp_lifecycle::State &) override;
   FAIRINO_HARDWARE_PUBLIC
-  hardware_interface::CallbackReturn on_deactivate(
-    const rclcpp_lifecycle::State & previous_state) override;
-
+  hardware_interface::CallbackReturn on_activate(const rclcpp_lifecycle::State &) override;
+  FAIRINO_HARDWARE_PUBLIC
+  hardware_interface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State &) override;
+  FAIRINO_HARDWARE_PUBLIC
+  hardware_interface::CallbackReturn on_cleanup(const rclcpp_lifecycle::State &) override;
+  FAIRINO_HARDWARE_PUBLIC
+  hardware_interface::CallbackReturn on_shutdown(const rclcpp_lifecycle::State &) override;
+  FAIRINO_HARDWARE_PUBLIC
+  hardware_interface::CallbackReturn on_error(const rclcpp_lifecycle::State &) override;
   FAIRINO_HARDWARE_PUBLIC
   std::vector<hardware_interface::StateInterface> export_state_interfaces() override;
-
   FAIRINO_HARDWARE_PUBLIC
   std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
-
-  // hardware_interface::return_type prepare_command_mode_switch(
-  //   const std::vector<std::string> & start_interfaces,
-  //   const std::vector<std::string> & stop_interfaces) override;
-  // hardware_interface::return_type perform_command_mode_switch(
-  //   const std::vector<std::string>& start_interfaces,
-  //   const std::vector<std::string>& stop_interfaces) override;
-
   FAIRINO_HARDWARE_PUBLIC
-  hardware_interface::return_type read(
-    const rclcpp::Time & time, const rclcpp::Duration & period) override;
-
+  hardware_interface::return_type prepare_command_mode_switch(
+    const std::vector<std::string> & start, const std::vector<std::string> & stop) override;
   FAIRINO_HARDWARE_PUBLIC
-  hardware_interface::return_type write(
-    const rclcpp::Time & time, const rclcpp::Duration & period) override;
+  hardware_interface::return_type perform_command_mode_switch(
+    const std::vector<std::string> & start, const std::vector<std::string> & stop) override;
+  FAIRINO_HARDWARE_PUBLIC
+  hardware_interface::return_type read(const rclcpp::Time &, const rclcpp::Duration &) override;
+  FAIRINO_HARDWARE_PUBLIC
+  hardware_interface::return_type write(const rclcpp::Time &, const rclcpp::Duration &) override;
+
+protected:
+  virtual std::unique_ptr<RobotBackend> create_backend() { return make_sdk_backend(); }
 
 private:
-  static inline rclcpp::Logger get_logger();
-  double _jnt_position_command[6];
-  double _jnt_velocity_command[6];
-  double _jnt_torque_command[6];
-  double _jnt_position_state[6];
-  double _jnt_velocity_state[6];
-  double _jnt_torque_state[6];
-  int _control_mode;
-  std::string _controller_ip = CONTROLLER_IP_ADDRESS;
-  std::unique_ptr<FRRobot> _ptr_robot;
+  void close_session();
+  size_t owned_interfaces(const std::vector<std::string> & interfaces) const;
+  void update_state();
+  void seed_commands();
+
+  std::array<double, 6> positions_{};
+  std::array<double, 6> velocities_{};
+  std::array<double, 6> efforts_{};
+  std::array<double, 6> commands_{};
+  double motion_allowed_ = 0.0;
+  double connected_ = 0.0;
+  double fault_latched_ = 0.0;
+  double feedback_age_ = 0.0;
+  double main_error_ = 0.0;
+  double sub_error_ = 0.0;
+  bool active_ = false;
+  std::string robot_ip_ = "192.168.58.2";
+  std::string state_prefix_ = "fairino";
+  std::chrono::milliseconds feedback_timeout_{100};
+  std::chrono::milliseconds command_timeout_{100};
+  std::shared_ptr<RobotSession> session_;
+  std::shared_ptr<robot_command_thread> node_;
+  std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
+  std::atomic<bool> executor_running_{false};
+  std::thread executor_thread_;
 };
-
 }  // namespace fairino_hardware
-
 #endif
