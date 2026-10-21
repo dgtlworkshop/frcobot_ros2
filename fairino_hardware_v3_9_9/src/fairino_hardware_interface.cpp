@@ -90,10 +90,9 @@ std::vector<hardware_interface::StateInterface> FairinoHardwareInterface::export
 
   //导出关节相关的状态接口(位置，速度，扭矩)
   for (size_t i = 0; i < this->info_.joints.size(); ++i) {
-    state_interfaces.emplace_back(
-      hardware_interface::StateInterface(
-        this->info_.joints[i].name, hardware_interface::HW_IF_POSITION, &this->_jnt_position_state[i])
-      );
+    state_interfaces.emplace_back(hardware_interface::StateInterface(
+      this->info_.joints[i].name, hardware_interface::HW_IF_POSITION,
+      &this->_jnt_position_state[i]));
 
     // state_interfaces.emplace_back(hardware_interface::StateInterface(
     //     info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &_jnt_velocity_state.at(i)));
@@ -112,7 +111,8 @@ FairinoHardwareInterface::export_command_interfaces()
   std::vector<hardware_interface::CommandInterface> command_interfaces;
   for (size_t i = 0; i < this->info_.joints.size(); ++i) {
     command_interfaces.emplace_back(hardware_interface::CommandInterface(
-      this->info_.joints[i].name, hardware_interface::HW_IF_POSITION, &this->_jnt_position_command[i]));
+      this->info_.joints[i].name, hardware_interface::HW_IF_POSITION,
+      &this->_jnt_position_command[i]));
 
     //     command_interfaces.emplace_back(hardware_interface::CommandInterface(//预留的扭矩控制接口
     //         info_.joints[i].name, hardware_interface::HW_IF_EFFORT, &_jnt_torque_command.at(i)));
