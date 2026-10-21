@@ -18,6 +18,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
    "srv/RemoteCmdInterface.srv"
    "srv/RemoteScriptContent.srv"
    "msg/RobotNonrtState.msg"
+   "msg/ApiResponseEnum.msg"
    DEPENDENCIES std_msgs  # 添加实际依赖
 )
 
