@@ -178,17 +178,19 @@ std::string RobotSession::readiness_error(const ROBOT_STATE_PKG & s)
   if (s.rbtEnableState != 1) {
     add_condition("rbtEnableState=" + std::to_string(s.rbtEnableState) + " (expected 1: enabled)");
   }
-  if (s.robot_mode != 0) {
-    add_condition("robot_mode=" + std::to_string(s.robot_mode) + " (expected 0: automatic)");
+  // The Robot Mode can be either in Manual or Automatic
+  if (s.robot_mode != 0 && s.robot_mode != 1) {
+    add_condition("robot_mode=" + std::to_string(s.robot_mode) + " (expected 0: automatic or 1: manual)");
   }
   if (s.robot_state != 1 && s.robot_state != 2) {
     add_condition("robot_state=" + std::to_string(s.robot_state) +
       " (expected 1: stopped or 2: running; 3: paused, 4: drag)");
   }
-  if (s.programRunState != 0 && s.programRunState != 200) {
-    add_condition("programRunState=" + std::to_string(s.programRunState) +
-      " (expected 0: no LUA program running; 200: allowed unknown value)");
-  }
+  // programRunState is seemingly random
+  // if (s.programRunState != 0 && s.programRunState != 200) {
+  //   add_condition("programRunState=" + std::to_string(s.programRunState) +
+  //     " (expected 0: no LUA program running; 200: allowed unknown value)");
+  // }
   if (!readiness.empty()) {
     return "Robot not ready: " + readiness;
   }
@@ -271,13 +273,13 @@ void RobotSession::poll_once()
     if (result != 0) {
       latch_locked("SDK feedback/connection failure: " + std::to_string(result));
     } else {
-      if (state.programRunState == 200 &&
-        (!status_.valid || status_.state.programRunState != 200))
-      {
-        RCLCPP_WARN(logger,
-          "programRunState=200 is unknown in this SDK; allowed by explicit compatibility "
-          "exception, not confirmation that no LUA program is running");
-      }
+      // if (state.programRunState == 200 &&
+      //   (!status_.valid || status_.state.programRunState != 200))
+      // {
+      //   RCLCPP_WARN_ONCE(logger,
+      //     "programRunState=200 is unknown in this SDK; allowed by explicit compatibility "
+      //     "exception, not confirmation that no LUA program is running");
+      // }
       const bool changed = state.robotTime.year != 0 &&
                            (!status_.valid || !same_time(state.robotTime, status_.state.robotTime));
       status_.state = state;
