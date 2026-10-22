@@ -69,6 +69,16 @@ TEST_F(RosTest, PublishesBeforeControlAfterFaultAndOnDisconnect)
   EXPECT_FALSE(session->snapshot().claimed);
   {
     std::lock_guard<std::mutex> guard(robot->mutex);
+    robot->state.programRunState = 200;
+  }
+  ASSERT_TRUE(spin_until([&]() {
+    return !diagnostics.status.empty() &&
+           diagnostics.status[0].level == diagnostic_msgs::msg::DiagnosticStatus::WARN;
+  }));
+  EXPECT_TRUE(session->snapshot().motion_allowed);
+  EXPECT_NE(diagnostics.status[0].message.find("unknown"), std::string::npos);
+  {
+    std::lock_guard<std::mutex> guard(robot->mutex);
     robot->state.main_code = 88;
     robot->state.sub_code = 9;
     robot->state.jt_cur_pos[5] = 42.0;

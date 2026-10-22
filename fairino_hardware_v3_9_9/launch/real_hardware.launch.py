@@ -1,11 +1,11 @@
 from pathlib import Path
 
+import xacro
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-import xacro
 
 
 def launch_setup(context):
@@ -41,15 +41,24 @@ def launch_setup(context):
 
 
 def generate_launch_description():
-    return LaunchDescription([
-        DeclareLaunchArgument("robot_ip", description="Real robot controller IPv4 address"),
-        DeclareLaunchArgument(
-            "model",
-            default_value="fairino20_v6",
-            choices=[
-                "fairino3_v6", "fairino3_mt_v6", "fairino5_v6", "fairino10_v6",
-                "fairino16_v6", "fairino20_v6", "fairino30_v6",
-            ],
-        ),
-        OpaqueFunction(function=launch_setup),
-    ])
+    return LaunchDescription(
+        [
+            DeclareLaunchArgument(
+                "robot_ip", description="Real robot controller IPv4 address"
+            ),
+            DeclareLaunchArgument(
+                "model",
+                default_value="fairino20_v6",
+                choices=[
+                    "fairino3_v6",
+                    "fairino3_mt_v6",
+                    "fairino5_v6",
+                    "fairino10_v6",
+                    "fairino16_v6",
+                    "fairino20_v6",
+                    "fairino30_v6",
+                ],
+            ),
+            OpaqueFunction(function=launch_setup),
+        ]
+    )

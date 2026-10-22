@@ -216,6 +216,56 @@ TEST_F(SessionTest, BusySdkAndStalledWorkerFailClosed)
   EXPECT_FALSE(session->snapshot().motion_allowed);
 }
 
+TEST_F(SessionTest, RecoveryIdentifiesAllFailedReadinessConditionsAndRawValues)
+{
+  robot->state.rbtEnableState = 0;
+  robot->state.robot_mode = 1;
+  robot->state.robot_state = 3;
+  robot->state.programRunState = 1;
+  session->poll_once();
+  std::string reason;
+  ASSERT_FALSE(session->recover(reason));
+  EXPECT_NE(reason.find("rbtEnableState=0"), std::string::npos);
+  EXPECT_NE(reason.find("robot_mode=1"), std::string::npos);
+  EXPECT_NE(reason.find("robot_state=3"), std::string::npos);
+  EXPECT_NE(reason.find("programRunState=1"), std::string::npos);
+  EXPECT_FALSE(session->snapshot().motion_allowed);
+}
+
+TEST_F(SessionTest, AllowsUnknownProgramState200ButPreservesOtherFaultGates)
+{
+  robot->state.programRunState = 200;
+  session->poll_once();
+  EXPECT_TRUE(session->snapshot().motion_allowed);
+  std::string reason;
+  ASSERT_TRUE(session->recover(reason));
+  ASSERT_TRUE(session->claim());
+  session->command({});
+  session->poll_once();
+  EXPECT_EQ(robot->sends, 1);
+  robot->state.main_code = 42;
+  session->poll_once();
+  EXPECT_FALSE(session->snapshot().motion_allowed);
+  EXPECT_FALSE(session->recover(reason));
+  EXPECT_EQ(robot->stops, 1);
+}
+
+TEST_F(SessionTest, RejectsProgramStatesOtherThanZeroAndExplicitException)
+{
+  for (const auto value : {1, 2, 199, 201, 255}) {
+    SCOPED_TRACE(value);
+    robot->state.programRunState = value;
+    session->poll_once();
+    EXPECT_FALSE(session->snapshot().motion_allowed);
+    std::string reason;
+    EXPECT_FALSE(session->recover(reason));
+    EXPECT_NE(reason.find("programRunState=" + std::to_string(value)), std::string::npos);
+    robot->state.programRunState = 0;
+    session->poll_once();
+    ASSERT_TRUE(session->recover(reason));
+  }
+}
+
 TEST(SessionSetup, FailedSdkConfigurationCannotBeAcknowledgedAsReady)
 {
   auto backend = std::make_unique<FakeRobot>();

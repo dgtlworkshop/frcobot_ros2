@@ -14326,6 +14326,12 @@ void robot_command_thread::_state_recv_callback()
   status.level = snapshot.motion_allowed ? diagnostic_msgs::msg::DiagnosticStatus::OK
                                          : diagnostic_msgs::msg::DiagnosticStatus::ERROR;
   status.message = snapshot.reason;
+  if (snapshot.motion_allowed && ctrl_state.programRunState == 200) {
+    status.level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    status.message =
+      "programRunState=200 is unknown; allowed by compatibility exception, "
+      "not confirmation that no LUA program is running";
+  }
   const auto add = [&status](const std::string & key, const std::string & value) {
     diagnostic_msgs::msg::KeyValue item;
     item.key = key;
@@ -14341,7 +14347,9 @@ void robot_command_thread::_state_recv_callback()
   add("main_error_code", std::to_string(ctrl_state.main_code));
   add("sub_error_code", std::to_string(ctrl_state.sub_code));
   add("robot_enabled", std::to_string(ctrl_state.rbtEnableState));
+  add("robot_mode", std::to_string(ctrl_state.robot_mode));
   add("robot_state", std::to_string(ctrl_state.robot_state));
+  add("program_run_state", std::to_string(ctrl_state.programRunState));
   add("safety_stop0", std::to_string(ctrl_state.safety_stop0_state));
   add("safety_stop1", std::to_string(ctrl_state.safety_stop1_state));
   diagnostics.status.push_back(status);
