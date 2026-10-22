@@ -14344,6 +14344,8 @@ void robot_command_thread::_state_recv_callback()
   add("fault_latched", std::to_string(snapshot.fault_latched));
   add("motion_allowed", std::to_string(snapshot.motion_allowed));
   add("controller_claimed", std::to_string(snapshot.claimed));
+  add("stop_pending", std::to_string(snapshot.stop_pending));
+  add("readiness", snapshot.readiness.empty() ? "Ready" : snapshot.readiness);
   add("main_error_code", std::to_string(ctrl_state.main_code));
   add("sub_error_code", std::to_string(ctrl_state.sub_code));
   add("robot_enabled", std::to_string(ctrl_state.rbtEnableState));

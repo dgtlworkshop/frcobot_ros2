@@ -173,6 +173,57 @@ TEST_F(SessionTest, StopFailureIsNotSuccess)
   EXPECT_TRUE(session->snapshot().fault_latched);
 }
 
+TEST_F(SessionTest, DisconnectDefersStopAndReleaseNeverBlocks)
+{
+  ASSERT_TRUE(session->claim());
+  robot->receive_result = 2;
+  session->poll_once();
+  EXPECT_EQ(robot->stops, 0);
+  EXPECT_TRUE(session->snapshot().stop_pending);
+  EXPECT_TRUE(session->release());
+  EXPECT_FALSE(session->snapshot().claimed);
+  EXPECT_EQ(robot->stops, 0);
+  std::string reason;
+  EXPECT_FALSE(session->recover(reason));
+  robot->receive_result = 0;
+  session->poll_once();
+  EXPECT_EQ(robot->stops, 1);
+  EXPECT_FALSE(session->snapshot().stop_pending);
+  EXPECT_TRUE(session->recover(reason));
+  ASSERT_TRUE(session->claim());
+}
+
+TEST_F(SessionTest, ReleaseWithBusySdkDefersStopAndBlocksReclaim)
+{
+  ASSERT_TRUE(session->claim());
+  {
+    std::lock_guard<std::mutex> guard(session->sdk_mutex());
+    EXPECT_TRUE(session->release());
+    EXPECT_FALSE(session->claim());
+  }
+  EXPECT_EQ(robot->stops, 0);
+  EXPECT_TRUE(session->snapshot().stop_pending);
+  EXPECT_FALSE(session->claim());
+  session->poll_once();
+  EXPECT_EQ(robot->stops, 1);
+  std::string reason;
+  ASSERT_TRUE(session->recover(reason));
+  ASSERT_TRUE(session->claim());
+}
+
+TEST_F(SessionTest, AlarmReasonNamesActiveFlags)
+{
+  robot->state.cmdPointError = 1;
+  robot->state.driverComError[2] = 1;
+  session->poll_once();
+  const auto readiness = session->snapshot().readiness;
+  EXPECT_NE(readiness.find("cmdPointError=1"), std::string::npos);
+  EXPECT_NE(readiness.find("driverComError[2]=1"), std::string::npos);
+  std::string reason;
+  EXPECT_FALSE(session->recover(reason));
+  EXPECT_NE(reason.find("ResetAllError()"), std::string::npos);
+}
+
 TEST_F(SessionTest, RejectsEveryReadinessLoss)
 {
   const auto healthy = robot->state;

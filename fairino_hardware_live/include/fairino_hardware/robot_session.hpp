@@ -39,6 +39,9 @@ struct RobotSnapshot
   bool fault_latched = false;
   bool claimed = false;
   bool motion_allowed = false;
+  bool stop_pending = false;
+  // Current readiness problem (empty when ready); `reason` keeps the first latched fault.
+  std::string readiness;
   double feedback_age = 0.0;
   uint64_t timestamp = 0;
   std::string reason = "Waiting for robot feedback";

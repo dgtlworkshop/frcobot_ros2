@@ -154,19 +154,40 @@ std::string RobotSession::readiness_error(const ROBOT_STATE_PKG & s)
   if (s.main_code != 0 || s.sub_code != 0) {
     return "Robot fault " + std::to_string(s.main_code) + "/" + std::to_string(s.sub_code);
   }
-  if (
-    s.EmergencyStop || s.safety_stop0_state || s.safety_stop1_state || s.btnBoxStopSignal ||
-    s.collisionState || s.safetyDoorAlarm || s.safetyPlaneAlarm || s.safetyDataState ||
-    s.alarmCheckEmergStopBtn || s.ctrlBoxError || s.driverError || s.driverAlarm ||
-    s.aliveSlaveNumError || s.cmdPointError || s.outSoftLimitError || s.abnomalStop ||
-    s.motonAlarm || s.interfaceAlarm || s.alarmRebootRobot || s.alarm ||
-    std::any_of(
-      std::begin(s.driverComError), std::end(s.driverComError),
-      [](auto value) { return value != 0; }) ||
-    std::any_of(std::begin(s.slaveComError), std::end(s.slaveComError), [](auto value) {
-      return value != 0;
-    })) {
-    return "Robot safety stop or controller/drive alarm";
+  std::string alarms;
+  const auto flag = [&alarms](const std::string & name, long value) {
+    if (value != 0) {
+      alarms += (alarms.empty() ? "" : ", ") + name + "=" + std::to_string(value);
+    }
+  };
+  flag("EmergencyStop", s.EmergencyStop);
+  flag("safety_stop0_state", s.safety_stop0_state);
+  flag("safety_stop1_state", s.safety_stop1_state);
+  flag("btnBoxStopSignal", s.btnBoxStopSignal);
+  flag("collisionState", s.collisionState);
+  flag("safetyDoorAlarm", s.safetyDoorAlarm);
+  flag("safetyPlaneAlarm", s.safetyPlaneAlarm);
+  flag("safetyDataState", s.safetyDataState);
+  flag("alarmCheckEmergStopBtn", s.alarmCheckEmergStopBtn);
+  flag("ctrlBoxError", s.ctrlBoxError);
+  flag("driverError", s.driverError);
+  flag("driverAlarm", s.driverAlarm);
+  flag("aliveSlaveNumError", s.aliveSlaveNumError);
+  flag("cmdPointError", s.cmdPointError);
+  flag("outSoftLimitError", s.outSoftLimitError);
+  flag("abnomalStop", s.abnomalStop);
+  flag("motonAlarm", s.motonAlarm);
+  flag("interfaceAlarm", s.interfaceAlarm);
+  flag("alarmRebootRobot", s.alarmRebootRobot);
+  flag("alarm", s.alarm);
+  for (size_t i = 0; i < std::size(s.driverComError); ++i) {
+    flag("driverComError[" + std::to_string(i) + "]", s.driverComError[i]);
+  }
+  for (size_t i = 0; i < std::size(s.slaveComError); ++i) {
+    flag("slaveComError[" + std::to_string(i) + "]", s.slaveComError[i]);
+  }
+  if (!alarms.empty()) {
+    return "Robot safety stop or controller/drive alarm: " + alarms;
   }
   std::string readiness;
   const auto add_condition = [&readiness](const std::string & condition) {
@@ -215,8 +236,10 @@ RobotSnapshot RobotSession::snapshot_locked(Clock::time_point now) const
   result.feedback_age = status_.valid ? std::chrono::duration<double>(now - feedback_time_).count()
                                       : std::numeric_limits<double>::infinity();
   result.fresh = status_.connected && status_.valid && now - feedback_time_ < feedback_timeout_;
+  result.readiness = readiness_error(result.state);
+  result.stop_pending = stop_pending_;
   result.motion_allowed =
-    configured_ && result.fresh && !result.fault_latched && readiness_error(result.state).empty();
+    configured_ && result.fresh && !result.fault_latched && result.readiness.empty();
   if (!result.fresh && !result.fault_latched) {
     result.reason = "Robot feedback missing or stale";
   }
@@ -305,8 +328,11 @@ void RobotSession::poll_once()
     if (status_.claimed && now - command_time_ >= command_timeout_) {
       latch_locked("Controller command watchdog expired");
     }
-    stop = stop_pending_;
-    stop_pending_ = false;
+    // XML-RPC stop calls block until the SDK reconnects; keep monitoring and stop once reachable.
+    stop = stop_pending_ && status_.connected;
+    if (stop) {
+      stop_pending_ = false;
+    }
     send = status_.claimed && snapshot_locked(now).motion_allowed && command_pending_;
     if (send) {
       target = command_degrees_;
@@ -329,9 +355,14 @@ void RobotSession::poll_once()
 
 bool RobotSession::claim()
 {
-  std::lock_guard<std::mutex> sdk_guard(sdk_mutex_);
+  // Called from the controller-manager update loop: never wait for a busy SDK.
+  std::unique_lock<std::mutex> sdk_guard(sdk_mutex_, std::try_to_lock);
   {
     std::lock_guard<std::mutex> guard(mutex_);
+    if (!sdk_guard.owns_lock() || stop_pending_) {
+      RCLCPP_ERROR(logger, "Cannot claim servo control: SDK busy or previous stop still pending");
+      return false;
+    }
     if (
       status_.claimed || !snapshot_locked(Clock::now()).motion_allowed ||
       status_.state.robot_state != 1) {
@@ -361,7 +392,9 @@ bool RobotSession::claim()
 
 bool RobotSession::release()
 {
-  std::lock_guard<std::mutex> sdk_guard(sdk_mutex_);
+  // Called from the controller-manager update loop. A disconnected SDK can block XML-RPC
+  // calls until it reconnects, so never wait here: hand the stop to the monitor worker.
+  std::unique_lock<std::mutex> sdk_guard(sdk_mutex_, std::try_to_lock);
   {
     std::lock_guard<std::mutex> guard(mutex_);
     if (!status_.claimed && !stop_pending_) {
@@ -369,6 +402,12 @@ bool RobotSession::release()
     }
     status_.claimed = false;
     command_pending_ = false;
+    if (!sdk_guard.owns_lock() || !status_.connected) {
+      stop_pending_ = true;
+      latch_locked("Servo release deferred: SDK busy or disconnected");
+      RCLCPP_WARN(logger, "Servo stop deferred until the SDK is reachable");
+      return true;
+    }
     stop_pending_ = false;
   }
   const int result = backend_->stop();
@@ -401,12 +440,25 @@ bool RobotSession::recover(std::string & reason)
     return false;
   }
   const auto current = snapshot_locked(Clock::now());
-  if (current.claimed || stop_pending_ || !current.fresh) {
-    reason = "Deactivate the trajectory controller and wait for fresh connected feedback";
+  if (current.claimed) {
+    reason = "Servo control still claimed; deactivate the trajectory controller";
     return false;
   }
-  reason = readiness_error(current.state);
+  if (stop_pending_) {
+    reason = "Robot stop pending until the SDK reconnects; retry once connected";
+    return false;
+  }
+  if (!current.fresh) {
+    reason = "Waiting for fresh connected robot feedback";
+    return false;
+  }
+  reason = current.readiness;
   if (!reason.empty()) {
+    if (current.state.main_code || current.state.sub_code || reason.find("alarm") != std::string::npos) {
+      reason += " (robot-side; clear with ResetAllError() after resolving the cause)";
+    } else if (current.state.rbtEnableState != 1) {
+      reason += " (enable with RobotEnable(1))";
+    }
     return false;
   }
   status_.fault_latched = false;
