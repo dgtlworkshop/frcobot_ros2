@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(fairino_hardware_v3_9_9)
+project(fairino_hardware_live)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic -fPIC -g -ggdb3)
@@ -18,19 +18,27 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(fairino_msgs REQUIRED)
 find_package(libfairino REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
+find_package(controller_interface REQUIRED)
+find_package(joint_trajectory_controller REQUIRED)
+find_package(controller_manager_msgs REQUIRED)
+find_package(Threads REQUIRED)
 
 
 #set variable
 set(SRC_DIR EXP_SRC_DIR)
-file(GLOB SRC_DIR ./src/command_server.cpp ./src/command_server_node.cpp ./src/CNDE_thread.cpp ./src/global_val_def.cpp)
+set(SRC_DIR ./src/command_server_node.cpp)
 file(GLOB EXP_SRC_DIR ./examples/src/*.cpp)
 
 #compile
 add_executable(ros2_cmd_server ${SRC_DIR})
 add_executable(srv_test_client ${EXP_SRC_DIR})
+add_library(fairino_robot_session SHARED src/robot_session.cpp src/command_server.cpp)
+add_library(fairino_trajectory_controller SHARED src/fault_aware_joint_trajectory_controller.cpp)
 add_library(
-  fairino_hardware 
-  SHARED 
+  fairino_hardware
+  SHARED
   ./src/fairino_hardware_interface.cpp
 )
 
@@ -43,27 +51,40 @@ target_include_directories(ros2_cmd_server PUBLIC
 ${CMAKE_CURRENT_SOURCE_DIR}/include/)
 
 target_include_directories(srv_test_client PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/examples/include)
-target_include_directories(fairino_hardware PUBLIC 
+target_include_directories(fairino_hardware PUBLIC
 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-$<INSTALL_INTERFACE:include/fairino_hardware>
+$<INSTALL_INTERFACE:include>
 )
-target_link_libraries(ros2_cmd_server libfairino::fairino)
-target_link_libraries(fairino_hardware libfairino::fairino)
+target_include_directories(fairino_robot_session PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_include_directories(fairino_trajectory_controller PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_link_libraries(ros2_cmd_server fairino_robot_session)
+target_link_libraries(fairino_robot_session libfairino::fairino Threads::Threads)
+target_link_libraries(fairino_hardware fairino_robot_session)
+ament_target_dependencies(fairino_robot_session rclcpp fairino_msgs std_srvs diagnostic_msgs)
+ament_target_dependencies(fairino_trajectory_controller
+  rclcpp controller_interface joint_trajectory_controller controller_manager_msgs pluginlib)
 
 #add dependencies
 ament_target_dependencies(ros2_cmd_server rclcpp fairino_msgs)
 ament_target_dependencies(srv_test_client rclcpp fairino_msgs)
-ament_target_dependencies(fairino_hardware 
+ament_target_dependencies(fairino_hardware
   hardware_interface
   pluginlib
   rclcpp
   fairino_msgs
-  rclcpp_lifecycle 
+  rclcpp_lifecycle
+  std_srvs
+  diagnostic_msgs
 )
 
 
 #export hardware plugins
 pluginlib_export_plugin_description_file(hardware_interface fairino_hardware.xml)
+pluginlib_export_plugin_description_file(controller_interface fairino_controllers.xml)
 
 #install all files
 #command server
@@ -77,16 +98,24 @@ install(TARGETS srv_test_client
 )
 
 #ros2_control hardware
-install(TARGETS fairino_hardware
+install(TARGETS fairino_hardware fairino_robot_session fairino_trajectory_controller
   EXPORT fairino_hardware
-  ARCHIVE DESTINATION lib/${PROJECT_NAME}
-  LIBRARY DESTINATION lib/${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
 )
+install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY config launch urdf DESTINATION share/${PROJECT_NAME})
+install(FILES README.md DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   find_package(ament_cmake_gmock REQUIRED)
   find_package(hardware_interface REQUIRED)
+  ament_add_gmock(test_robot_session test/test_robot_session.cpp)
+  target_link_libraries(test_robot_session fairino_robot_session fairino_hardware)
+  ament_add_gmock(test_ros_integration test/test_ros_integration.cpp)
+  target_link_libraries(test_ros_integration
+    fairino_robot_session fairino_trajectory_controller fairino_hardware)
   # the following line skips the linter which checks for copyrights
   # comment the line when a copyright and license is added to all source files
   set(ament_cmake_copyright_FOUND TRUE)
@@ -99,6 +128,8 @@ endif()
 
 #export
 ament_export_targets(fairino_hardware HAS_LIBRARY_TARGET)
-ament_export_dependencies(ament_cmake rclcpp hardware_interface pluginlib rclcpp_lifecycle libfairino)
+ament_export_dependencies(ament_cmake rclcpp hardware_interface pluginlib rclcpp_lifecycle
+  libfairino fairino_msgs std_srvs diagnostic_msgs controller_interface joint_trajectory_controller
+  controller_manager_msgs Threads)
 
 ament_package()

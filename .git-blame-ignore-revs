@@ -1,2 +1,8 @@
 # Reformatted v3_9_9 to match ROS
 6d1c7be7a56dd6c6e060611141945551d18872a9
+
+# format command_server
+63b4d4dc50a816419f42198e19688b1a76eebea9
+
+# Rename fairino_hardware_v3_9_9 to fairino_hardware_live
+6e50af5fc85944e2bac825369ac05bd5669662bb

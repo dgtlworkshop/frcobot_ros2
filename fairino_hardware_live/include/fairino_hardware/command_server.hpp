@@ -9,6 +9,8 @@
 
 #include "arpa/inet.h"
 #include "data_type_def.h"
+#include "diagnostic_msgs/msg/diagnostic_array.hpp"
+#include "fairino_hardware/robot_session.hpp"
 #include "fairino_msgs/msg/robot_nonrt_state.hpp"
 #include "fairino_msgs/srv/remote_cmd_interface.hpp"
 #include "fairino_msgs/srv/remote_script_content.hpp"
@@ -19,6 +21,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/service.hpp"
 #include "semaphore.h"
+#include "std_srvs/srv/trigger.hpp"
 #include "stdlib.h"
 #include "sys/mman.h"
 #include "sys/socket.h"
@@ -33,7 +36,9 @@ using robot_feedback_msg = fairino_msgs::msg::RobotNonrtState;
 class robot_command_thread : public rclcpp::Node
 {
 public:
-  robot_command_thread(const std::string node_name);
+  robot_command_thread(
+    const std::string node_name, std::shared_ptr<fairino_hardware::RobotSession> session = nullptr,
+    const std::string & robot_ip = "");
   ~robot_command_thread();
 
   //点位信息设置类
@@ -701,11 +706,11 @@ private:
     _state_publisher;  //进程内通信，用于发送状态数据字符串
   rclcpp::TimerBase::SharedPtr _locktimer1;
 
-  void _ping_recv_callback();
-  rclcpp::TimerBase::SharedPtr _locktimer2;
-  bool _check_ping(const std::string & ip_address);
-
-  std::unique_ptr<FRRobot> _ptr_robot;    //机械臂SDK库指针
+  std::shared_ptr<fairino_hardware::RobotSession> _session;
+  bool _hardware_managed = false;
+  FRRobot * _ptr_robot = nullptr;
+  rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr _diagnostics;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr _recover_service;
   ROBOT_STATE_PKG _robot_realtime_state;  //从SDK获取的机械臂实时状态结构体
   rclcpp::TimerBase::SharedPtr _locktimer;
 

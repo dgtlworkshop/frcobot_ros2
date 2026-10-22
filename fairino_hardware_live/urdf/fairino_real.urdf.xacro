@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="fairino">
+  <xacro:arg name="model" default="fairino20_v6"/>
+  <xacro:arg name="robot_ip" default="192.168.58.2"/>
+  <xacro:include filename="$(find fairino_description)/urdf/$(arg model).urdf"/>
+  <xacro:include filename="fairino.ros2_control.xacro"/>
+  <xacro:fairino_ros2_control name="FairinoSystem" robot_ip="$(arg robot_ip)"/>
+</robot>

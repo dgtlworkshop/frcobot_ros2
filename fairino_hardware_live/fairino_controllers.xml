@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<library path="fairino_trajectory_controller">
+  <class name="fairino_hardware/FaultAwareJointTrajectoryController"
+         type="fairino_hardware::FaultAwareJointTrajectoryController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>JTC with latched Fairino motion-authority fault escalation.</description>
+  </class>
+</library>
