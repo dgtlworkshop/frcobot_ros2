@@ -43,6 +43,7 @@ class robot_version_thread:public rclcpp::Node{
         std::string target_lib;
         std::string libdir;
         const std::vector<std::string> stringList = {
+            "fairino_hardware_live",
             "fairino_hardware_v3_8_2_11",
             "fairino_hardware_v3_8_2_12",
             "fairino_hardware_v3_9_0",

@@ -9,7 +9,7 @@ from launch_ros.actions import Node
 
 
 def launch_setup(context):
-    share = Path(get_package_share_directory("fairino_hardware_v3_9_9"))
+    share = Path(get_package_share_directory("fairino_hardware_live"))
     description = xacro.process_file(
         str(share / "urdf" / "fairino_real.urdf.xacro"),
         mappings={

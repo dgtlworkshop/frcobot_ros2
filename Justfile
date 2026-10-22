@@ -27,8 +27,8 @@ clean:
 	rm -rf build install log
 
 # Formats all code
-format: _format_3_9_9
+format: _format_live
 
-[working-directory("fairino_hardware_v3_9_9")]
-_format_3_9_9:
+[working-directory("fairino_hardware_live")]
+_format_live:
 	clang-format -i --style=file --verbose **/*.cpp include/**/*.h include/**/*.hpp

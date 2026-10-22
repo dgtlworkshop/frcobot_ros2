@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(fairino_hardware_v3_9_9)
+project(fairino_hardware_live)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic -fPIC -g -ggdb3)
@@ -37,8 +37,8 @@ add_executable(srv_test_client ${EXP_SRC_DIR})
 add_library(fairino_robot_session SHARED src/robot_session.cpp src/command_server.cpp)
 add_library(fairino_trajectory_controller SHARED src/fault_aware_joint_trajectory_controller.cpp)
 add_library(
-  fairino_hardware 
-  SHARED 
+  fairino_hardware
+  SHARED
   ./src/fairino_hardware_interface.cpp
 )
 
@@ -51,7 +51,7 @@ target_include_directories(ros2_cmd_server PUBLIC
 ${CMAKE_CURRENT_SOURCE_DIR}/include/)
 
 target_include_directories(srv_test_client PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/examples/include)
-target_include_directories(fairino_hardware PUBLIC 
+target_include_directories(fairino_hardware PUBLIC
 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 $<INSTALL_INTERFACE:include>
 )
@@ -71,12 +71,12 @@ ament_target_dependencies(fairino_trajectory_controller
 #add dependencies
 ament_target_dependencies(ros2_cmd_server rclcpp fairino_msgs)
 ament_target_dependencies(srv_test_client rclcpp fairino_msgs)
-ament_target_dependencies(fairino_hardware 
+ament_target_dependencies(fairino_hardware
   hardware_interface
   pluginlib
   rclcpp
   fairino_msgs
-  rclcpp_lifecycle 
+  rclcpp_lifecycle
   std_srvs
   diagnostic_msgs
 )
