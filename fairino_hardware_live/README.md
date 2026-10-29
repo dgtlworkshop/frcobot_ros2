@@ -30,10 +30,13 @@ ros2 control switch_controllers --activate fairino_controller --strict
 1. Deactivate controller
 
 ```sh
-ros2 control switch_controllers --deactivate fairino_controller --strict
+ros2 control switch_controllers --deactivate fairino_controller
 ```
 
-2. Attempt to trigger recovery
+> [!NOTE]
+> `--strict` is not used here as this command could result in no controllers active
+
+2. Attempt to trigger SDK recovery
 
 ```sh
 ros2 service call /fairino/recover std_srvs/srv/Trigger '{}'
