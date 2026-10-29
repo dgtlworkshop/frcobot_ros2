@@ -162,3 +162,82 @@ Before enabling a real arm, exercise faults/disconnects, frozen feedback,
 watchdog timeouts, servo failures, cancellation, tolerance errors, startup hold
 and explicit recovery in simulation/mocks, then commission under vendor
 procedures with independent safety equipment and reduced risk.
+
+## FR20 speed limits
+
+The FR20 configuration uses the requested operating ceilings below. These are
+planning/model limits, not independently verified manufacturer ratings or
+safety-rated robot-side limits. Other robot models are unchanged.
+
+| Limit | Value | Configuration |
+|---|---|---|
+| Each joint (`j1`-`j6`) | 45 degrees/s = `0.7853981633974483` rad/s | `fairino_description/urdf/fairino20_v6.urdf`, joint `limit velocity` |
+| MoveIt joint velocity | Same six limits, with `has_velocity_limits: true` | `fairino20_v6_moveit2_config/config/joint_limits.yaml`, `max_velocity` |
+| Pilz Cartesian translation | 250 mm/s = `0.25` m/s | `fairino20_v6_moveit2_config/config/pilz_cartesian_limits.yaml`, `cartesian_limits.max_trans_vel` |
+
+Both the FR20 fake-hardware xacro and the live driver with `model:=fairino20_v6`
+include the shared URDF, so neither needs a duplicate set of model limits.
+The MoveIt default velocity and acceleration scaling factors remain `0.1`.
+A joint velocity scaling factor of `0.1` gives a 4.5 degrees/s ceiling;
+`1.0` permits the configured 45 degrees/s maximum. Scaling is a fraction of
+the configured limit, not a velocity in degrees/s or mm/s.
+
+The generated MoveIt launches use `MoveItConfigsBuilder`. On ROS 2 Humble,
+the builder loads the available default pipelines, including
+`pilz_industrial_motion_planner`, and merges `pilz_cartesian_limits.yaml` into
+`robot_description_planning`. For Cartesian speed-controlled planning, select
+pipeline `pilz_industrial_motion_planner` and planner `LIN` or `CIRC`; for example,
+with a MoveGroupInterface instance named `move_group`:
+
+```cpp
+move_group.setPlanningPipelineId("pilz_industrial_motion_planner");
+move_group.setPlannerId("LIN");
+move_group.setMaxVelocityScalingFactor(0.1);
+move_group.setMaxAccelerationScalingFactor(0.1);
+```
+
+Provide a valid target and plan before executing. **Joint acceleration limits
+remain unspecified.** The current FR20 configuration leaves them disabled;
+OMPL's time parameterization uses a fallback, and a successful Pilz plan does
+not establish validated joint acceleration/deceleration limits. Obtain appropriate
+robot/load-specific values before hardware use. The supplied speed ceilings do
+not determine acceleration, deceleration, or tool angular velocity, so those
+existing settings are unchanged.
+
+The planning chain currently ends at `wrist3_link`; there is no separate offset
+tool/TCP frame. For an attached tool, model its actual fixed transform and use
+the correct TCP link for Cartesian planning and speed verification.
+
+**Coverage:** a joint limit does not imply a TCP limit, because TCP speed depends
+on posture and tool offset. The Pilz setting is not a global cap for OMPL,
+Pilz PTP, arbitrary Cartesian-path APIs, Servo, direct trajectory goals, or
+SDK/service commands. URDF has no standard global TCP-speed attribute, and its
+`safety_controller.k_velocity` is a gain, not a speed limit. The live driver's
+position-command/ServoJ stream is not made into a speed-enforcing controller by
+these settings. Configure appropriate robot-side limits if the ceiling must
+apply to all physical motion.
+
+After changing limits, rebuild and source this workspace, then restart MoveIt
+and any robot-description/controller processes:
+
+```sh
+colcon build --packages-select fairino_description fairino20_v6_moveit2_config
+source install/setup.bash
+ros2 launch fairino20_v6_moveit2_config move_group.launch.py
+```
+
+Do not run the fake-hardware demo alongside a live controller manager. Existing
+execution routing also differs: the generated FR20 MoveIt configuration uses
+`fairino20_controller`, while the live driver uses `fairino_controller`; configure
+that integration separately before live execution.
+
+Check the loaded values (after sourcing the intended install space):
+
+```sh
+ros2 param get /move_group robot_description_planning.joint_limits.j1.max_velocity
+ros2 param get /move_group robot_description_planning.cartesian_limits.max_trans_vel
+```
+
+Expect `0.7853981633974483` and `0.25`, respectively; also check joints `j2`-`j6`.
+Verify generated joint and TCP speeds in simulation at the actual tool frame
+before supervised hardware use, starting with conservative scaling.
