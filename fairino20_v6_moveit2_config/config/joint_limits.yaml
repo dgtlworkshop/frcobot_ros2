@@ -7,34 +7,35 @@ default_acceleration_scaling_factor: 0.1
 
 # Specific joint properties can be changed with the keys [max_position, min_position, max_velocity, max_acceleration]
 # Joint limits can be turned off with [has_velocity_limits, has_acceleration_limits]
+# Requested FR20 operating ceiling: 45 degrees/s = pi/4 rad/s per joint.
 joint_limits:
   j1:
     has_velocity_limits: true
-    max_velocity: 3.1499999999999999
+    max_velocity: 0.7853981633974483
     has_acceleration_limits: false
     max_acceleration: 0
   j2:
     has_velocity_limits: true
-    max_velocity: 3.1499999999999999
+    max_velocity: 0.7853981633974483
     has_acceleration_limits: false
     max_acceleration: 0
   j3:
     has_velocity_limits: true
-    max_velocity: 3.1499999999999999
+    max_velocity: 0.7853981633974483
     has_acceleration_limits: false
     max_acceleration: 0
   j4:
     has_velocity_limits: true
-    max_velocity: 3.2000000000000002
+    max_velocity: 0.7853981633974483
     has_acceleration_limits: false
     max_acceleration: 0
   j5:
     has_velocity_limits: true
-    max_velocity: 3.2000000000000002
+    max_velocity: 0.7853981633974483
     has_acceleration_limits: false
     max_acceleration: 0
   j6:
     has_velocity_limits: true
-    max_velocity: 3.2000000000000002
+    max_velocity: 0.7853981633974483
     has_acceleration_limits: false
     max_acceleration: 0
