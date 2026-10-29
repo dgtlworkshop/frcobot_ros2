@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="fairino_ros2_control"
+               params="name robot_ip state_prefix:=fairino feedback_timeout_ms:=100 command_timeout_ms:=100">
+    <ros2_control name="${name}" type="system">
+      <hardware>
+        <plugin>fairino_hardware/FairinoHardwareInterface</plugin>
+        <param name="robot_ip">${robot_ip}</param>
+        <param name="state_prefix">${state_prefix}</param>
+        <param name="feedback_timeout_ms">${feedback_timeout_ms}</param>
+        <param name="command_timeout_ms">${command_timeout_ms}</param>
+      </hardware>
+      <xacro:macro name="fairino_joint_interfaces" params="joint">
+        <joint name="${joint}">
+          <command_interface name="position"/>
+          <state_interface name="position"/>
+          <state_interface name="velocity"/>
+          <state_interface name="effort"/>
+        </joint>
+      </xacro:macro>
+      <!-- SDK axes 1 through 6; order is significant. -->
+      <xacro:fairino_joint_interfaces joint="j1"/>
+      <xacro:fairino_joint_interfaces joint="j2"/>
+      <xacro:fairino_joint_interfaces joint="j3"/>
+      <xacro:fairino_joint_interfaces joint="j4"/>
+      <xacro:fairino_joint_interfaces joint="j5"/>
+      <xacro:fairino_joint_interfaces joint="j6"/>
+    </ros2_control>
+  </xacro:macro>
+</robot>

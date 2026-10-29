@@ -3,6 +3,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
+#include <set>
+
 #include "fairino_hardware/version_control.h"
 #include "sys/mman.h"
 
@@ -142,8 +144,12 @@ typedef enum _msg_id {
  * @brief 构造函数，用于初始化参数服务器中的变量，加载SDK库并连接机械臂
  * @param[in] node_name-节点名称，构建ros2 node必须的参数
  */
-robot_command_thread::robot_command_thread(const std::string node_name)
-: rclcpp::Node(node_name, rclcpp::NodeOptions().use_intra_process_comms(true))
+robot_command_thread::robot_command_thread(
+  const std::string node_name, std::shared_ptr<fairino_hardware::RobotSession> session,
+  const std::string & robot_ip)
+: rclcpp::Node(node_name),
+  _session(session ? session : std::make_shared<fairino_hardware::RobotSession>()),
+  _hardware_managed(session != nullptr)
 {
   using namespace std::chrono_literals;
 
@@ -199,8 +205,9 @@ robot_command_thread::robot_command_thread(const std::string node_name)
   /*********************************************************************************************/
 
   /********************************尝试使用SDK库连接机械臂******************************************/
-  _controller_ip = CONTROLLER_IP;  //控制器默认ip地址
-  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Robot ip:%s", CONTROLLER_IP);
+  _controller_ip =
+    this->declare_parameter<std::string>("robot_ip", robot_ip.empty() ? CONTROLLER_IP : robot_ip);
+  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "Robot ip:%s", _controller_ip.c_str());
 
   //打印输出版本信息及其他前置信息
   RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(hello)]);
@@ -217,13 +224,6 @@ robot_command_thread::robot_command_thread(const std::string node_name)
     (std::string(msgout[msg_id(build_time)]) + std::string("%s,%s")).c_str(), __TIME__, __DATE__);
 
   //开始初始化
-  int connect_count = 0;
-  _ptr_robot = std::make_unique<FRRobot>();
-  // _ptr_robot->SetReConnectParam(true,86400000,500);
-  _ptr_robot->SetReConnectParam(true, 86400000, 500);
-  _ptr_robot->LoggerInit(0, "/home/fairino/ros2_ws/fairino_SDK_log/cppsdk.log", 5);
-  _ptr_robot->SetLoggerLevel(3);
-
   std::vector<RobotState> states = {// RobotState::FrameHead,
                                     // RobotState::FrameCnt,
                                     // RobotState::DataLen,
@@ -358,46 +358,43 @@ robot_command_thread::robot_command_thread(const std::string node_name)
                                     RobotState::TsWebStateComErr,
                                     RobotState::ExaxisCoordID,
                                     RobotState::ProgramRunState};
-  int rnt = _ptr_robot->SetRobotRealtimeStateConfig(states, 8);
-  while (connect_count < _connect_retry_SDK) {
-    error_t returncode = _ptr_robot->RPC(_controller_ip.c_str());
-    if (returncode != 0) {
-      connect_count++;
-    } else {  //正常情况
-      break;
-    }
-    if (connect_count == _connect_retry_SDK) {
-      RCLCPP_ERROR(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(connect_failed)]);
-      exit(0);
-    }
-  }
+  _session->connect(_controller_ip, states);
+  _ptr_robot = _session->sdk();
+  _session->start_monitor();
 
   // _locktimer = this->create_wall_timer(100ms,std::bind(&robot_command_thread::_getRobotRTState,this));
-  RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), msgout[msg_id(connect_success)]);
+  RCLCPP_INFO(
+    this->get_logger(), "SDK monitoring started; inspect fairino/diagnostics for readiness");
   /*********************************************************************************************/
-  _state_publisher = this->create_publisher<robot_feedback_msg>("nonrt_state_data", 1);
+  _state_publisher = this->create_publisher<robot_feedback_msg>(
+    "nonrt_state_data", rclcpp::QoS(1).reliable().transient_local());
+  _diagnostics = this->create_publisher<diagnostic_msgs::msg::DiagnosticArray>(
+    "fairino/diagnostics", rclcpp::QoS(1).reliable().transient_local());
+  _recover_service = this->create_service<std_srvs::srv::Trigger>(
+    "fairino/recover", [this](
+                         const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+                         std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+      response->success = _session->recover(response->message);
+      if (!response->success) {
+        RCLCPP_ERROR(this->get_logger(), "Recovery refused: %s", response->message.c_str());
+      }
+    });
   _locktimer1 = this->create_wall_timer(
     10ms, std::bind(
             &robot_command_thread::_state_recv_callback,
             this));  //创建一个定时器任务用于获取非实时状态数据,触发间隔为100ms
-  _locktimer2 =
-    this->create_wall_timer(100ms, std::bind(&robot_command_thread::_ping_recv_callback, this));
 }
 
 /**
  * @brief 析构函数，关闭xmlrpc连接并销毁SDK实例对象
  */
-robot_command_thread::~robot_command_thread()
-{
-  //_ptr_robot->CloseRPC();
-  _ptr_robot->~FRRobot();
-}
+robot_command_thread::~robot_command_thread() { _locktimer1.reset(); }
 
 /**
  * @brief 私有函数，service的回调函数，用于解析字符串指令，跳转对应的处理函数
  */
 void robot_command_thread::_parseROSCommandData_callback(
-  const std::shared_ptr<remote_cmd_server_srv_msg::Request> req,\ 
+  const std::shared_ptr<remote_cmd_server_srv_msg::Request> req,\
         std::shared_ptr<remote_cmd_server_srv_msg::Response>
     res)
 {
@@ -408,6 +405,59 @@ void robot_command_thread::_parseROSCommandData_callback(
   if (std::regex_match(req->cmd_str, func_match, func_reg)) {
     std::string func_name = func_match[1];
     std::string para_list = func_match[2];
+    if (func_name == "StopMotion") {
+      res->cmd_res = _session->stop_motion() ? "0" : "-1";
+      return;
+    }
+    std::unique_lock<std::mutex> sdk_guard(_session->sdk_mutex(), std::try_to_lock);
+    if (!sdk_guard.owns_lock()) {
+      RCLCPP_ERROR(this->get_logger(), "SDK busy; command '%s' refused", func_name.c_str());
+      res->cmd_res = "-1";
+      return;
+    }
+    const auto snapshot = _session->snapshot();
+    // Only explicitly reviewed commands may bypass ros2_control ownership.
+    static const std::set<std::string> shared_commands = {
+      "GetSDKVersion", "GetErrorCode", "GetControllerIP", "GetRobotVersion", "ResetAllError",
+      "RobotEnable",   "Mode",         "SetDO",           "SetToolDO",       "SetAO",
+      "SetToolAO"};
+    static const std::set<std::string> connection_commands = {
+      "CloseRPC",
+      "SetReConnectParam",
+      "SetRobotRealtimeStateConfig",
+      "SetRobotRealtimeStatePeriod",
+      "AddRobotRealtimeState",
+      "DeleteRobotRealtimeState"};
+    if (
+      snapshot.claimed || !snapshot.connected || connection_commands.count(func_name) ||
+      (_hardware_managed && !shared_commands.count(func_name))) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Command '%s' refused: controller owns motion, SDK disconnected, or command is not "
+        "allowed on a shared session; use nonrt_state_data for feedback",
+        func_name.c_str());
+      res->cmd_res = "-1";
+      return;
+    }
+    if (_hardware_managed) {
+      std::string pattern;
+      if (func_name == "RobotEnable" || func_name == "Mode") {
+        pattern = "[01]";
+      } else if (func_name == "SetDO") {
+        pattern = "([0-9]|1[0-5]),[01]";
+      } else if (func_name == "SetToolDO") {
+        pattern = "[01],[01]";
+      } else if (func_name == "SetAO" || func_name == "SetToolAO") {
+        pattern = (func_name == "SetAO" ? "[01]," : "0,") +
+                  std::string("(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)");
+      }
+      if (!std::regex_match(para_list, std::regex(pattern))) {
+        RCLCPP_ERROR(
+          this->get_logger(), "Invalid arguments for shared command '%s'", func_name.c_str());
+        res->cmd_res = "-1";
+        return;
+      }
+    }
     RCLCPP_INFO(
       rclcpp::get_logger(LOGGER_NAME),
       (std::string(msgout[msg_id(receive_cmd)]) + std::string("%s,%s")).c_str(), func_name.c_str(),
@@ -452,7 +502,7 @@ void robot_command_thread::_parseROSCommandData_callback(
 /**
  * @brief 私有函数，用于按逗号分割字符串并存储入std::list容器中
  * @param [in] str-需要进行风格的字符串
- * @param [out] list_data-输出的按逗号风格出来的字符串列表 
+ * @param [out] list_data-输出的按逗号风格出来的字符串列表
  */
 void robot_command_thread::_splitString2List(std::string str, std::list<std::string> & list_data)
 {
@@ -469,7 +519,7 @@ void robot_command_thread::_splitString2List(std::string str, std::list<std::str
 /**
  * @brief 私有函数，用于按逗号分割字符串并存储入std::vector容器中
  * @param [in] str-需要进行风格的字符串
- * @param [out] list_data-输出的按逗号风格出来的字符串列表 
+ * @param [out] list_data-输出的按逗号风格出来的字符串列表
  */
 void robot_command_thread::_splitString2Vec(std::string str, std::vector<std::string> & vector_data)
 {
@@ -715,7 +765,7 @@ std::string robot_command_thread::DragTeachSwitch(std::string para)
  * @brief 机械臂使能
  * @param [in] para-使能开关,0-disable,1-enable
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::RobotEnable(std::string para)
 {
@@ -726,7 +776,7 @@ std::string robot_command_thread::RobotEnable(std::string para)
  * @brief 机械臂手动/自动模式切换
  * @param [in] para-模式设置
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::Mode(std::string para)
 {
@@ -737,7 +787,7 @@ std::string robot_command_thread::Mode(std::string para)
  * @brief 设置速度
  * @param [in] para-速度值，单位为百分比
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetSpeed(std::string para)
 {
@@ -748,7 +798,7 @@ std::string robot_command_thread::SetSpeed(std::string para)
  * @brief 设置工具坐标系标定值
  * @param [in] para-按照顺序依次包含id,x,y,z,rx,ry,rz
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetToolCoord(std::string para)
 {
@@ -809,7 +859,7 @@ std::string robot_command_thread::ComputeTcp4(std::string para)
  * @brief 设置工具坐标系标定值列表
  * @param [in] para-按照顺序依次包含id,x,y,z,rx,ry,rz
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetToolList(std::string para)
 {
@@ -838,7 +888,7 @@ std::string robot_command_thread::SetToolList(std::string para)
  * @brief 设置外部工具坐标系标定值
  * @param [in] para-按照顺序依次包含id,x,y,z,rx,ry,rz
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetExToolCoord(std::string para)
 {
@@ -861,7 +911,7 @@ std::string robot_command_thread::SetExToolCoord(std::string para)
  * @brief 设置外部工具坐标系列表
  * @param [in] para-按照顺序依次包含id,x,y,z,rx,ry,rz
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetExToolList(std::string para)
 {
@@ -884,7 +934,7 @@ std::string robot_command_thread::SetExToolList(std::string para)
  * @brief 设置工件坐标系标定值
  * @param [in] para-按照顺序依次包含id,x,y,z,rx,ry,rz
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetWObjCoord(std::string para)
 {
@@ -905,7 +955,7 @@ std::string robot_command_thread::SetWObjCoord(std::string para)
  * @brief 设置工件坐标系列表
  * @param [in] para-按照顺序依次包含id,x,y,z,rx,ry,rz
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetWObjList(std::string para)
 {
@@ -926,7 +976,7 @@ std::string robot_command_thread::SetWObjList(std::string para)
  * @brief 设置末端负载重量
  * @param [in] para-loadNum,weight
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetLoadWeight(std::string para)
 {
@@ -945,7 +995,7 @@ std::string robot_command_thread::SetLoadWeight(std::string para)
  * @brief 设置末端负载质心偏移
  * @param [in] para-x,y,z,rx,ry,rz
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetLoadCoord(std::string para)
 {
@@ -961,7 +1011,7 @@ std::string robot_command_thread::SetLoadCoord(std::string para)
  * @brief 设置机械臂安装方式
  * @param [in] para-安装方式
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetRobotInstallPos(std::string para)
 {
@@ -973,7 +1023,7 @@ std::string robot_command_thread::SetRobotInstallPos(std::string para)
  * @brief 设置机械臂安装角度
  * @param [in] para-顺序为yangle,zangle
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetRobotInstallAngle(std::string para)
 {
@@ -990,7 +1040,7 @@ std::string robot_command_thread::SetRobotInstallAngle(std::string para)
  * @brief 设置防碰撞策略
  * @param [in] para-顺序为mode,level[6],config
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetAnticollision(std::string para)
 {
@@ -1018,7 +1068,7 @@ std::string robot_command_thread::SetAnticollision(std::string para)
  * @brief 设置防碰撞等级
  * @param [in] para-strategy,safedisntance,safevel
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetCollisionStrategy(std::string para)
 {
@@ -1040,7 +1090,7 @@ std::string robot_command_thread::SetCollisionStrategy(std::string para)
  * @brief 设置关节正限位的值
  * @param [in] para-limit[6]每个关节限位角度
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetLimitPositive(std::string para)
 {
@@ -1059,7 +1109,7 @@ std::string robot_command_thread::SetLimitPositive(std::string para)
  * @brief 设置关节负限位的值
  * @param [in] para-limit[6]每个关节限位角度
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetLimitNegtive(std::string para)
 {
@@ -1077,7 +1127,7 @@ std::string robot_command_thread::SetLimitNegtive(std::string para)
 /**
  * @brief 尝试清除错误
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ResetAllError(std::string para)
 {
@@ -1090,7 +1140,7 @@ std::string robot_command_thread::ResetAllError(std::string para)
  * @brief 摩擦力补偿开关
  * @param [in] para- 1-打开，0-关闭
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FrictionCompensationOnOff(std::string para)
 {
@@ -1102,7 +1152,7 @@ std::string robot_command_thread::FrictionCompensationOnOff(std::string para)
  * @brief 设置关节摩擦力等级
  * @param [in] para- coeff[6]
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetFrictionValue_level(std::string para)
 {
@@ -1121,7 +1171,7 @@ std::string robot_command_thread::SetFrictionValue_level(std::string para)
  * @brief 侧装状态设置关节摩擦力
  * @param [in] para- coeff[6]
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetFrictionValue_wall(std::string para)
 {
@@ -1140,7 +1190,7 @@ std::string robot_command_thread::SetFrictionValue_wall(std::string para)
  * @brief 倒装状态设置关节摩擦力
  * @param [in] para- coeff[6]
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetFrictionValue_ceiling(std::string para)
 {
@@ -1159,7 +1209,7 @@ std::string robot_command_thread::SetFrictionValue_ceiling(std::string para)
  * @brief 自由安装状态设置关节摩擦力
  * @param [in] para- coeff[6]
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetFrictionValue_freedom(std::string para)
 {
@@ -1178,7 +1228,7 @@ std::string robot_command_thread::SetFrictionValue_freedom(std::string para)
  * @brief 激活夹爪
  * @param [in] para-顺序依次为index,act
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ActGripper(std::string para)
 {
@@ -1196,7 +1246,7 @@ std::string robot_command_thread::ActGripper(std::string para)
  * @param [in] para-顺序依次为index,pos
  * @attention 默认使用的线性导轨夹爪，如果需要改旋转夹爪需要修改后面的4个参数
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveGripper(std::string para)
 {
@@ -1229,7 +1279,7 @@ std::string robot_command_thread::MoveGripper(std::string para)
  * @brief 设置数字IO输出
  * @param [in] para-顺序依次为id,status
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetDO(std::string para)
 {
@@ -1257,7 +1307,7 @@ std::string robot_command_thread::SetDO(std::string para)
  * @brief 设置工具数字IO输出
  * @param [in] para-顺序依次为id,status
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetToolDO(std::string para)
 {
@@ -1285,7 +1335,7 @@ std::string robot_command_thread::SetToolDO(std::string para)
  * @brief 设置模拟IO输出
  * @param [in] para-顺序依次为id,value
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetAO(std::string para)
 {
@@ -1310,7 +1360,7 @@ std::string robot_command_thread::SetAO(std::string para)
  * @brief 设置工具模拟IO输出
  * @param [in] para-顺序依次为id,value
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetToolAO(std::string para)
 {
@@ -1335,7 +1385,7 @@ std::string robot_command_thread::SetToolAO(std::string para)
  * @brief 设置辅助数字IO输出
  * @param [in] para-顺序依次为number,open
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetAuxDO(std::string para)
 {
@@ -1362,7 +1412,7 @@ std::string robot_command_thread::SetAuxDO(std::string para)
  * @brief 设置辅助模拟IO输出
  * @param [in] para-顺序依次为number,percentage
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetAuxAO(std::string para)
 {
@@ -1387,7 +1437,7 @@ std::string robot_command_thread::SetAuxAO(std::string para)
  * @brief 外部轴使能
  * @param [in] para-顺序依次为number,switch
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ExtAxisServoOn(std::string para)
 {
@@ -1405,7 +1455,7 @@ std::string robot_command_thread::ExtAxisServoOn(std::string para)
  * @brief 外部轴点动开始
  * @param [in] para-顺序依次为number,direction,speed,acc,max_distance
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ExtAxisStartJog(std::string para)
 {
@@ -1430,7 +1480,7 @@ std::string robot_command_thread::ExtAxisStartJog(std::string para)
  * @brief 外部轴回零
  * @param [in] para-顺序依次为number,zero_mode,search_speed,latch_speed
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ExtAxisSetHoming(std::string para)
 {
@@ -1452,7 +1502,7 @@ std::string robot_command_thread::ExtAxisSetHoming(std::string para)
  * @brief 外部轴停止点动
  * @param [in] para- index
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::StopExtAxisJog(std::string para)
 {
@@ -1463,7 +1513,7 @@ std::string robot_command_thread::StopExtAxisJog(std::string para)
 /**
  * @brief 获取UDP扩展轴坐标系
  * @return 指令执行是否成功及坐标系数值
- * @retval flag,x,y,z,rx,ry,rz 
+ * @retval flag,x,y,z,rx,ry,rz
  */
 std::string robot_command_thread::ExtAxisGetCoord(std::string para)
 {
@@ -1478,7 +1528,7 @@ std::string robot_command_thread::ExtAxisGetCoord(std::string para)
 /**
  * @brief UDP扩展轴移动
  * @return 指令执行是否成功及坐标系数值
- * @retval flag,x,y,z,rx,ry,rz 
+ * @retval flag,x,y,z,rx,ry,rz
  */
 std::string robot_command_thread::ExtAxisMove(std::string para)
 {
@@ -1500,7 +1550,7 @@ std::string robot_command_thread::ExtAxisMove(std::string para)
 /**
  * @brief UDP扩展轴移动
  * @return 指令执行是否成功及坐标系数值
- * @retval flag,x,y,z,rx,ry,rz 
+ * @retval flag,x,y,z,rx,ry,rz
  */
 std::string robot_command_thread::ExtAxisSyncMoveJ(std::string para)
 {
@@ -1685,7 +1735,7 @@ std::string robot_command_thread::ExtDevLoadUDPDriver(std::string para)
  * @brief 机械臂关节点动
  * @param [in] para- 参数顺序依次为ref,nb,dir,vel,acc,max_dis
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::StartJOG(std::string para)
 {
@@ -1712,7 +1762,7 @@ std::string robot_command_thread::StartJOG(std::string para)
  * @brief 机械臂减速停止点动
  * @param [in] para- ref
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::StopJOG(std::string para)
 {
@@ -1723,7 +1773,7 @@ std::string robot_command_thread::StopJOG(std::string para)
 /**
  * @brief 机械臂立即停止点动
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ImmStopJOG(std::string para)
 {
@@ -1736,7 +1786,7 @@ std::string robot_command_thread::ImmStopJOG(std::string para)
  * @brief 机械臂关节空间运动
  * @param [in] para - 顺序依次为JNT点位/CART点位,speed,tool,user
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveJ(std::string para)
 {
@@ -1858,7 +1908,7 @@ std::string robot_command_thread::MoveJ(std::string para)
  * @brief 机械臂笛卡尔空间直线运动
  * @param [in] para - 顺序依次为JNT点位/CART点位,speed,tool,user
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveL(std::string para)
 {
@@ -1955,7 +2005,7 @@ std::string robot_command_thread::MoveL(std::string para)
  * @brief 机械臂笛卡尔空间圆弧运动
  * @param [in] para - 顺序依次为两个JNT点位/CART点位,speed,tool,user
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveC(std::string para)
 {
@@ -2088,9 +2138,9 @@ std::string robot_command_thread::MoveC(std::string para)
 
 std::string robot_command_thread::Circle(std::string para)
 {
-  /*JointPos *joint_pos_p, DescPose *desc_pos_p, int ptool, 
-    int puser, float pvel, float pacc, ExaxisPos *epos_p, JointPos *joint_pos_t, 
-    DescPose *desc_pos_t, int ttool, int tuser, float tvel, float tacc, 
+  /*JointPos *joint_pos_p, DescPose *desc_pos_p, int ptool,
+    int puser, float pvel, float pacc, ExaxisPos *epos_p, JointPos *joint_pos_t,
+    DescPose *desc_pos_t, int ttool, int tuser, float tvel, float tacc,
     ExaxisPos *epos_t, float ovl, uint8_t offset_flag, DescPose *offset_pos*/
   return "-1";
 }
@@ -2099,7 +2149,7 @@ std::string robot_command_thread::Circle(std::string para)
  * @brief 机械臂关节伺服指令，该指令对于实时性要求较高
  * @param [in] jntpos-六个关节的位置指令，单位为度，eaxispos-4个外部轴位置指令，单位为度，deltaT-指令时间间隔，范围0.001~0.0016
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ServoJ(std::string para)
 {
@@ -2165,7 +2215,7 @@ std::string robot_command_thread::ServoJMultiPoint(std::string para)
 /**
  * @brief 机械臂关节空间样条运动开始
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SplineStart(std::string para)
 {
@@ -2178,11 +2228,11 @@ std::string robot_command_thread::SplineStart(std::string para)
  * @brief 机械臂关节空间样条运动
  * @param [in] para-顺序依次是JNT点位，tool,user,vel
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SplinePTP(std::string para)
 {
-  /*JointPos *joint_pos, DescPose *desc_pos, int tool, 
+  /*JointPos *joint_pos, DescPose *desc_pos, int tool,
     int user, float vel, float acc, float ovl*/
   //默认进来的都是JNT数据
   int speed, tool, user;
@@ -2235,7 +2285,7 @@ std::string robot_command_thread::SplinePTP(std::string para)
 /**
  * @brief 机械臂关节空间样条运动结束
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SplineEnd(std::string para)
 {
@@ -2248,7 +2298,7 @@ std::string robot_command_thread::SplineEnd(std::string para)
  * @brief 机械臂笛卡尔空间样条运动开始
  * @param [in] para-type 0-圆弧过渡，1-给定点位为路径点
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::NewSplineStart(std::string para)
 {
@@ -2260,11 +2310,11 @@ std::string robot_command_thread::NewSplineStart(std::string para)
  * @brief 机械臂笛卡尔空间样条运动
  * @param [in] para-顺序依次是CART点位，speed,tool,user,lastflag
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::NewSplinePoint(std::string para)
 {
-  /*JointPos *joint_pos, DescPose *desc_pos, int tool, int user, float vel, 
+  /*JointPos *joint_pos, DescPose *desc_pos, int tool, int user, float vel,
       float acc, float ovl float blendR uint8_t lastFlag*/
   //输入参数:pos,speed,lastflag
 
@@ -2323,7 +2373,7 @@ std::string robot_command_thread::NewSplinePoint(std::string para)
 /**
  * @brief 机械臂笛卡尔空间样条运动结束
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::NewSplineEnd(std::string para)
 {
@@ -2335,7 +2385,7 @@ std::string robot_command_thread::NewSplineEnd(std::string para)
 /**
  * @brief 机械臂停止运动
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::StopMotion(std::string para)
 {
@@ -2348,7 +2398,7 @@ std::string robot_command_thread::StopMotion(std::string para)
  * @brief 点位偏移使能
  * @param [in] para-顺序依次是flag, offset_pos
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::PointsOffsetEnable(std::string para)
 {
@@ -2367,7 +2417,7 @@ std::string robot_command_thread::PointsOffsetEnable(std::string para)
 /**
  * @brief 点位偏移关闭
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::PointsOffsetDisable(std::string para)
 {
@@ -2379,7 +2429,7 @@ std::string robot_command_thread::PointsOffsetDisable(std::string para)
  * @brief 设置扩展轴配置参数
  * @param [in] para-servoid,servocomany,model,softversion,reoslution,ratio
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoSetParam(std::string para)
 {
@@ -2408,7 +2458,7 @@ std::string robot_command_thread::AuxServoSetParam(std::string para)
  * @brief 设置扩展轴使能
  * @param [in] para-servoid, status
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoEnable(std::string para)
 {
@@ -2428,7 +2478,7 @@ std::string robot_command_thread::AuxServoEnable(std::string para)
  * @brief 设置扩展轴控制模式
  * @param [in] para-servoid, mode
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoSetControlMode(std::string para)
 {
@@ -2447,7 +2497,7 @@ std::string robot_command_thread::AuxServoSetControlMode(std::string para)
  * @brief 设置扩展轴目标位置
  * @param [in] para-servoid,pos,speed
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoSetTargetPos(std::string para)
 {
@@ -2469,7 +2519,7 @@ std::string robot_command_thread::AuxServoSetTargetPos(std::string para)
  * @brief 设置扩展轴目标速度
  * @param [in] para-servoid,speed
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoSetTargetSpeed(std::string para)
 {
@@ -2489,7 +2539,7 @@ std::string robot_command_thread::AuxServoSetTargetSpeed(std::string para)
  * @brief 设置扩展轴目标扭矩
  * @param [in] para-servoid,torque
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoSetTargetTorque(std::string para)
 {
@@ -2509,7 +2559,7 @@ std::string robot_command_thread::AuxServoSetTargetTorque(std::string para)
  * @brief 扩展轴归零
  * @param [in] para-servoid,mode,searchvel,latchvel
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoHoming(std::string para)
 {
@@ -2533,7 +2583,7 @@ std::string robot_command_thread::AuxServoHoming(std::string para)
  * @brief 扩展轴清除错误
  * @param [in] para-servoid
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoClearError(std::string para)
 {
@@ -2544,7 +2594,7 @@ std::string robot_command_thread::AuxServoClearError(std::string para)
  * @brief 设置扩展轴ID
  * @param [in] para-servoid
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoSetStatusID(std::string para)
 {
@@ -2555,7 +2605,7 @@ std::string robot_command_thread::AuxServoSetStatusID(std::string para)
  * @brief 加载脚本
  * @param [in] para-program_name[64]
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ScriptLoad(std::string para)
 {
@@ -2571,7 +2621,7 @@ std::string robot_command_thread::ScriptLoad(std::string para)
 /**
  * @brief 开始执行脚本
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ScriptStart(std::string para)
 {
@@ -2581,7 +2631,7 @@ std::string robot_command_thread::ScriptStart(std::string para)
 /**
  * @brief 停止脚本
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ScriptStop(std::string para)
 {
@@ -2592,7 +2642,7 @@ std::string robot_command_thread::ScriptStop(std::string para)
 /**
  * @brief 暂停脚本执行
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ScriptPause(std::string para)
 {
@@ -2603,7 +2653,7 @@ std::string robot_command_thread::ScriptPause(std::string para)
 /**
  * @brief 继续执行脚本
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ScriptResume(std::string para)
 {
@@ -2641,8 +2691,12 @@ std::string robot_command_thread::GetMsgVersion(std::string para)
  */
 std::string robot_command_thread::GetRobotVersion(std::string para)
 {
-  char robotmodel[64], softversion[64], ctrversion[64];
+  char robotmodel[64]{}, softversion[64]{}, ctrversion[64]{};
   int res = _ptr_robot->GetSoftwareVersion(robotmodel, softversion, ctrversion);
+  if (res != 0) {
+    RCLCPP_ERROR(this->get_logger(), "GetSoftwareVersion failed: %d", res);
+    return std::to_string(res);
+  }
   return std::string(std::to_string(res) + ",robot:" + std::string(softversion));
 }
 
@@ -2661,7 +2715,7 @@ std::string robot_command_thread::GetControllerVersion(std::string para)
 /**
  * @brief 获取工具标定值
  * @return TCP标定值
- * @retval res,x,y,z,rx,ry,rz 
+ * @retval res,x,y,z,rx,ry,rz
  */
 std::string robot_command_thread::GetTCPOffset(std::string para)
 {
@@ -2712,8 +2766,12 @@ std::string robot_command_thread::GetWeldingBreakOffState(std::string para)
  */
 std::string robot_command_thread::GetErrorCode(std::string para)
 {
-  int maincode, subcode;
-  _ptr_robot->GetRobotErrorCode(&maincode, &subcode);
+  int maincode = 0, subcode = 0;
+  const int result = _ptr_robot->GetRobotErrorCode(&maincode, &subcode);
+  if (result != 0) {
+    RCLCPP_ERROR(this->get_logger(), "GetRobotErrorCode failed: %d", result);
+    return std::to_string(result);
+  }
   return std::string(std::to_string(maincode) + "," + std::to_string(subcode));
 }
 
@@ -2746,7 +2804,7 @@ std::string robot_command_thread::GetInverseKin(std::string para)
  * @brief 可移动设备使能
  * @param [in] para-使能状态，0-去使能 1-使能
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::TractorEnable(std::string para)
 {
@@ -2758,7 +2816,7 @@ std::string robot_command_thread::TractorEnable(std::string para)
 /**
  * @brief 可移动设备回零
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::TractorHoming(std::string para)
 {
@@ -2770,7 +2828,7 @@ std::string robot_command_thread::TractorHoming(std::string para)
  * @brief 可移动设备直线运动
  * @param [in] para-distance,vel
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::TractorMoveL(std::string para)
 {
@@ -2788,7 +2846,7 @@ std::string robot_command_thread::TractorMoveL(std::string para)
  * @brief 可移动设备圆弧运动
  * @param [in] para-ratio,angle,vel
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::TractorMoveC(std::string para)
 {
@@ -2807,7 +2865,7 @@ std::string robot_command_thread::TractorMoveC(std::string para)
 /**
  * @brief 可移动设备运动停止
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::TractorStop(std::string para)
 {
@@ -2819,7 +2877,7 @@ std::string robot_command_thread::TractorStop(std::string para)
  * @brief 上传轨迹J文件
  * @param [in] para-filepath
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::TrajectoryJUpLoad(std::string para)
 {
@@ -2831,7 +2889,7 @@ std::string robot_command_thread::TrajectoryJUpLoad(std::string para)
  * @brief 删除轨迹J文件
  * @param [in] para-filename
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::TrajectoryJDelete(std::string para)
 {
@@ -2843,7 +2901,7 @@ std::string robot_command_thread::TrajectoryJDelete(std::string para)
  * @brief 加载轨迹J文件
  * @param [in] para-name[30],ovl
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LoadTrajectoryJ(std::string para)
 {
@@ -2860,7 +2918,7 @@ std::string robot_command_thread::LoadTrajectoryJ(std::string para)
 /**
  * @brief 运行轨迹J文件
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveTrajectoryJ(std::string para)
 {
@@ -2871,7 +2929,7 @@ std::string robot_command_thread::MoveTrajectoryJ(std::string para)
 /**
  * @brief 获取轨迹J文件第一个点的初始位姿
  * @param [in] para-name[30]
- * @return 初始点位姿 
+ * @return 初始点位姿
  * @retval x,y,z,rx,ry,rz
  */
 std::string robot_command_thread::GetTrajectoryStartPose(std::string para)
@@ -2886,7 +2944,7 @@ std::string robot_command_thread::GetTrajectoryStartPose(std::string para)
   if (_ptr_robot->GetTrajectoryStartPose(name, &pos) == 0) {
     return std::to_string(pos.tran.x) + "," + std::to_string(pos.tran.y) + "," +
            std::to_string(pos.tran.z) + "," + std::to_string(pos.rpy.rx) + "," +
-           std::to_string(pos.rpy.ry) + "," +\   
+           std::to_string(pos.rpy.ry) + "," +\
                 std::to_string(pos.rpy.rz);
   } else {
     return std::string("0,0,0,0,0,0");
@@ -2913,7 +2971,7 @@ std::string robot_command_thread::GetTrajectoryPointNum(std::string para)
  * @brief 设置轨迹J运行速度
  * @param [in] para-vel
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTrajectoryJSpeed(std::string para)
 {
@@ -2932,7 +2990,7 @@ std::string robot_command_thread::SetTrajectoryJSpeed(std::string para)
  * @brief 下载LUA脚本
  * @param [in] para-filename,filepath
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LuaDownLoad(std::string para)
 {
@@ -2950,7 +3008,7 @@ std::string robot_command_thread::LuaDownLoad(std::string para)
  * @brief 上传LUA脚本
  * @param [in] para-filepath
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LuaUpload(std::string para)
 {
@@ -2967,7 +3025,7 @@ std::string robot_command_thread::LuaUpload(std::string para)
  * @brief 删除LUA脚本
  * @param [in] para-filename
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LuaDelete(std::string para)
 {
@@ -3082,7 +3140,7 @@ std::string robot_command_thread::WeldingSetVoltage(std::string para)
  * @param [in] checkEnable 是否使能检测；0-不使能；1-使能
  * @param [in] arcInterruptTimeLength 电弧中断确认时长(ms)
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WeldingSetCheckArcInterruptionParam(std::string para)
 {
@@ -3153,7 +3211,7 @@ std::string robot_command_thread::WeldingGetReWeldAfterBreakOffParam(std::string
 /**
  * @brief 开始机器人焊接电弧意外中断
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WeldingStartReWeldAfterBreakOff(std::string para)
 {
@@ -3163,7 +3221,7 @@ std::string robot_command_thread::WeldingStartReWeldAfterBreakOff(std::string pa
 /**
  * @brief 停止机器人焊接电弧意外中断
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WeldingAbortWeldAfterBreakOff(std::string para)
 {
@@ -3881,7 +3939,7 @@ std::string robot_command_thread::WeldingSetVoltageRelation(std::string para)
  * @param [in] ioType io类型 0-控制器IO； 1-扩展IO
  * @param [in] arcNum 焊机配置文件编号
  * @param [in] timeout 起弧超时时间
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ARCStart(std::string para)
 {
@@ -3904,7 +3962,7 @@ std::string robot_command_thread::ARCStart(std::string para)
  * @param [in] ioType io类型 0-控制器IO； 1-扩展IO
  * @param [in] arcNum 焊机配置文件编号
  * @param [in] timeout 起弧超时时间
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ARCEnd(std::string para)
 {
@@ -3926,7 +3984,7 @@ std::string robot_command_thread::ARCEnd(std::string para)
  * @brief 正向送丝
  * @param [in] ioType io类型  0-控制器IO；1-扩展IO
  * @param [in] wireFeed 送丝控制  0-停止送丝；1-送丝
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetForwardWireFeed(std::string para)
 {
@@ -3946,7 +4004,7 @@ std::string robot_command_thread::SetForwardWireFeed(std::string para)
  * @brief 反向送丝
  * @param [in] ioType io类型  0-控制器IO；1-扩展IO
  * @param [in] wireFeed 送丝控制  0-停止送丝；1-送丝
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetReverseWireFeed(std::string para)
 {
@@ -4230,7 +4288,7 @@ std::string robot_command_thread::OpenLuaUpload(std::string para)
 /**
  * @brief 获取机器人外设协议
  * @param [in] protocol 机器人外设协议号 4096-扩展轴控制卡；4097-ModbusSlave；4098-ModbusMaster
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetExDevProtocol(std::string para)
 {
@@ -4325,7 +4383,7 @@ std::string robot_command_thread::AuxServoSetEmergencyStopAcc(std::string para)
  * @param [out] outputVoltageMin 焊接电流-模拟量输出线性关系左侧点模拟量输出电压值(V)
  * @param [out] outputVoltageMax 焊接电流-模拟量输出线性关系右侧点模拟量输出电压值(V)
  * @param [out] AOIndex 焊接电流模拟量输出端口
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WeldingGetCurrentRelation(std::string para)
 {
@@ -4350,7 +4408,7 @@ std::string robot_command_thread::WeldingGetCurrentRelation(std::string para)
  * @param [out] outputVoltageMin 焊接电压-模拟量输出线性关系左侧点模拟量输出电压值(V)
  * @param [out] outputVoltageMax 焊接电压-模拟量输出线性关系右侧点模拟量输出电压值(V)
  * @param [out] AOIndex 焊接电压模拟量输出端口
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WeldingGetVoltageRelation(std::string para)
 {
@@ -4371,7 +4429,7 @@ std::string robot_command_thread::WeldingGetVoltageRelation(std::string para)
 /**
  * @brief 设置机器人外设协议
  * @param [out] protocol 机器人外设协议号 4096-扩展轴控制卡；4097-ModbusSlave；4098-ModbusMaster
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetExDevProtocol(std::string para)
 {
@@ -4389,7 +4447,7 @@ std::string robot_command_thread::GetExDevProtocol(std::string para)
  * @param [out] servoSoftVersion 伺服驱动器软件版本，1-V1.0
  * @param [out] servoResolution 编码器分辨率
  * @param [out] axisMechTransRatio 机械传动比
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoGetParam(std::string para)
 {
@@ -4446,7 +4504,7 @@ std::string robot_command_thread::AuxServoGetEmergencyStopAcc(std::string para)
  * @brief 送气
  * @param [in] ioType io类型  0-控制器IO；1-扩展IO
  * @param [in] airControl 送气控制  0-停止送气；1-送气
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetAspirated(std::string para)
 {
@@ -4465,7 +4523,7 @@ std::string robot_command_thread::SetAspirated(std::string para)
 /**
  * @brief 停止脚本
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ExtDevUDPClientComReset(std::string para)
 {
@@ -4476,7 +4534,7 @@ std::string robot_command_thread::ExtDevUDPClientComReset(std::string para)
 /**
  * @brief 停止脚本
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ExtDevUDPClientComClose(std::string para)
 {
@@ -4487,7 +4545,7 @@ std::string robot_command_thread::ExtDevUDPClientComClose(std::string para)
 /**
  * @brief 获取当前配置的控制器外设协议LUA文件名
  * @param name 4个lua文件名称 “CTRL_LUA_test.lua”
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetCtrlOpenLUAName(std::string para)
 {
@@ -4502,7 +4560,7 @@ std::string robot_command_thread::GetCtrlOpenLUAName(std::string para)
 /**
  * @brief 删除开放协议Lua文件
  * @param [in] fileName 要删除的开放协议lua文件名“CtrlDev_XXX.lua”
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::OpenLuaDelete(std::string para)
 {
@@ -4518,7 +4576,7 @@ std::string robot_command_thread::OpenLuaDelete(std::string para)
 
 /**
  * @brief 删除所有开放协议Lua文件
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AllOpenLuaDelete(std::string para)
 {
@@ -4529,31 +4587,39 @@ std::string robot_command_thread::AllOpenLuaDelete(std::string para)
 /**
  * @brief 查询SDK版本号
  * @return SDK版本号
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetSDKVersion(std::string para)
 {
-  char version;
-  int res = _ptr_robot->GetSDKVersion(&version);
-  return std::string(std::to_string(res) + ",SDKVersion:" + std::to_string(version));
+  char version[64]{};
+  const int res = _ptr_robot->GetSDKVersion(version);
+  if (res != 0) {
+    RCLCPP_ERROR(this->get_logger(), "GetSDKVersion failed: %d", res);
+    return std::to_string(res);
+  }
+  return std::to_string(res) + ",SDKVersion:" + std::string(version);
 }
 
 /**
  * @brief 查询控制器IP
  * @return 控制器IP
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetControllerIP(std::string para)
 {
-  char ip;
-  int res = _ptr_robot->GetControllerIP(&ip);
-  return std::string(std::to_string(res) + ",ControllerIP:" + std::to_string(ip));
+  char ip[64]{};
+  const int res = _ptr_robot->GetControllerIP(ip);
+  if (res != 0) {
+    RCLCPP_ERROR(this->get_logger(), "GetControllerIP failed: %d", res);
+    return std::to_string(res);
+  }
+  return std::to_string(res) + ",ControllerIP:" + std::string(ip);
 }
 
 /**
  * @brief 查询机器人是否处于拖动示教模式
  * @return 0-非拖动示教模式，1-拖动示教模式
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::IsInDragTeach(std::string para)
 {
@@ -4566,7 +4632,7 @@ std::string robot_command_thread::IsInDragTeach(std::string para)
  * @param  [in] id  io编号，范围[0~15]
  * @param  [in] block  0-阻塞，1-非阻塞
  * @param  [out] result  0-低电平，1-高电平
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetDI(std::string para)
 {
@@ -4587,7 +4653,7 @@ std::string robot_command_thread::GetDI(std::string para)
  * @param  [in] id  io编号，范围[0~1]
  * @param  [in] block  0-阻塞，1-非阻塞
  * @param  [out] result  0-低电平，1-高电平
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetToolDI(std::string para)
 {
@@ -4609,7 +4675,7 @@ std::string robot_command_thread::GetToolDI(std::string para)
  * @param  [in]  status 0-关，1-开
  * @param  [in]  max_time  最大等待时间，单位ms
  * @param  [in]  opt  超时后策略，0-程序停止并提示超时，1-忽略超时提示程序继续执行，2-一直等待
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WaitDI(std::string para)
 {
@@ -4635,7 +4701,7 @@ std::string robot_command_thread::WaitDI(std::string para)
  * @param  [in]  status 0-关，1-开
  * @param  [in]  max_time  最大等待时间，单位ms
  * @param  [in]  opt  超时后策略，0-程序停止并提示超时，1-忽略超时提示程序继续执行，2-一直等待
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WaitMultiDI(std::string para)
 {
@@ -4662,7 +4728,7 @@ std::string robot_command_thread::WaitMultiDI(std::string para)
  * @param  [in]  status 0-关，1-开
  * @param  [in]  max_time  最大等待时间，单位ms
  * @param  [in]  opt  超时后策略，0-程序停止并提示超时，1-忽略超时提示程序继续执行，2-一直等待
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WaitToolDI(std::string para)
 {
@@ -4687,7 +4753,7 @@ std::string robot_command_thread::WaitToolDI(std::string para)
  * @param  [in] id  io编号，范围[0~1]
  * @param  [in] block  0-阻塞，1-非阻塞
  * @param  [out] result  输入电流或电压值百分比，范围[0~100]对应电流值[0~20mS]或电压[0~10V]
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetAI(std::string para)
 {
@@ -4709,7 +4775,7 @@ std::string robot_command_thread::GetAI(std::string para)
  * @param  [in] id  io编号，范围[0]
  * @param  [in] block  0-阻塞，1-非阻塞
  * @param  [out] result  输入电流或电压值百分比，范围[0~100]对应电压[0~10V]
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetToolAI(std::string para)
 {
@@ -4740,7 +4806,7 @@ std::string robot_command_thread::GetToolAI(std::string para)
  * @param  [in] offset_pos  位姿偏移量
  * @param  [in] spiral_param  螺旋参数
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::NewSpiral(std::string para)
 {
@@ -4807,7 +4873,7 @@ std::string robot_command_thread::NewSpiral(std::string para)
 /**
  * @brief 伺服运动开始，配合ServoJ、ServoCart指令使用
  * @param [in] comType 指令下发类型；0-xmlrpc；1-UDP(对应机器人20007端口)
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ServoMoveStart(std::string para)
 {
@@ -4824,7 +4890,7 @@ std::string robot_command_thread::ServoMoveStart(std::string para)
 /**
  * @brief 伺服运动结束，配合ServoJ、ServoCart指令使用
  * @param [in] comType 指令下发类型；0-xmlrpc；1-UDP(对应机器人20007端口)
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ServoMoveEnd(std::string para)
 {
@@ -4908,7 +4974,7 @@ std::string robot_command_thread::ServoCart(std::string para)
  * @param  [in] blendT [-1.0]-运动到位(阻塞)，[0~500.0]-平滑时间(非阻塞)，单位ms
  * @param  [in] config  关节空间配置，[-1]-参考当前关节位置解算，[0~7]-参考特定关节空间配置解算，默认为-1
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveCart(std::string para)
 {
@@ -4939,7 +5005,7 @@ std::string robot_command_thread::MoveCart(std::string para)
 
 /**
  * @brief 暂停运动
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::PauseMotion(std::string para)
 {
@@ -4949,7 +5015,7 @@ std::string robot_command_thread::PauseMotion(std::string para)
 
 /**
  * @brief 恢复运动
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ResumeMotion(std::string para)
 {
@@ -4960,7 +5026,7 @@ std::string robot_command_thread::ResumeMotion(std::string para)
 /**
  * @brief 获取机器人末端点记录按钮状态
  * @param [out] state 按钮状态，0-按下，1-松开
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetAxlePointRecordBtnState(std::string para)
 {
@@ -4973,7 +5039,7 @@ std::string robot_command_thread::GetAxlePointRecordBtnState(std::string para)
 /**
  * @brief 获取机器人末端DO输出状态
  * @param [out] do_state DO输出状态，do0~do1对应bit1~bit2,从bit0开始
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetToolDO(std::string para)
 {
@@ -4987,7 +5053,7 @@ std::string robot_command_thread::GetToolDO(std::string para)
  * @brief 获取机器人控制器DO输出状态
  * @param [out] do_state_h DO输出状态，co0~co7对应bit0~bit7
  * @param [out] do_state_l DO输出状态，do0~do7对应bit0~bit7
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetDO(std::string para)
 {
@@ -5006,7 +5072,7 @@ std::string robot_command_thread::GetDO(std::string para)
  * @param  [in]  value 输入电流或电压值百分比，范围[0~100]对应电流值[0~20mS]或电压[0~10V]
  * @param  [in]  max_time  最大等待时间，单位ms
  * @param  [in]  opt  超时后策略，0-程序停止并提示超时，1-忽略超时提示程序继续执行，2-一直等待
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WaitAI(std::string para)
 {
@@ -5035,7 +5101,7 @@ std::string robot_command_thread::WaitAI(std::string para)
  * @param  [in]  value 输入电流或电压值百分比，范围[0~100]对应电压[0~10V]
  * @param  [in]  max_time  最大等待时间，单位ms
  * @param  [in]  opt  超时后策略，0-程序停止并提示超时，1-忽略超时提示程序继续执行，2-一直等待
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WaitToolAI(std::string para)
 {
@@ -5061,7 +5127,7 @@ std::string robot_command_thread::WaitToolAI(std::string para)
  * @brief  设置系统变量值
  * @param  [in]  id  变量编号，范围[1~20]
  * @param  [in]  value 变量值
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetSysVarValue(std::string para)
 {
@@ -5080,7 +5146,7 @@ std::string robot_command_thread::SetSysVarValue(std::string para)
 /**
  * @brief 设置外部工具参考点-六点法
  * @param [in] point_num 点编号,范围[1~4]
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetExTCPPoint(std::string para)
 {
@@ -5097,7 +5163,7 @@ std::string robot_command_thread::SetExTCPPoint(std::string para)
 /**
  * @brief  计算外部工具坐标系
  * @param [out] tcp_pose 外部工具坐标系
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ComputeExTCF(std::string para)
 {
@@ -5113,7 +5179,7 @@ std::string robot_command_thread::ComputeExTCF(std::string para)
 /**
  * @brief 设置工件参考点-三点法
  * @param [in] point_num 点编号,范围[1~3]
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetWObjCoordPoint(std::string para)
 {
@@ -5132,7 +5198,7 @@ std::string robot_command_thread::SetWObjCoordPoint(std::string para)
  * @param [in] method 计算方法 0：原点-x轴-z轴  1：原点-x轴-xy平面
  * @param [in] refFrame 参考坐标系
  * @param [out] wobj_pose 工件坐标系
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ComputeWObjCoord(std::string para)
 {
@@ -5156,7 +5222,7 @@ std::string robot_command_thread::ComputeWObjCoord(std::string para)
 /**
  * @brief  等待指定时间
  * @param  [in]  t_ms  单位ms
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WaitMs(std::string para)
 {
@@ -5173,7 +5239,7 @@ std::string robot_command_thread::WaitMs(std::string para)
 /**
  * @brief  设置负限位
  * @param  [in] limit 六个关节位置，单位deg
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetLimitNegative(std::string para)
 {
@@ -5202,7 +5268,7 @@ std::string robot_command_thread::SetLimitNegative(std::string para)
  * @brief  获取机器人安装角度
  * @param  [out] yangle 倾斜角
  * @param  [out] zangle 旋转角
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetRobotInstallAngle(std::string para)
 {
@@ -5218,7 +5284,7 @@ std::string robot_command_thread::GetRobotInstallAngle(std::string para)
  * @brief  获取系统变量值
  * @param  [in] id 系统变量编号，范围[1~20]
  * @param  [out] value  系统变量值
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetSysVarValue(std::string para)
 {
@@ -5238,7 +5304,7 @@ std::string robot_command_thread::GetSysVarValue(std::string para)
  * @brief  获取当前关节位置(角度)
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] jPos 六个关节位置，单位deg
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetActualJointPosDegree(std::string para)
 {
@@ -5261,7 +5327,7 @@ std::string robot_command_thread::GetActualJointPosDegree(std::string para)
  * @brief  获取关节反馈速度-deg/s
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] speed [x,y,z,rx,ry,rz]速度
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetActualJointSpeedsDegree(std::string para)
 {
@@ -5284,7 +5350,7 @@ std::string robot_command_thread::GetActualJointSpeedsDegree(std::string para)
  * @brief  获取关节反馈加速度-deg/s^2
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] acc 六个关节加速度
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetActualJointAccDegree(std::string para)
 {
@@ -5308,7 +5374,7 @@ std::string robot_command_thread::GetActualJointAccDegree(std::string para)
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] tcp_speed 线性速度
  * @param  [out] ori_speed 姿态速度
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetTargetTCPCompositeSpeed(std::string para)
 {
@@ -5331,7 +5397,7 @@ std::string robot_command_thread::GetTargetTCPCompositeSpeed(std::string para)
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] tcp_speed 线性速度
  * @param  [out] ori_speed 姿态速度
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetActualTCPCompositeSpeed(std::string para)
 {
@@ -5353,7 +5419,7 @@ std::string robot_command_thread::GetActualTCPCompositeSpeed(std::string para)
  * @brief  获取TCP指令速度
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] speed [x,y,z,rx,ry,rz]速度
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetTargetTCPSpeed(std::string para)
 {
@@ -5376,7 +5442,7 @@ std::string robot_command_thread::GetTargetTCPSpeed(std::string para)
  * @brief  获取TCP反馈速度
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] speed [x,y,z,rx,ry,rz]速度
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetActualTCPSpeed(std::string para)
 {
@@ -5399,7 +5465,7 @@ std::string robot_command_thread::GetActualTCPSpeed(std::string para)
  * @brief  获取当前工具位姿
  * @param  [in] flag  0-阻塞，1-非阻塞
  * @param  [out] desc_pos  工具位姿
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetActualTCPPose(std::string para)
 {
@@ -5422,7 +5488,7 @@ std::string robot_command_thread::GetActualTCPPose(std::string para)
  * @brief  获取当前工具坐标系编号
  * @param  [in] flag  0-阻塞，1-非阻塞
  * @param  [out] id  工具坐标系编号
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetActualTCPNum(std::string para)
 {
@@ -5441,7 +5507,7 @@ std::string robot_command_thread::GetActualTCPNum(std::string para)
  * @brief  获取当前工件坐标系编号
  * @param  [in] flag  0-阻塞，1-非阻塞
  * @param  [out] id  工件坐标系编号
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetActualWObjNum(std::string para)
 {
@@ -5460,7 +5526,7 @@ std::string robot_command_thread::GetActualWObjNum(std::string para)
  * @brief  获取当前末端法兰位姿
  * @param  [in] flag  0-阻塞，1-非阻塞
  * @param  [out] desc_pos  法兰位姿
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetActualToolFlangePose(std::string para)
 {
@@ -5485,7 +5551,7 @@ std::string robot_command_thread::GetActualToolFlangePose(std::string para)
  * @param  [in] desc_pos 笛卡尔位姿
  * @param  [in] joint_pos_ref 参考关节位置
  * @param  [out] joint_pos 关节位置
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetInverseKinRef(std::string para)
 {
@@ -5514,7 +5580,7 @@ std::string robot_command_thread::GetInverseKinRef(std::string para)
  * @param  [in] desc_pos 笛卡尔位姿
  * @param  [in] joint_pos_ref 参考关节位置
  * @param  [out] result 0-无解，1-有解
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetInverseKinHasSolution(std::string para)
 {
@@ -5586,7 +5652,7 @@ std::string robot_command_thread::GetInverseKinExaxis(std::string para)
  * @brief  正运动学求解
  * @param  [in] joint_pos 关节位置
  * @param  [out] desc_pos 笛卡尔位姿
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetForwardKin(std::string para)
 {
@@ -5609,7 +5675,7 @@ std::string robot_command_thread::GetForwardKin(std::string para)
  * @brief 获取当前关节转矩
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] torques 关节转矩
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetJointTorques(std::string para)
 {
@@ -5631,7 +5697,7 @@ std::string robot_command_thread::GetJointTorques(std::string para)
  * @brief  获取当前负载的重量
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] weight 负载重量，单位kg
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetTargetPayload(std::string para)
 {
@@ -5650,7 +5716,7 @@ std::string robot_command_thread::GetTargetPayload(std::string para)
  * @brief  获取当前负载的质心
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] cog 负载质心，单位mm
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetTargetPayloadCog(std::string para)
 {
@@ -5671,7 +5737,7 @@ std::string robot_command_thread::GetTargetPayloadCog(std::string para)
  * @brief  获取当前工件坐标系
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] desc_pos 工件坐标系位姿
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetWObjOffset(std::string para)
 {
@@ -5695,7 +5761,7 @@ std::string robot_command_thread::GetWObjOffset(std::string para)
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] negative  负限位角度，单位deg
  * @param  [out] positive  正限位角度，单位deg
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetJointSoftLimitDeg(std::string para)
 {
@@ -5720,7 +5786,7 @@ std::string robot_command_thread::GetJointSoftLimitDeg(std::string para)
 /**
  * @brief  获取系统时间
  * @param  [out] t_ms 单位ms
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetSystemClock(std::string para)
 {
@@ -5732,7 +5798,7 @@ std::string robot_command_thread::GetSystemClock(std::string para)
 /**
  * @brief  获取机器人当前关节位置
  * @param  [out]  config  关节空间配置，范围[0~7]
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetRobotCurJointsConfig(std::string para)
 {
@@ -5744,7 +5810,7 @@ std::string robot_command_thread::GetRobotCurJointsConfig(std::string para)
 /**
  * @brief  获取机器人当前速度
  * @param  [out]  vel  速度，单位mm/s
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetDefaultTransVel(std::string para)
 {
@@ -5756,7 +5822,7 @@ std::string robot_command_thread::GetDefaultTransVel(std::string para)
 /**
  * @brief  查询机器人运动是否完成
  * @param  [out]  state  0-未完成，1-完成
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetRobotMotionDone(std::string para)
 {
@@ -5769,7 +5835,7 @@ std::string robot_command_thread::GetRobotMotionDone(std::string para)
  * @brief  查询机器人错误码
  * @param  [out]  maincode  主错误码
  * @param  [out]  subcode   子错误码
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetRobotErrorCode(std::string para)
 {
@@ -5784,7 +5850,7 @@ std::string robot_command_thread::GetRobotErrorCode(std::string para)
  * @brief  查询机器人示教管理点位数据
  * @param  [in]  name  点位名
  * @param  [out]  data   点位数据
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetRobotTeachingPoint(std::string para)
 {
@@ -5811,7 +5877,7 @@ std::string robot_command_thread::GetRobotTeachingPoint(std::string para)
 /**
  * @brief  查询机器人运动队列缓存长度
  * @param  [out]  len  缓存长度
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetMotionQueueLength(std::string para)
 {
@@ -5827,7 +5893,7 @@ std::string robot_command_thread::GetMotionQueueLength(std::string para)
  * @param  [in] period_ms  数据采样周期，固定值2ms或4ms或8ms
  * @param  [in] di_choose  DI选择,bit0~bit7对应控制箱DI0~DI7，bit8~bit9对应末端DI0~DI1，0-不选择，1-选择
  * @param  [in] do_choose  DO选择,bit0~bit7对应控制箱DO0~DO7，bit8~bit9对应末端DO0~DO1，0-不选择，1-选择
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTPDParam(std::string para)
 {
@@ -5858,7 +5924,7 @@ std::string robot_command_thread::SetTPDParam(std::string para)
  * @param  [in] period_ms  数据采样周期，固定值2ms或4ms或8ms
  * @param  [in] di_choose  DI选择,bit0~bit7对应控制箱DI0~DI7，bit8~bit9对应末端DI0~DI1，0-不选择，1-选择
  * @param  [in] do_choose  DO选择,bit0~bit7对应控制箱DO0~DO7，bit8~bit9对应末端DO0~DO1，0-不选择，1-选择
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTPDStart(std::string para)
 {
@@ -5884,7 +5950,7 @@ std::string robot_command_thread::SetTPDStart(std::string para)
 
 /**
  * @brief  停止轨迹记录
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetWebTPDStop(std::string para)
 {
@@ -5895,7 +5961,7 @@ std::string robot_command_thread::SetWebTPDStop(std::string para)
 /**
  * @brief  删除轨迹记录
  * @param  [in] name  轨迹文件名
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTPDDelete(std::string para)
 {
@@ -5913,7 +5979,7 @@ std::string robot_command_thread::SetTPDDelete(std::string para)
 /**
  * @brief  轨迹预加载
  * @param  [in] name  轨迹文件名
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LoadTPD(std::string para)
 {
@@ -5931,7 +5997,7 @@ std::string robot_command_thread::LoadTPD(std::string para)
 /**
  * @brief  获取轨迹起始位姿
  * @param  [in] name 轨迹文件名
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetTPDStartPose(std::string para)
 {
@@ -5956,7 +6022,7 @@ std::string robot_command_thread::GetTPDStartPose(std::string para)
  * @param  [in] name  轨迹文件名
  * @param  [in] blend 0-不平滑，1-平滑
  * @param  [in] ovl  速度缩放百分比，范围[0~100]
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveTPD(std::string para)
 {
@@ -5978,7 +6044,7 @@ std::string robot_command_thread::MoveTPD(std::string para)
 /**
  * @brief  设置轨迹运行中的力和扭矩
  * @param  [in] ft 三个方向的力和扭矩，单位N和Nm
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTrajectoryJForceTorque(std::string para)
 {
@@ -6005,7 +6071,7 @@ std::string robot_command_thread::SetTrajectoryJForceTorque(std::string para)
 /**
  * @brief  设置轨迹运行中的沿x方向的力
  * @param  [in] fx 沿x方向的力，单位N
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTrajectoryJForceFx(std::string para)
 {
@@ -6021,7 +6087,7 @@ std::string robot_command_thread::SetTrajectoryJForceFx(std::string para)
 /**
  * @brief  设置轨迹运行中的沿y方向的力
  * @param  [in] fy 沿y方向的力，单位N
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTrajectoryJForceFy(std::string para)
 {
@@ -6037,7 +6103,7 @@ std::string robot_command_thread::SetTrajectoryJForceFy(std::string para)
 /**
  * @brief  设置轨迹运行中的沿z方向的力
  * @param  [in] fz 沿x方向的力，单位N
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTrajectoryJForceFz(std::string para)
 {
@@ -6053,7 +6119,7 @@ std::string robot_command_thread::SetTrajectoryJForceFz(std::string para)
 /**
  * @brief  设置轨迹运行中的绕x轴的扭矩
  * @param  [in] tx 绕x轴的扭矩，单位Nm
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTrajectoryJTorqueTx(std::string para)
 {
@@ -6069,7 +6135,7 @@ std::string robot_command_thread::SetTrajectoryJTorqueTx(std::string para)
 /**
  * @brief  设置轨迹运行中的绕y轴的扭矩
  * @param  [in] ty 绕y轴的扭矩，单位Nm
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTrajectoryJTorqueTy(std::string para)
 {
@@ -6085,7 +6151,7 @@ std::string robot_command_thread::SetTrajectoryJTorqueTy(std::string para)
 /**
  * @brief  设置轨迹运行中的绕z轴的扭矩
  * @param  [in] tz 绕z轴的扭矩，单位Nm
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetTrajectoryJTorqueTz(std::string para)
 {
@@ -6102,7 +6168,7 @@ std::string robot_command_thread::SetTrajectoryJTorqueTz(std::string para)
  * @brief  设置开机自动加载默认的作业程序
  * @param  [in] flag  0-开机不自动加载默认程序，1-开机自动加载默认程序
  * @param  [in] program_name 作业程序名及路径，如"/fruser/movej.lua"，其中"/fruser/"为固定路径
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LoadDefaultProgConfig(std::string para)
 {
@@ -6122,7 +6188,7 @@ std::string robot_command_thread::LoadDefaultProgConfig(std::string para)
 /**
  * @brief  加载指定的作业程序
  * @param  [in] program_name 作业程序名及路径，如"/fruser/movej.lua"，其中"/fruser/"为固定路径
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ProgramLoad(std::string para)
 {
@@ -6140,7 +6206,7 @@ std::string robot_command_thread::ProgramLoad(std::string para)
 /**
  * @brief  获取已加载的作业程序名
  * @param  [out] program_name 作业程序名及路径，如"/fruser/movej.lua"，其中"/fruser/"为固定路径
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetLoadedProgram(std::string para)
 {
@@ -6158,7 +6224,7 @@ std::string robot_command_thread::GetLoadedProgram(std::string para)
 /**
  * @brief  获取当前机器人作业程序执行的行号
  * @param  [out] line  行号
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetCurrentLine(std::string para)
 {
@@ -6169,7 +6235,7 @@ std::string robot_command_thread::GetCurrentLine(std::string para)
 
 /**
  * @brief  运行当前加载的作业程序
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ProgramRun(std::string para)
 {
@@ -6179,7 +6245,7 @@ std::string robot_command_thread::ProgramRun(std::string para)
 
 /**
  * @brief  暂停当前运行的作业程序
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ProgramPause(std::string para)
 {
@@ -6189,7 +6255,7 @@ std::string robot_command_thread::ProgramPause(std::string para)
 
 /**
  * @brief  恢复当前暂停的作业程序
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ProgramResume(std::string para)
 {
@@ -6199,7 +6265,7 @@ std::string robot_command_thread::ProgramResume(std::string para)
 
 /**
  * @brief  终止当前运行的作业程序
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ProgramStop(std::string para)
 {
@@ -6210,7 +6276,7 @@ std::string robot_command_thread::ProgramStop(std::string para)
 /**
  * @brief  获取机器人作业程序执行状态
  * @param  [out]  state 1-程序停止或无程序运行，2-程序运行中，3-程序暂停
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetProgramState(std::string para)
 {
@@ -6225,7 +6291,7 @@ std::string robot_command_thread::GetProgramState(std::string para)
  * @param  [in] device  设备号，Robotiq(0-2F-85系列)，慧灵(0-NK系列,1-Z-EFG-100)，天机(0-TEG-110)，大寰(0-PGI-140)，知行(0-CTPM2F20)
  * @param  [in] softvesion  软件版本号，暂不使用，默认为0
  * @param  [in] bus 设备挂在末端总线位置，暂不使用，默认为0
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetGripperConfig(std::string para)
 {
@@ -6251,7 +6317,7 @@ std::string robot_command_thread::SetGripperConfig(std::string para)
  *@param  [out] device  设备号，Robotiq(0-2F-85系列)，慧灵(0-NK系列,1-Z-EFG-100)，天机(0-TEG-110)，大寰(0-PGI-140)，知行(0-CTPM2F20)
  *@param  [out] softvesion  软件版本号，暂不使用，默认为0
  *@param  [out] bus 设备挂在末端总线位置，暂不使用，默认为0
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetGripperConfig(std::string para)
 {
@@ -6286,7 +6352,7 @@ std::string robot_command_thread::GetGripperMotionDone(std::string para)
  * @brief  获取夹爪激活状态
  * @param  [out] fault  0-无错误，1-有错误
  * @param  [out] status  bit0~bit15对应夹爪编号0~15，bit=0为未激活，bit=1为激活
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetGripperActivateStatus(std::string para)
 {
@@ -6302,7 +6368,7 @@ std::string robot_command_thread::GetGripperActivateStatus(std::string para)
  * @brief  获取夹爪位置
  * @param  [out] fault  0-无错误，1-有错误
  * @param  [out] position  位置百分比，范围0~100%
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetGripperCurPosition(std::string para)
 {
@@ -6318,7 +6384,7 @@ std::string robot_command_thread::GetGripperCurPosition(std::string para)
  * @brief  获取夹爪速度
  * @param  [out] fault  0-无错误，1-有错误
  * @param  [out] speed  速度百分比，范围0~100%
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetGripperCurSpeed(std::string para)
 {
@@ -6334,7 +6400,7 @@ std::string robot_command_thread::GetGripperCurSpeed(std::string para)
  * @brief  获取夹爪电流
  * @param  [out] fault  0-无错误，1-有错误
  * @param  [out] current  电流百分比，范围0~100%
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetGripperCurCurrent(std::string para)
 {
@@ -6350,7 +6416,7 @@ std::string robot_command_thread::GetGripperCurCurrent(std::string para)
  * @brief  获取夹爪电压
  * @param  [out] fault  0-无错误，1-有错误
  * @param  [out] voltage  电压,单位0.1V
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetGripperVoltage(std::string para)
 {
@@ -6366,7 +6432,7 @@ std::string robot_command_thread::GetGripperVoltage(std::string para)
  * @brief  获取夹爪温度
  * @param  [out] fault  0-无错误，1-有错误
  * @param  [out] temp  温度，单位℃
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetGripperTemp(std::string para)
 {
@@ -6382,7 +6448,7 @@ std::string robot_command_thread::GetGripperTemp(std::string para)
  * @brief  获取旋转夹爪的旋转圈数
  * @param  [out] fault  0-无错误，1-有错误
  * @param  [out] num  旋转圈数
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetGripperRotNum(std::string para)
 {
@@ -6397,7 +6463,7 @@ std::string robot_command_thread::GetGripperRotNum(std::string para)
  * @brief  获取旋转夹爪的旋转速度
  * @param  [out] fault  0-无错误，1-有错误
  * @param  [out] speed  旋转速度百分比
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetGripperRotSpeed(std::string para)
 {
@@ -6413,7 +6479,7 @@ std::string robot_command_thread::GetGripperRotSpeed(std::string para)
  * @brief  获取旋转夹爪的旋转力矩
  * @param  [out] fault  0-无错误，1-有错误
  * @param  [out] torque  旋转力矩百分比
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetGripperRotTorque(std::string para)
 {
@@ -6431,7 +6497,7 @@ std::string robot_command_thread::GetGripperRotTorque(std::string para)
  * @param  [in] zlength   z轴偏移量
  * @param  [in] zangle    绕z轴旋转偏移量
  * @param  [out] pre_pos  预抓取点
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ComputePrePick(std::string para)
 {
@@ -6461,7 +6527,7 @@ std::string robot_command_thread::ComputePrePick(std::string para)
  * @param  [in] zlength   z轴偏移量
  * @param  [in] zangle    绕z轴旋转偏移量
  * @param  [out] post_pos 撤退点
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ComputePostPick(std::string para)
 {
@@ -6491,7 +6557,7 @@ std::string robot_command_thread::ComputePostPick(std::string para)
  * @param  [in] device  设备号，坤维(0-KWR75B)，航天十一院(0-MCS6A-200-4)，ATI(0-AXIA80-M8)，中科米点(0-MST2010)，伟航敏芯(0-WHC6L-YB-10A)，NBIT(0-XLH93003ACS)，鑫精诚XJC(0-XJC-6F-D82)，NSR(0-NSR-FTSensorA)
  * @param  [in] softvesion  软件版本号，暂不使用，默认为0
  * @param  [in] bus 设备挂在末端总线位置，暂不使用，默认为0
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_SetConfig(std::string para)
 {
@@ -6517,7 +6583,7 @@ std::string robot_command_thread::FT_SetConfig(std::string para)
  * @param  [out] device  设备号，暂不使用，默认为0
  * @param  [out] softvesion  软件版本号，暂不使用，默认为0
  * @param  [out] bus 设备挂在末端总线位置，暂不使用，默认为0
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_GetConfig(std::string para)
 {
@@ -6535,7 +6601,7 @@ std::string robot_command_thread::FT_GetConfig(std::string para)
 /**
  * @brief  力传感器激活
  * @param  [in] act  0-复位，1-激活
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_Activate(std::string para)
 {
@@ -6552,7 +6618,7 @@ std::string robot_command_thread::FT_Activate(std::string para)
 /**
  * @brief  力传感器校零
  * @param  [in] act  0-去除零点，1-零点矫正
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_SetZero(std::string para)
 {
@@ -6570,7 +6636,7 @@ std::string robot_command_thread::FT_SetZero(std::string para)
  * @brief  设置力传感器参考坐标系
  * @param  [in] ref  0-工具坐标系，1-基坐标系,2-自定义坐标系
  * @param  [in] coord  自定义坐标系值
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_SetRCS(std::string para)
 {
@@ -6589,7 +6655,7 @@ std::string robot_command_thread::FT_SetRCS(std::string para)
 /**
  * @brief  负载重量辨识记录
  * @param  [in] id  传感器坐标系编号，范围[1~14]
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_PdIdenRecord(std::string para)
 {
@@ -6606,7 +6672,7 @@ std::string robot_command_thread::FT_PdIdenRecord(std::string para)
 /**
  * @brief  负载重量辨识计算
  * @param  [out] weight  负载重量，单位kg
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_PdIdenCompute(std::string para)
 {
@@ -6639,7 +6705,7 @@ std::string robot_command_thread::FT_PdCogIdenRecord(std::string para)
 /**
  * @brief  负载质心辨识计算
  * @param  [out] cog  负载质心，单位mm
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_PdCogIdenCompute(std::string para)
 {
@@ -6655,7 +6721,7 @@ std::string robot_command_thread::FT_PdCogIdenCompute(std::string para)
  * @brief  获取参考坐标系下力/扭矩数据
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] ft  力/扭矩，fx,fy,fz,tx,ty,tz
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_GetForceTorqueRCS(std::string para)
 {
@@ -6678,7 +6744,7 @@ std::string robot_command_thread::FT_GetForceTorqueRCS(std::string para)
  * @brief  获取力传感器原始力/扭矩数据
  * @param  [in] flag 0-阻塞，1-非阻塞
  * @param  [out] ft  力/扭矩，fx,fy,fz,tx,ty,tz
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_GetForceTorqueOrigin(std::string para)
 {
@@ -6706,7 +6772,7 @@ std::string robot_command_thread::FT_GetForceTorqueOrigin(std::string para)
  * @param  [in] max_threshold 最大阈值
  * @param  [in] min_threshold 最小阈值
  * @note   力/扭矩检测范围：(ft-min_threshold, ft+max_threshold)
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_Guard(std::string para)
 {
@@ -6785,13 +6851,13 @@ std::string robot_command_thread::FT_Guard(std::string para)
  * @param  [in] ILC_sign ILC启停控制， 0-停止，1-训练，2-实操
  * @param  [in] max_dis 最大调整距离，单位mm
  * @param  [in] max_ang 最大调整角度，单位deg
- * @param  [in] M 质量参数 
+ * @param  [in] M 质量参数
  * @param  [in] B 阻尼参数
  * @param  [in] polishRadio 打磨半径，单位mm
  * @param  [in] filter_Sign 滤波开启标志 0-关；1-开，默认关闭
  * @param  [in] posAdapt_sign 姿态顺应开启标志 0-关；1-开，默认关闭
  * @param  [in] isNoBlock 阻塞标志，0-阻塞；1-非阻塞
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_Control(std::string para)
 {
@@ -7007,7 +7073,7 @@ std::string robot_command_thread::FT_SpiralSearch(std::string para)
  * @param  [in] max_angAcc 最大旋转加速度，单位deg/s^2，暂不使用，默认为0
  * @param  [in] rotorn  旋转方向，1-顺时针，2-逆时针
  * @param  [in] strategy 未检测到力/力矩的处理策略，0-报错；1-警告，继续运动
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_RotInsertion(std::string para)
 {
@@ -7117,7 +7183,7 @@ std::string robot_command_thread::FT_FindSurface(std::string para)
 
 /**
  * @brief  计算中间平面位置开始
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_CalCenterStart(std::string para)
 {
@@ -7128,7 +7194,7 @@ std::string robot_command_thread::FT_CalCenterStart(std::string para)
 /**
  * @brief  计算中间平面位置结束
  * @param  [out] pos 中间平面位姿
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_CalCenterEnd(std::string para)
 {
@@ -7145,7 +7211,7 @@ std::string robot_command_thread::FT_CalCenterEnd(std::string para)
  * @brief  柔顺控制开启
  * @param  [in] p 位置调节系数或柔顺系数
  * @param  [in] force 柔顺开启力阈值，单位N
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_ComplianceStart(std::string para)
 {
@@ -7163,7 +7229,7 @@ std::string robot_command_thread::FT_ComplianceStart(std::string para)
 
 /**
  * @brief  柔顺控制关闭
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::FT_ComplianceStop(std::string para)
 {
@@ -7173,7 +7239,7 @@ std::string robot_command_thread::FT_ComplianceStop(std::string para)
 
 /**
  * @brief  负载辨识初始化
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LoadIdentifyDynFilterInit(std::string para)
 {
@@ -7183,7 +7249,7 @@ std::string robot_command_thread::LoadIdentifyDynFilterInit(std::string para)
 
 /**
  * @brief  负载辨识初始化
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LoadIdentifyDynVarInit(std::string para)
 {
@@ -7196,7 +7262,7 @@ std::string robot_command_thread::LoadIdentifyDynVarInit(std::string para)
  * @param [in] joint_torque 关节扭矩
  * @param [in] joint_pos 关节位置
  * @param [in] t 采样周期
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LoadIdentifyMain(std::string para)
 {
@@ -7241,7 +7307,7 @@ std::string robot_command_thread::LoadIdentifyMain(std::string para)
  * @param [in] gain
  * @param [out] weight 负载重量
  * @param [out] cog 负载质心
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LoadIdentifyGetResult(std::string para)
 {
@@ -7265,7 +7331,7 @@ std::string robot_command_thread::LoadIdentifyGetResult(std::string para)
 /**
  * @brief 传动带启动、停止
  * @param [in] status 状态，1-启动，0-停止
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorStartEnd(std::string para)
 {
@@ -7281,7 +7347,7 @@ std::string robot_command_thread::ConveyorStartEnd(std::string para)
 
 /**
  * @brief 记录IO检测点
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorPointIORecord(std::string para)
 {
@@ -7291,7 +7357,7 @@ std::string robot_command_thread::ConveyorPointIORecord(std::string para)
 
 /**
  * @brief 记录A点
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorPointARecord(std::string para)
 {
@@ -7301,7 +7367,7 @@ std::string robot_command_thread::ConveyorPointARecord(std::string para)
 
 /**
  * @brief 记录参考点
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorRefPointRecord(std::string para)
 {
@@ -7311,7 +7377,7 @@ std::string robot_command_thread::ConveyorRefPointRecord(std::string para)
 
 /**
  * @brief 记录B点
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorPointBRecord(std::string para)
 {
@@ -7322,7 +7388,7 @@ std::string robot_command_thread::ConveyorPointBRecord(std::string para)
 /**
  * @brief 传送带工件IO检测
  * @param [in] max_t 最大检测时间，单位ms
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorIODetect(std::string para)
 {
@@ -7339,7 +7405,7 @@ std::string robot_command_thread::ConveyorIODetect(std::string para)
 /**
  * @brief 获取物体当前位置
  * @param [in] mode
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorGetTrackData(std::string para)
 {
@@ -7356,7 +7422,7 @@ std::string robot_command_thread::ConveyorGetTrackData(std::string para)
 /**
  * @brief 传动带跟踪开始
  * @param [in] status 状态，1-启动，0-停止
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorTrackStart(std::string para)
 {
@@ -7372,7 +7438,7 @@ std::string robot_command_thread::ConveyorTrackStart(std::string para)
 
 /**
  * @brief 传动带跟踪停止
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorTrackEnd(std::string para)
 {
@@ -7387,11 +7453,11 @@ std::string robot_command_thread::ConveyorTrackEnd(std::string para)
  * @param [in] para[2] 编码器转一圈传送带行走距离
  * @param [in] para[3] 工件坐标系编号 针对跟踪运动功能选择工件坐标系编号，跟踪抓取、TPD跟踪设为0
  * @param [in] para[4] 是否配视觉  0 不配  1 配
- * @param [in] para[5] 速度比  针对传送带跟踪抓取选项（1-100）  其他选项默认为1 
+ * @param [in] para[5] 速度比  针对传送带跟踪抓取选项（1-100）  其他选项默认为1
  * @param [in] followType 跟踪运动类型，0-跟踪运动；1-追检运动
  * @param [in] startDis 追检抓取需要设置， 跟踪起始距离， -1：自动计算(工件到达机器人下方后自动追检)，单位mm， 默认值0
  * @param [in] endDis 追检抓取需要设置，跟踪终止距离， 单位mm， 默认值100
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorSetParam(std::string para)
 {
@@ -7448,7 +7514,7 @@ std::string robot_command_thread::SetStationaryTrackPara(std::string para)
 /**
  * @brief 传动带抓取点补偿
  * @param [in] cmp 补偿位置 double[3]{x, y, z}
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ConveyorCatchPointComp(std::string para)
 {
@@ -7470,7 +7536,7 @@ std::string robot_command_thread::ConveyorCatchPointComp(std::string para)
 /**
  * @brief 直线运动
  * @param [in] status 状态，1-启动，0-停止
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::TrackMoveL(std::string para)
 {
@@ -7504,7 +7570,7 @@ std::string robot_command_thread::TrackMoveL(std::string para)
 /**
  * @brief 获取SSH公钥
  * @param [out] keygen 公钥
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetSSHKeygen(std::string para)
 {
@@ -7520,7 +7586,7 @@ std::string robot_command_thread::GetSSHKeygen(std::string para)
  * @param [in] sship 上位机ip地址
  * @param [in] usr_file_url 上位机文件路径
  * @param [in] robot_file_url 机器人控制器文件路径
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetSSHScpCmd(std::string para)
 {
@@ -7550,7 +7616,7 @@ std::string robot_command_thread::SetSSHScpCmd(std::string para)
  * @brief 计算指定路径下文件的MD5值
  * @param [in] file_path 文件路径包含文件名，默认Traj文件夹路径为:"/fruser/traj/",如"/fruser/traj/trajHelix_aima_1.txt"
  * @param [out] md5 文件MD5值
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ComputeFileMD5(std::string para)
 {
@@ -7570,7 +7636,7 @@ std::string robot_command_thread::ComputeFileMD5(std::string para)
 /**
  * @brief 获取机器人急停状态
  * @param [out] state 急停状态，0-非急停，1-急停
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetRobotEmergencyStopState(std::string para)
 {
@@ -7583,7 +7649,7 @@ std::string robot_command_thread::GetRobotEmergencyStopState(std::string para)
 /**
  * @brief 获取SDK与机器人的通讯状态
  * @param [out]  state 通讯状态，0-通讯正常，1-通讯异常
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetSDKComState(std::string para)
 {
@@ -7597,7 +7663,7 @@ std::string robot_command_thread::GetSDKComState(std::string para)
  * @brief 获取安全停止信号
  * @param [out]  si0_state 安全停止信号SI0
  * @param [out]  si1_state 安全停止信号SI1
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetSafetyStopState(std::string para)
 {
@@ -7613,7 +7679,7 @@ std::string robot_command_thread::GetSafetyStopState(std::string para)
  * @brief 获取安全配置参数校验和
  * @param [out] status 校验状态，0-有效，1-校验中，2-校验失败
  * @param [out] checksum 校验和 8位16进制
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetSafetyParamsCheckSum(std::string para)
 {
@@ -7629,7 +7695,7 @@ std::string robot_command_thread::GetSafetyParamsCheckSum(std::string para)
  * @brief 安全操作密码校验
  * @param [in] status 校验，0-开启，1-关闭
  * @param [in] password 密码
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SafetyOPPasswordCheck(std::string para)
 {
@@ -7653,7 +7719,7 @@ std::string robot_command_thread::SafetyOPPasswordCheck(std::string para)
  * @param[out] driver5version 驱动器5硬件版本
  * @param[out] driver6version 驱动器6硬件版本
  * @param[out] endBoardversion 未端版硬件版本
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetHardwareVersion(std::string para)
 {
@@ -7687,7 +7753,7 @@ std::string robot_command_thread::GetHardwareVersion(std::string para)
  * @param[out] driver5version 驱动器5固件版本
  * @param[out] driver6version 驱动器6固件版本
  * @param[out] endBoardversion 未端版固件版本
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetFirmwareVersion(std::string para)
 {
@@ -7714,7 +7780,7 @@ std::string robot_command_thread::GetFirmwareVersion(std::string para)
 /**
  * @brief 点位表切换
  * @param [in] pointTableName 要切换的点位表名称    pointTable1.db
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::PointTableSwitch(std::string para)
 {
@@ -7732,7 +7798,7 @@ std::string robot_command_thread::PointTableSwitch(std::string para)
  * @brief 下载点位表数据库
  * @param [in] pointTableName 要下载的点位表名称    pointTable1.db
  * @param [in] saveFilePath 下载点位表的存储路径   C://test/
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::PointTableDownLoad(std::string para)
 {
@@ -7751,7 +7817,7 @@ std::string robot_command_thread::PointTableDownLoad(std::string para)
 /**
  * @brief 上传点位表数据库
  * @param [in] pointTableFilePath 上传点位表的全路径名   C://test/pointTable1.db
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::PointTableUpLoad(std::string para)
 {
@@ -7770,7 +7836,7 @@ std::string robot_command_thread::PointTableUpLoad(std::string para)
  * @param [in] pointTableName 要切换的点位表名称   "pointTable1.db",当点位表为空，即""时，表示将lua程序更新为未应用点位表的初始程
  * @param [in] luaFileName 要更新的lua文件名称   "testPointTable.lua"
  * @param [out] errorStr 切换点位表错误信息
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::PointTableUpdateLua(std::string para)
 {
@@ -7802,7 +7868,7 @@ std::string robot_command_thread::PointTableUpdateLua(std::string para)
  * @param [in] weaveStationary 摆动位置等待，0-等待时间内位置继续移动；1-等待时间内位置静止
  * @param [in] weaveYawAngle 摆动方向方位角(绕摆动Z轴旋转)，单位°
  * @param [in] weaveRotAngle 摆动方向侧倾角(绕摆动X轴偏转)，单位°
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WeaveSetPara(std::string para)
 {
@@ -7856,7 +7922,7 @@ std::string robot_command_thread::WeaveSetPara(std::string para)
  * @param [in] weaveRightStayTime 摆动右停留时间(ms)
  * @param [in] weaveCircleRadio 圆形摆动-回调比率(0-100%)
  * @param [in] weaveStationary 摆动位置等待，0-等待时间内位置继续移动；1-等待时间内位置静止
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WeaveOnlineSetPara(std::string para)
 {
@@ -7891,7 +7957,7 @@ std::string robot_command_thread::WeaveOnlineSetPara(std::string para)
 /**
  * @brief 摆动开始
  * @param [in] weaveNum 摆焊参数配置编号
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WeaveStart(std::string para)
 {
@@ -7908,7 +7974,7 @@ std::string robot_command_thread::WeaveStart(std::string para)
 /**
  * @brief 摆动结束
  * @param [in] weaveNum 摆焊参数配置编号
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WeaveEnd(std::string para)
 {
@@ -8013,7 +8079,7 @@ std::string robot_command_thread::SegmentWeldStart(std::string para)
  * @param output_model：输出模式，0-直接输出；1-缓冲输出；2-异步输出;
  * @param file_path: 文件保存路径+名称，,长度上限256，名称必须是xxx.log的形式，比如/home/fr/linux/fairino.log;
  * @param file_num：滚动存储的文件数量，1~20个.单个文件上限50M;
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::LoggerInit(std::string para)
 {
@@ -8034,7 +8100,7 @@ std::string robot_command_thread::LoggerInit(std::string para)
 /**
  * @brief 设置日志过滤等级;
  * @param lvl: 过滤等级值，值越小输出日志越少，默认值是1. 1-error, 2-warnning, 3-inform, 4-debug;
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetLoggerLevel(std::string para)
 {
@@ -8055,7 +8121,7 @@ std::string robot_command_thread::SetLoggerLevel(std::string para)
  * @param [out] servoState 伺服驱动器状态[十进制数转为二进制，bit0-bit5：伺服使能-伺服运行-正限位触发-负限位触发-定位完成-回零完成]
  * @param [out] servoPos 伺服当前位置 mm或°
  * @param [out] servoSpeed 伺服当前速度 mm/s或°/s
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::AuxServoGetStatus(std::string para)
 {
@@ -8082,7 +8148,7 @@ std::string robot_command_thread::AuxServoGetStatus(std::string para)
 /**
  * @brief 设置机器人加速度
  * @param [in] acc 机器人加速度百分比
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetOaccScale(std::string para)
 {
@@ -8102,7 +8168,7 @@ std::string robot_command_thread::SetOaccScale(std::string para)
  * @param [in] maxTCPSpeed 最大TCP速度值[1-5000mm/s]，默认1000
  * @param [in] maxAOPercent 最大TCP速度值对应的AO百分比，默认100%
  * @param [in] zeroZoneCmp 死区补偿值AO百分比，整形，默认为20%，范围[0-100]
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveAOStart(std::string para)
 {
@@ -8124,7 +8190,7 @@ std::string robot_command_thread::MoveAOStart(std::string para)
 
 /**
  * @brief 控制箱AO飞拍停止
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveAOStop(std::string para)
 {
@@ -8138,7 +8204,7 @@ std::string robot_command_thread::MoveAOStop(std::string para)
  * @param [in] maxTCPSpeed 最大TCP速度值[1-5000mm/s]，默认1000
  * @param [in] maxAOPercent 最大TCP速度值对应的AO百分比，默认100%
  * @param [in] zeroZoneCmp 死区补偿值AO百分比，整形，默认为20%，范围[0-100]
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveToolAOStart(std::string para)
 {
@@ -8160,7 +8226,7 @@ std::string robot_command_thread::MoveToolAOStart(std::string para)
 
 /**
  * @brief 末端AO飞拍停止
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MoveToolAOStop(std::string para)
 {
@@ -8170,7 +8236,7 @@ std::string robot_command_thread::MoveToolAOStop(std::string para)
 
 /**
  * @brief 卸载UDP通信
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::ExtDevUnloadUDPDriver(std::string para)
 {
@@ -8181,7 +8247,7 @@ std::string robot_command_thread::ExtDevUnloadUDPDriver(std::string para)
 /**
  * @brief 设置扩展DI输入滤波时间
  * @param [in] filterTime 滤波时间(ms)
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetAuxDIFilterTime(std::string para)
 {
@@ -8199,7 +8265,7 @@ std::string robot_command_thread::SetAuxDIFilterTime(std::string para)
  * @brief 设置扩展AI输入滤波时间
  * @param [in] AONum AO编号
  * @param [in] filterTime 滤波时间(ms)
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetAuxAIFilterTime(std::string para)
 {
@@ -8221,7 +8287,7 @@ std::string robot_command_thread::SetAuxAIFilterTime(std::string para)
  * @param [in] bOpen 开关 0-关；1-开
  * @param [in] time 最大等待时间(ms)
  * @param [in] errorAlarm 是否继续运动
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WaitAuxDI(std::string para)
 {
@@ -8248,7 +8314,7 @@ std::string robot_command_thread::WaitAuxDI(std::string para)
  * @param [in] value AI值
  * @param [in] time 最大等待时间(ms)
  * @param [in] errorAlarm 是否继续运动
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::WaitAuxAI(std::string para)
 {
@@ -8275,7 +8341,7 @@ std::string robot_command_thread::WaitAuxAI(std::string para)
  * @param [in] DINum DI编号
  * @param [in] isNoBlock 是否阻塞
  * @param [out] isOpen 0-关；1-开
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetAuxDI(std::string para)
 {
@@ -8303,7 +8369,7 @@ std::string robot_command_thread::GetAuxDI(std::string para)
  * @param [in] DINum DI编号
  * @param [in] isNoBlock 是否阻塞
  * @param [out] isOpen 0-关；1-开
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::GetAuxAI(std::string para)
 {
@@ -8324,7 +8390,7 @@ std::string robot_command_thread::GetAuxAI(std::string para)
 /**
  * @brief 设置标定参考点在变位机末端坐标系下位姿
  * @param [in] pos 位姿值
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::SetRefPointInExAxisEnd(std::string para)
 {
@@ -8341,7 +8407,7 @@ std::string robot_command_thread::SetRefPointInExAxisEnd(std::string para)
 /**
  * @brief 变位机坐标系参考点设置
  * @param [in]  pointNum 点编号[1-4]
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::PositionorSetRefPoint(std::string para)
 {
@@ -8358,7 +8424,7 @@ std::string robot_command_thread::PositionorSetRefPoint(std::string para)
 /**
  * @brief 变位机坐标系计算-四点法
  * @param [out]  coord 坐标系值
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::PositionorComputeECoordSys(std::string para)
 {
@@ -9509,7 +9575,7 @@ std::string robot_command_thread::ArcWeldTraceReplayEnd(std::string para)
  * @param  [in] dz z方向偏移量(mm)
  * @param  [in] dry 绕y轴偏移量(°)
  * @return 指令执行是否成功
- * @retval 0-成功，其他-错误码 
+ * @retval 0-成功，其他-错误码
  */
 std::string robot_command_thread::MultilayerOffsetTrsfToBase(std::string para)
 {
@@ -10577,7 +10643,7 @@ std::string robot_command_thread::GetLaserSeamPos(std::string para)
 /**
  * @brief 摆动渐变开始
  * @param [in] weaveChangeFlag 1-变摆动参数；2-变摆动参数+焊接速度
- * @param [in] weaveNum 摆动编号 
+ * @param [in] weaveNum 摆动编号
  * @param [in] velStart 焊接开始速度，(cm/min)
  * @param [in] velEnd 焊接结束速度，(cm/min)
  * @return 错误码
@@ -11542,7 +11608,7 @@ std::string robot_command_thread::SetSuckerCtrl(std::string para)
  * @brief 获取阵列式吸盘状态
  * @param [in] slaveID 从站号
  * @param [out] state 吸附状态 0-释放物体 1-检测到工件吸附成功 2-没有吸附到物体 3-物体脱离
- * @param [out] pressValue 当前真空度 单位kpa 
+ * @param [out] pressValue 当前真空度 单位kpa
  * @param [out] error 吸盘当前的错误码
  * @return 错误码
  */
@@ -11701,7 +11767,7 @@ std::string robot_command_thread::SetTorqueDetectionSwitch(std::string para)
 * @param [out] coord 坐标系数值
 * @param [out] type 工具类型 0-工具；1-传感器
 * @param [out] install 安装位置 0-机器人末端；1-机器人外部
-* @param [out] toolID 工具ID 
+* @param [out] toolID 工具ID
 * @param [out] loadNo 负载编号
 * @return 错误码
 */
@@ -12112,10 +12178,10 @@ std::string robot_command_thread::MotionQueueClear(std::string para)
 
 /**
  * @brief 获取机器人8个从站端口错误帧数
- * @param [out] inRecvErr 输入接收错误帧数 
- * @param [out] inCRCErr 输入CRC错误帧数 
- * @param [out] inTransmitErr 输入转发错误帧数 
- * @param [out] inLinkErr 输入链接错误帧数 
+ * @param [out] inRecvErr 输入接收错误帧数
+ * @param [out] inCRCErr 输入CRC错误帧数
+ * @param [out] inTransmitErr 输入转发错误帧数
+ * @param [out] inLinkErr 输入链接错误帧数
  * @param [out] outRecvErr 输出接收错误帧数
  * @param [out] outCRCErr 输出CRC错误帧数
  * @param [out] outTransmitErr 输出转发错误帧数
@@ -14026,264 +14092,268 @@ std::string robot_command_thread::HiSpeedManualSwitch(std::string para)
 void robot_command_thread::_state_recv_callback()
 {
   auto msg = robot_feedback_msg();
-  static ROBOT_STATE_PKG ctrl_state;
+  const auto snapshot = _session->snapshot();
+  const auto & ctrl_state = snapshot.state;
+  if (snapshot.valid) {
+    msg.j1_cur_pos = ctrl_state.jt_cur_pos[0];
+    msg.j2_cur_pos = ctrl_state.jt_cur_pos[1];
+    msg.j3_cur_pos = ctrl_state.jt_cur_pos[2];
+    msg.j4_cur_pos = ctrl_state.jt_cur_pos[3];
+    msg.j5_cur_pos = ctrl_state.jt_cur_pos[4];
+    msg.j6_cur_pos = ctrl_state.jt_cur_pos[5];
+    msg.j1_cur_tor = ctrl_state.jt_cur_tor[0];
+    msg.j2_cur_tor = ctrl_state.jt_cur_tor[1];
+    msg.j3_cur_tor = ctrl_state.jt_cur_tor[2];
+    msg.j4_cur_tor = ctrl_state.jt_cur_tor[3];
+    msg.j5_cur_tor = ctrl_state.jt_cur_tor[4];
+    msg.j6_cur_tor = ctrl_state.jt_cur_tor[5];
+    msg.cart_x_cur_pos = ctrl_state.tl_cur_pos[0];
+    msg.cart_y_cur_pos = ctrl_state.tl_cur_pos[1];
+    msg.cart_z_cur_pos = ctrl_state.tl_cur_pos[2];
+    msg.cart_a_cur_pos = ctrl_state.tl_cur_pos[3];
+    msg.cart_b_cur_pos = ctrl_state.tl_cur_pos[4];
+    msg.cart_c_cur_pos = ctrl_state.tl_cur_pos[5];
+    msg.flange_x_cur_pos = ctrl_state.flange_cur_pos[0];
+    msg.flange_y_cur_pos = ctrl_state.flange_cur_pos[1];
+    msg.flange_z_cur_pos = ctrl_state.flange_cur_pos[2];
+    msg.flange_a_cur_pos = ctrl_state.flange_cur_pos[3];
+    msg.flange_b_cur_pos = ctrl_state.flange_cur_pos[4];
+    msg.flange_c_cur_pos = ctrl_state.flange_cur_pos[5];
+    msg.exaxispos1 = ctrl_state.extAxisStatus[0].pos;
+    exaxis_1 = ctrl_state.extAxisStatus[0].pos;
+    msg.exaxistatus1[0] = ctrl_state.extAxisStatus[0].errorCode;
+    msg.exaxistatus1[1] = ctrl_state.extAxisStatus[0].ready;
+    msg.exaxistatus1[2] = ctrl_state.extAxisStatus[0].inPos;
+    msg.exaxistatus1[3] = ctrl_state.extAxisStatus[0].alarm;
+    msg.exaxistatus1[4] = ctrl_state.extAxisStatus[0].flerr;
+    msg.exaxistatus1[5] = ctrl_state.extAxisStatus[0].nlimit;
+    msg.exaxistatus1[6] = ctrl_state.extAxisStatus[0].pLimit;
+    msg.exaxistatus1[7] = ctrl_state.extAxisStatus[0].mdbsOffLine;
+    msg.exaxistatus1[8] = ctrl_state.extAxisStatus[0].mdbsTimeout;
+    msg.exaxistatus1[9] = ctrl_state.extAxisStatus[0].homingStatus;
+    msg.exaxispos2 = ctrl_state.extAxisStatus[1].pos;
+    exaxis_2 = ctrl_state.extAxisStatus[1].pos;
+    msg.exaxistatus2[0] = ctrl_state.extAxisStatus[1].errorCode;
+    msg.exaxistatus2[1] = ctrl_state.extAxisStatus[1].ready;
+    msg.exaxistatus2[2] = ctrl_state.extAxisStatus[1].inPos;
+    msg.exaxistatus2[3] = ctrl_state.extAxisStatus[1].alarm;
+    msg.exaxistatus2[4] = ctrl_state.extAxisStatus[1].flerr;
+    msg.exaxistatus2[5] = ctrl_state.extAxisStatus[1].nlimit;
+    msg.exaxistatus2[6] = ctrl_state.extAxisStatus[1].pLimit;
+    msg.exaxistatus2[7] = ctrl_state.extAxisStatus[1].mdbsOffLine;
+    msg.exaxistatus2[8] = ctrl_state.extAxisStatus[1].mdbsTimeout;
+    msg.exaxistatus2[9] = ctrl_state.extAxisStatus[1].homingStatus;
+    msg.exaxispos3 = ctrl_state.extAxisStatus[2].pos;
+    exaxis_3 = ctrl_state.extAxisStatus[2].pos;
+    msg.exaxistatus3[0] = ctrl_state.extAxisStatus[2].errorCode;
+    msg.exaxistatus3[1] = ctrl_state.extAxisStatus[2].ready;
+    msg.exaxistatus3[2] = ctrl_state.extAxisStatus[2].inPos;
+    msg.exaxistatus3[3] = ctrl_state.extAxisStatus[2].alarm;
+    msg.exaxistatus3[4] = ctrl_state.extAxisStatus[2].flerr;
+    msg.exaxistatus3[5] = ctrl_state.extAxisStatus[2].nlimit;
+    msg.exaxistatus3[6] = ctrl_state.extAxisStatus[2].pLimit;
+    msg.exaxistatus3[7] = ctrl_state.extAxisStatus[2].mdbsOffLine;
+    msg.exaxistatus3[8] = ctrl_state.extAxisStatus[2].mdbsTimeout;
+    msg.exaxistatus3[9] = ctrl_state.extAxisStatus[2].homingStatus;
+    msg.exaxispos4 = ctrl_state.extAxisStatus[3].pos;
+    exaxis_4 = ctrl_state.extAxisStatus[3].pos;
+    msg.exaxistatus4[0] = ctrl_state.extAxisStatus[3].errorCode;
+    msg.exaxistatus4[1] = ctrl_state.extAxisStatus[3].ready;
+    msg.exaxistatus4[2] = ctrl_state.extAxisStatus[3].inPos;
+    msg.exaxistatus4[3] = ctrl_state.extAxisStatus[3].alarm;
+    msg.exaxistatus4[4] = ctrl_state.extAxisStatus[3].flerr;
+    msg.exaxistatus4[5] = ctrl_state.extAxisStatus[3].nlimit;
+    msg.exaxistatus4[6] = ctrl_state.extAxisStatus[3].pLimit;
+    msg.exaxistatus4[7] = ctrl_state.extAxisStatus[3].mdbsOffLine;
+    msg.exaxistatus4[8] = ctrl_state.extAxisStatus[3].mdbsTimeout;
+    msg.exaxistatus4[9] = ctrl_state.extAxisStatus[3].homingStatus;
+    msg.ft_fx_data = ctrl_state.ft_sensor_data[0];
+    msg.ft_fy_data = ctrl_state.ft_sensor_data[1];
+    msg.ft_fz_data = ctrl_state.ft_sensor_data[2];
+    msg.ft_tx_data = ctrl_state.ft_sensor_data[3];
+    msg.ft_ty_data = ctrl_state.ft_sensor_data[4];
+    msg.ft_tz_data = ctrl_state.ft_sensor_data[5];
+    msg.ft_actstatus = ctrl_state.ft_sensor_active;
+    msg.robot_mode = ctrl_state.robot_mode;
+    msg.tool_num = ctrl_state.tool;
+    msg.work_num = ctrl_state.user;
+    msg.prg_state = ctrl_state.program_state;
+    msg.abnormal_stop = ctrl_state.abnomalStop;
+    msg.prg_name = std::string(
+      ctrl_state.currentLuaFileName,
+      strnlen(ctrl_state.currentLuaFileName, sizeof(ctrl_state.currentLuaFileName)));
+    msg.prg_total_line = ctrl_state.programTotalLine;
+    msg.prg_cur_line = ctrl_state.luaLineNum;
+    msg.dgt_output_h = ctrl_state.cl_dgt_output_h;
+    msg.dgt_output_l = ctrl_state.cl_dgt_output_l;
+    msg.dgt_input_h = ctrl_state.cl_dgt_input_h;
+    msg.dgt_input_l = ctrl_state.cl_dgt_input_l;
+    msg.tl_dgt_output_l = ctrl_state.tl_dgt_output_l;
+    msg.tl_dgt_input_l = ctrl_state.tl_dgt_input_l;
+    msg.emg = ctrl_state.EmergencyStop;
+    msg.safetyboxsig[0] = ctrl_state.safetyBoxSingal[0];
+    msg.safetyboxsig[1] = ctrl_state.safetyBoxSingal[1];
+    msg.safetyboxsig[2] = ctrl_state.safetyBoxSingal[2];
+    msg.safetyboxsig[3] = ctrl_state.safetyBoxSingal[3];
+    msg.safetyboxsig[4] = ctrl_state.safetyBoxSingal[4];
+    msg.safetyboxsig[5] = ctrl_state.safetyBoxSingal[5];
+    msg.robot_motion_done = ctrl_state.motion_done;
+    msg.grip_motion_done = ctrl_state.gripper_motiondone;
+    msg.weldbreakoffstate = ctrl_state.weldingBreakOffState.breakOffState;
+    msg.weldarcstate = ctrl_state.weldingBreakOffState.weldArcState;
+    msg.welding_voltage = ctrl_state.weldVoltage;
+    msg.welding_current = ctrl_state.weldCurrent;
+    msg.weldtrackspeed = ctrl_state.weldTrackVel;
+    msg.main_error_code = ctrl_state.main_code;
+    msg.sub_error_code = ctrl_state.sub_code;
+    // msg.check_sum
+    msg.version = "V" + std::to_string(VERSION_MSG_MARJOR) + "." +
+                  std::to_string(VERSION_MSG_MINOR) + std::to_string(VERSION_MSG_MINOR2);
+    msg.timestamp = snapshot.timestamp;
+    msg.tpd_exception = ctrl_state.tpdException;
+    msg.alarm_reboot_robot = ctrl_state.alarmRebootRobot;
+    msg.modbusmasterconnectstate = ctrl_state.modbusMasterConnect;
+    msg.mdbsslaveconnect = ctrl_state.modbusSlaveConnect;
+    msg.socket_conn_timeout = ctrl_state.socketConnTimeout;
+    msg.socket_read_timeout = ctrl_state.socketReadTimeout;
 
-  int state;
-  int tmpres = _ptr_robot->GetSDKComState(&state);
-  if (state == 0) {
-    int res = _ptr_robot->GetRobotRealTimeState(&ctrl_state);
-    if (res == 0) {
-      msg.j1_cur_pos = ctrl_state.jt_cur_pos[0];
-      msg.j2_cur_pos = ctrl_state.jt_cur_pos[1];
-      msg.j3_cur_pos = ctrl_state.jt_cur_pos[2];
-      msg.j4_cur_pos = ctrl_state.jt_cur_pos[3];
-      msg.j5_cur_pos = ctrl_state.jt_cur_pos[4];
-      msg.j6_cur_pos = ctrl_state.jt_cur_pos[5];
-      msg.j1_cur_tor = ctrl_state.jt_cur_tor[0];
-      msg.j2_cur_tor = ctrl_state.jt_cur_tor[1];
-      msg.j3_cur_tor = ctrl_state.jt_cur_tor[2];
-      msg.j4_cur_tor = ctrl_state.jt_cur_tor[3];
-      msg.j5_cur_tor = ctrl_state.jt_cur_tor[4];
-      msg.j6_cur_tor = ctrl_state.jt_cur_tor[5];
-      msg.cart_x_cur_pos = ctrl_state.tl_cur_pos[0];
-      msg.cart_y_cur_pos = ctrl_state.tl_cur_pos[1];
-      msg.cart_z_cur_pos = ctrl_state.tl_cur_pos[2];
-      msg.cart_a_cur_pos = ctrl_state.tl_cur_pos[3];
-      msg.cart_b_cur_pos = ctrl_state.tl_cur_pos[4];
-      msg.cart_c_cur_pos = ctrl_state.tl_cur_pos[5];
-      msg.flange_x_cur_pos = ctrl_state.flange_cur_pos[0];
-      msg.flange_y_cur_pos = ctrl_state.flange_cur_pos[1];
-      msg.flange_z_cur_pos = ctrl_state.flange_cur_pos[2];
-      msg.flange_a_cur_pos = ctrl_state.flange_cur_pos[3];
-      msg.flange_b_cur_pos = ctrl_state.flange_cur_pos[4];
-      msg.flange_c_cur_pos = ctrl_state.flange_cur_pos[5];
-      msg.exaxispos1 = ctrl_state.extAxisStatus[0].pos;
-      exaxis_1 = ctrl_state.extAxisStatus[0].pos;
-      msg.exaxistatus1[0] = ctrl_state.extAxisStatus[0].errorCode;
-      msg.exaxistatus1[1] = ctrl_state.extAxisStatus[0].ready;
-      msg.exaxistatus1[2] = ctrl_state.extAxisStatus[0].inPos;
-      msg.exaxistatus1[3] = ctrl_state.extAxisStatus[0].alarm;
-      msg.exaxistatus1[4] = ctrl_state.extAxisStatus[0].flerr;
-      msg.exaxistatus1[5] = ctrl_state.extAxisStatus[0].nlimit;
-      msg.exaxistatus1[6] = ctrl_state.extAxisStatus[0].pLimit;
-      msg.exaxistatus1[7] = ctrl_state.extAxisStatus[0].mdbsOffLine;
-      msg.exaxistatus1[8] = ctrl_state.extAxisStatus[0].mdbsTimeout;
-      msg.exaxistatus1[9] = ctrl_state.extAxisStatus[0].homingStatus;
-      msg.exaxispos2 = ctrl_state.extAxisStatus[1].pos;
-      exaxis_2 = ctrl_state.extAxisStatus[1].pos;
-      msg.exaxistatus2[0] = ctrl_state.extAxisStatus[1].errorCode;
-      msg.exaxistatus2[1] = ctrl_state.extAxisStatus[1].ready;
-      msg.exaxistatus2[2] = ctrl_state.extAxisStatus[1].inPos;
-      msg.exaxistatus2[3] = ctrl_state.extAxisStatus[1].alarm;
-      msg.exaxistatus2[4] = ctrl_state.extAxisStatus[1].flerr;
-      msg.exaxistatus2[5] = ctrl_state.extAxisStatus[1].nlimit;
-      msg.exaxistatus2[6] = ctrl_state.extAxisStatus[1].pLimit;
-      msg.exaxistatus2[7] = ctrl_state.extAxisStatus[1].mdbsOffLine;
-      msg.exaxistatus2[8] = ctrl_state.extAxisStatus[1].mdbsTimeout;
-      msg.exaxistatus2[9] = ctrl_state.extAxisStatus[1].homingStatus;
-      msg.exaxispos3 = ctrl_state.extAxisStatus[2].pos;
-      exaxis_3 = ctrl_state.extAxisStatus[2].pos;
-      msg.exaxistatus3[0] = ctrl_state.extAxisStatus[2].errorCode;
-      msg.exaxistatus3[1] = ctrl_state.extAxisStatus[2].ready;
-      msg.exaxistatus3[2] = ctrl_state.extAxisStatus[2].inPos;
-      msg.exaxistatus3[3] = ctrl_state.extAxisStatus[2].alarm;
-      msg.exaxistatus3[4] = ctrl_state.extAxisStatus[2].flerr;
-      msg.exaxistatus3[5] = ctrl_state.extAxisStatus[2].nlimit;
-      msg.exaxistatus3[6] = ctrl_state.extAxisStatus[2].pLimit;
-      msg.exaxistatus3[7] = ctrl_state.extAxisStatus[2].mdbsOffLine;
-      msg.exaxistatus3[8] = ctrl_state.extAxisStatus[2].mdbsTimeout;
-      msg.exaxistatus3[9] = ctrl_state.extAxisStatus[2].homingStatus;
-      msg.exaxispos4 = ctrl_state.extAxisStatus[3].pos;
-      exaxis_4 = ctrl_state.extAxisStatus[3].pos;
-      msg.exaxistatus4[0] = ctrl_state.extAxisStatus[3].errorCode;
-      msg.exaxistatus4[1] = ctrl_state.extAxisStatus[3].ready;
-      msg.exaxistatus4[2] = ctrl_state.extAxisStatus[3].inPos;
-      msg.exaxistatus4[3] = ctrl_state.extAxisStatus[3].alarm;
-      msg.exaxistatus4[4] = ctrl_state.extAxisStatus[3].flerr;
-      msg.exaxistatus4[5] = ctrl_state.extAxisStatus[3].nlimit;
-      msg.exaxistatus4[6] = ctrl_state.extAxisStatus[3].pLimit;
-      msg.exaxistatus4[7] = ctrl_state.extAxisStatus[3].mdbsOffLine;
-      msg.exaxistatus4[8] = ctrl_state.extAxisStatus[3].mdbsTimeout;
-      msg.exaxistatus4[9] = ctrl_state.extAxisStatus[3].homingStatus;
-      msg.ft_fx_data = ctrl_state.ft_sensor_data[0];
-      msg.ft_fy_data = ctrl_state.ft_sensor_data[1];
-      msg.ft_fz_data = ctrl_state.ft_sensor_data[2];
-      msg.ft_tx_data = ctrl_state.ft_sensor_data[3];
-      msg.ft_ty_data = ctrl_state.ft_sensor_data[4];
-      msg.ft_tz_data = ctrl_state.ft_sensor_data[5];
-      msg.ft_actstatus = ctrl_state.ft_sensor_active;
-      msg.robot_mode = ctrl_state.robot_mode;
-      msg.tool_num = ctrl_state.tool;
-      msg.work_num = ctrl_state.user;
-      msg.prg_state = ctrl_state.program_state;
-      msg.abnormal_stop = ctrl_state.abnomalStop;
-      msg.prg_name = std::string(ctrl_state.currentLuaFileName);
-      msg.prg_total_line = ctrl_state.programTotalLine;
-      msg.prg_cur_line = ctrl_state.luaLineNum;
-      msg.dgt_output_h = ctrl_state.cl_dgt_output_h;
-      msg.dgt_output_l = ctrl_state.cl_dgt_output_l;
-      msg.dgt_input_h = ctrl_state.cl_dgt_input_h;
-      msg.dgt_input_l = ctrl_state.cl_dgt_input_l;
-      msg.tl_dgt_output_l = ctrl_state.tl_dgt_output_l;
-      msg.tl_dgt_input_l = ctrl_state.tl_dgt_input_l;
-      msg.emg = ctrl_state.EmergencyStop;
-      msg.safetyboxsig[0] = ctrl_state.safetyBoxSingal[0];
-      msg.safetyboxsig[1] = ctrl_state.safetyBoxSingal[1];
-      msg.safetyboxsig[2] = ctrl_state.safetyBoxSingal[2];
-      msg.safetyboxsig[3] = ctrl_state.safetyBoxSingal[3];
-      msg.safetyboxsig[4] = ctrl_state.safetyBoxSingal[4];
-      msg.safetyboxsig[5] = ctrl_state.safetyBoxSingal[5];
-      msg.robot_motion_done = ctrl_state.motion_done;
-      msg.grip_motion_done = ctrl_state.gripper_motiondone;
-      msg.weldbreakoffstate = ctrl_state.weldingBreakOffState.breakOffState;
-      msg.weldarcstate = ctrl_state.weldingBreakOffState.weldArcState;
-      msg.welding_voltage = ctrl_state.weldVoltage;
-      msg.welding_current = ctrl_state.weldCurrent;
-      msg.weldtrackspeed = ctrl_state.weldTrackVel;
-      msg.main_error_code = ctrl_state.main_code;
-      msg.sub_error_code = ctrl_state.sub_code;
-      // msg.check_sum
-      msg.version = "V" + std::to_string(VERSION_MSG_MARJOR) + "." +
-                    std::to_string(VERSION_MSG_MINOR) + std::to_string(VERSION_MSG_MINOR2);
-      auto cur_clock = rclcpp::Clock();  //使用系统时钟作为时间戳
-      msg.timestamp = RCL_NS_TO_S(cur_clock.now().nanoseconds());
-      msg.tpd_exception = ctrl_state.tpdException;
-      msg.alarm_reboot_robot = ctrl_state.alarmRebootRobot;
-      msg.modbusmasterconnectstate = ctrl_state.modbusMasterConnect;
-      msg.mdbsslaveconnect = ctrl_state.modbusSlaveConnect;
-      msg.socket_conn_timeout = ctrl_state.socketConnTimeout;
-      msg.socket_read_timeout = ctrl_state.socketReadTimeout;
+    msg.btn_box_stop_signa = ctrl_state.btnBoxStopSignal;
+    msg.strangeposflag = ctrl_state.strangePosFlag;
+    msg.drag_alarm = ctrl_state.dragAlarm;
+    msg.alarm = ctrl_state.alarm;
+    msg.safetydoor_alarm = ctrl_state.safetyDoorAlarm;
+    msg.safetyplanealarm = ctrl_state.safetyPlaneAlarm;
+    msg.motionalarm = ctrl_state.motonAlarm;
+    msg.interferealarm = ctrl_state.interfaceAlarm;
+    msg.endluaerrcode = ctrl_state.endLuaErrCode;
+    msg.dr_alarm = ctrl_state.driverAlarm;
+    msg.udpcmdstate = ctrl_state.udpCmdState;
+    msg.aliveslavenumerror = ctrl_state.aliveSlaveNumError;
+    msg.gripperfaultnum = ctrl_state.gripper_fault_id;
+    msg.slavecomerror[0] = ctrl_state.slaveComError[0];
+    msg.slavecomerror[1] = ctrl_state.slaveComError[1];
+    msg.slavecomerror[2] = ctrl_state.slaveComError[2];
+    msg.slavecomerror[3] = ctrl_state.slaveComError[3];
+    msg.slavecomerror[4] = ctrl_state.slaveComError[4];
+    msg.slavecomerror[5] = ctrl_state.slaveComError[5];
+    msg.slavecomerror[6] = ctrl_state.slaveComError[6];
+    msg.slavecomerror[7] = ctrl_state.slaveComError[7];
+    msg.cmdpointerror = ctrl_state.cmdPointError;
+    msg.ioerror = ctrl_state.IOError;
+    msg.grippererro = ctrl_state.gripperError;
+    msg.fileerror = ctrl_state.fileError;
+    msg.paraerror = ctrl_state.paraError;
+    msg.exaxis_out_slimit_error = ctrl_state.exaxisOutLimitError;
+    msg.dr_com_err[0] = ctrl_state.driverComError[0];
+    msg.dr_com_err[1] = ctrl_state.driverComError[1];
+    msg.dr_com_err[2] = ctrl_state.driverComError[2];
+    msg.dr_com_err[3] = ctrl_state.driverComError[3];
+    msg.dr_com_err[4] = ctrl_state.driverComError[4];
+    msg.dr_com_err[5] = ctrl_state.driverComError[5];
+    msg.dr_err = ctrl_state.driverError;
+    msg.out_sflimit_err = ctrl_state.outSoftLimitError;
+    msg.collision_err = ctrl_state.collisionState;
+    msg.weld_readystate = ctrl_state.weldReadyState;
+    msg.alarm_check_emerg_stop_btn = ctrl_state.alarmCheckEmergStopBtn;
+    msg.ts_web_state_com_error = ctrl_state.tsWebStateComErr;
+    msg.ts_tm_cmd_com_error = ctrl_state.tsTmCmdComError;
+    msg.ts_tm_state_com_error = ctrl_state.tsTmStateComError;
+    msg.ctrlboxerror = ctrl_state.ctrlBoxError;
+    msg.safety_data_state = ctrl_state.safetyDataState;
+    msg.forcesensorerrstate = ctrl_state.forceSensorErrState;
+    msg.ctrlopenluaerrcode[0] = ctrl_state.ctrlOpenLuaErrCode[0];
+    msg.ctrlopenluaerrcode[1] = ctrl_state.ctrlOpenLuaErrCode[1];
+    msg.ctrlopenluaerrcode[2] = ctrl_state.ctrlOpenLuaErrCode[2];
+    msg.ctrlopenluaerrcode[3] = ctrl_state.ctrlOpenLuaErrCode[3];
+    msg.auxservoservoid = ctrl_state.aux_state.servoId;
+    msg.auxservoerrcode = ctrl_state.aux_state.servoErrCode;
+    msg.auxservostate = ctrl_state.aux_state.servoState;
+    msg.auxservoactualpos = ctrl_state.aux_state.servoPos;
+    msg.auxservoctualspeed = ctrl_state.aux_state.servoVel;
+    msg.auxservoactualtorque = ctrl_state.aux_state.servoTorque;
+    msg.extpioinput[0] = ctrl_state.extDIState[0];
+    msg.extpioinput[1] = ctrl_state.extDIState[1];
+    msg.extpioinput[2] = ctrl_state.extDIState[2];
+    msg.extpioinput[3] = ctrl_state.extDIState[3];
+    msg.extpioinput[4] = ctrl_state.extDIState[4];
+    msg.extpioinput[5] = ctrl_state.extDIState[5];
+    msg.extpioinput[6] = ctrl_state.extDIState[6];
+    msg.extpioinput[7] = ctrl_state.extDIState[7];
+    msg.extpiooutput[0] = ctrl_state.extDOState[0];
+    msg.extpiooutput[1] = ctrl_state.extDOState[1];
+    msg.extpiooutput[2] = ctrl_state.extDOState[2];
+    msg.extpiooutput[3] = ctrl_state.extDOState[3];
+    msg.extpiooutput[4] = ctrl_state.extDOState[4];
+    msg.extpiooutput[5] = ctrl_state.extDOState[5];
+    msg.extpiooutput[6] = ctrl_state.extDOState[6];
+    msg.extpiooutput[7] = ctrl_state.extDOState[7];
+    msg.extadcinput[0] = ctrl_state.extAIState[0];
+    msg.extadcinput[1] = ctrl_state.extAIState[1];
+    msg.extadcinput[2] = ctrl_state.extAIState[2];
+    msg.extadcinput[3] = ctrl_state.extAIState[3];
+    msg.extadcoutput[0] = ctrl_state.extAOState[0];
+    msg.extadcoutput[1] = ctrl_state.extAOState[1];
+    msg.extadcoutput[2] = ctrl_state.extAOState[2];
+    msg.extadcoutput[3] = ctrl_state.extAOState[3];
+    msg.exaxiscoordid = ctrl_state.exaxisCoordID;
+    msg.slave_status_1 = 0;
+    msg.slave_status_2 = 0;
+    msg.slave_domain_id = 0;
+    msg.program_run_state = ctrl_state.programRunState;
+    msg.speed_scale_manual = ctrl_state.speedScaleManual;
+    msg.speed_scale_auto = ctrl_state.speedScaleAuto;
+    msg.slave1_reconnect_flag = 0;
+    msg.slave2_reconnect_flag = 0;
+    msg.slave1_exaxistatus_errorcode = 0;
+    msg.slave2_exaxistatus_errorcode = 0;
 
-      msg.btn_box_stop_signa = ctrl_state.btnBoxStopSignal;
-      msg.strangeposflag = ctrl_state.strangePosFlag;
-      msg.drag_alarm = ctrl_state.dragAlarm;
-      msg.alarm = ctrl_state.alarm;
-      msg.safetydoor_alarm = ctrl_state.safetyDoorAlarm;
-      msg.safetyplanealarm = ctrl_state.safetyPlaneAlarm;
-      msg.motionalarm = ctrl_state.motonAlarm;
-      msg.interferealarm = ctrl_state.interfaceAlarm;
-      msg.endluaerrcode = ctrl_state.endLuaErrCode;
-      msg.dr_alarm = ctrl_state.driverAlarm;
-      msg.udpcmdstate = ctrl_state.udpCmdState;
-      msg.aliveslavenumerror = ctrl_state.aliveSlaveNumError;
-      msg.gripperfaultnum = ctrl_state.gripper_fault_id;
-      msg.slavecomerror[0] = ctrl_state.slaveComError[0];
-      msg.slavecomerror[1] = ctrl_state.slaveComError[1];
-      msg.slavecomerror[2] = ctrl_state.slaveComError[2];
-      msg.slavecomerror[3] = ctrl_state.slaveComError[3];
-      msg.slavecomerror[4] = ctrl_state.slaveComError[4];
-      msg.slavecomerror[5] = ctrl_state.slaveComError[5];
-      msg.slavecomerror[6] = ctrl_state.slaveComError[6];
-      msg.slavecomerror[7] = ctrl_state.slaveComError[7];
-      msg.cmdpointerror = ctrl_state.cmdPointError;
-      msg.ioerror = ctrl_state.IOError;
-      msg.grippererro = ctrl_state.gripperError;
-      msg.fileerror = ctrl_state.fileError;
-      msg.paraerror = ctrl_state.paraError;
-      msg.exaxis_out_slimit_error = ctrl_state.exaxisOutLimitError;
-      msg.dr_com_err[0] = ctrl_state.driverComError[0];
-      msg.dr_com_err[1] = ctrl_state.driverComError[1];
-      msg.dr_com_err[2] = ctrl_state.driverComError[2];
-      msg.dr_com_err[3] = ctrl_state.driverComError[3];
-      msg.dr_com_err[4] = ctrl_state.driverComError[4];
-      msg.dr_com_err[5] = ctrl_state.driverComError[5];
-      msg.dr_err = ctrl_state.driverError;
-      msg.out_sflimit_err = ctrl_state.outSoftLimitError;
-      msg.collision_err = ctrl_state.collisionState;
-      msg.weld_readystate = ctrl_state.weldReadyState;
-      msg.alarm_check_emerg_stop_btn = ctrl_state.alarmCheckEmergStopBtn;
-      msg.ts_web_state_com_error = ctrl_state.tsWebStateComErr;
-      msg.ts_tm_cmd_com_error = ctrl_state.tsTmCmdComError;
-      msg.ts_tm_state_com_error = ctrl_state.tsTmStateComError;
-      msg.ctrlboxerror = ctrl_state.ctrlBoxError;
-      msg.safety_data_state = ctrl_state.safetyDataState;
-      msg.forcesensorerrstate = ctrl_state.forceSensorErrState;
-      msg.ctrlopenluaerrcode[0] = ctrl_state.ctrlOpenLuaErrCode[0];
-      msg.ctrlopenluaerrcode[1] = ctrl_state.ctrlOpenLuaErrCode[1];
-      msg.ctrlopenluaerrcode[2] = ctrl_state.ctrlOpenLuaErrCode[2];
-      msg.ctrlopenluaerrcode[3] = ctrl_state.ctrlOpenLuaErrCode[3];
-      msg.auxservoservoid = ctrl_state.aux_state.servoId;
-      msg.auxservoerrcode = ctrl_state.aux_state.servoErrCode;
-      msg.auxservostate = ctrl_state.aux_state.servoState;
-      msg.auxservoactualpos = ctrl_state.aux_state.servoPos;
-      msg.auxservoctualspeed = ctrl_state.aux_state.servoVel;
-      msg.auxservoactualtorque = ctrl_state.aux_state.servoTorque;
-      msg.extpioinput[0] = ctrl_state.extDIState[0];
-      msg.extpioinput[1] = ctrl_state.extDIState[1];
-      msg.extpioinput[2] = ctrl_state.extDIState[2];
-      msg.extpioinput[3] = ctrl_state.extDIState[3];
-      msg.extpioinput[4] = ctrl_state.extDIState[4];
-      msg.extpioinput[5] = ctrl_state.extDIState[5];
-      msg.extpioinput[6] = ctrl_state.extDIState[6];
-      msg.extpioinput[7] = ctrl_state.extDIState[7];
-      msg.extpiooutput[0] = ctrl_state.extDOState[0];
-      msg.extpiooutput[1] = ctrl_state.extDOState[1];
-      msg.extpiooutput[2] = ctrl_state.extDOState[2];
-      msg.extpiooutput[3] = ctrl_state.extDOState[3];
-      msg.extpiooutput[4] = ctrl_state.extDOState[4];
-      msg.extpiooutput[5] = ctrl_state.extDOState[5];
-      msg.extpiooutput[6] = ctrl_state.extDOState[6];
-      msg.extpiooutput[7] = ctrl_state.extDOState[7];
-      msg.extadcinput[0] = ctrl_state.extAIState[0];
-      msg.extadcinput[1] = ctrl_state.extAIState[1];
-      msg.extadcinput[2] = ctrl_state.extAIState[2];
-      msg.extadcinput[3] = ctrl_state.extAIState[3];
-      msg.extadcoutput[0] = ctrl_state.extAOState[0];
-      msg.extadcoutput[1] = ctrl_state.extAOState[1];
-      msg.extadcoutput[2] = ctrl_state.extAOState[2];
-      msg.extadcoutput[3] = ctrl_state.extAOState[3];
-      msg.reconnect_flag = res;
-      msg.exaxiscoordid = ctrl_state.exaxisCoordID;
-      msg.slave_status_1 = 0;
-      msg.slave_status_2 = 0;
-      msg.slave_domain_id = 0;
-      msg.program_run_state = ctrl_state.programRunState;
-      msg.speed_scale_manual = ctrl_state.speedScaleManual;
-      msg.speed_scale_auto = ctrl_state.speedScaleAuto;
-      msg.slave1_reconnect_flag = 0;
-      msg.slave2_reconnect_flag = 0;
-      msg.slave1_exaxistatus_errorcode = 0;
-      msg.slave2_exaxistatus_errorcode = 0;
-
-      // _state_publisher->publish(msg);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"exaxistatus1=%d",msg.exaxistatus1[0]);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j1_cur_pos=%f",msg.j1_cur_pos);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j2_cur_pos=%f",msg.j2_cur_pos);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j3_cur_pos=%f",msg.j3_cur_pos);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j4_cur_pos=%f",msg.j4_cur_pos);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j5_cur_pos=%f",msg.j5_cur_pos);
-      // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j6_cur_pos=%f",msg.j6_cur_pos);
-    } else {
-      RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "state feedback error: error_code=%d", res);
-      msg.reconnect_flag = 1;
-    }
-  } else {
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "connect error: error_code=%d", state);
-    msg.reconnect_flag = 1;
+    // _state_publisher->publish(msg);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"exaxistatus1=%d",msg.exaxistatus1[0]);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j1_cur_pos=%f",msg.j1_cur_pos);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j2_cur_pos=%f",msg.j2_cur_pos);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j3_cur_pos=%f",msg.j3_cur_pos);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j4_cur_pos=%f",msg.j4_cur_pos);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j5_cur_pos=%f",msg.j5_cur_pos);
+    // RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME),"j6_cur_pos=%f",msg.j6_cur_pos);
   }
+  msg.reconnect_flag = (!snapshot.connected || !snapshot.fresh) ? 1 : 0;
   _state_publisher->publish(msg);
-}
-
-/**
- * @brief 数据端口topic监听回调函数
-*/
-void robot_command_thread::_ping_recv_callback()
-{
-  auto msg = robot_feedback_msg();
-  static ROBOT_STATE_PKG ctrl_state;
-  bool current_ping_status = _check_ping("192.168.58.2");
-  int state;
-  int tmpres = _ptr_robot->GetSDKComState(&state);
-  if ((!current_ping_status) || (state != 0)) {
-    RCLCPP_INFO(rclcpp::get_logger(LOGGER_NAME), "192.168.58.2 is error: error_code=%d", state);
-    msg.reconnect_flag = 1;
-    _state_publisher->publish(msg);
-  }
-}
-
-bool robot_command_thread::_check_ping(const std::string & ip_address)
-{
-  std::string cmd = "ping -c 1 -W 1 " + ip_address + " > /dev/null 2>&1";
-  int result = system(cmd.c_str());
-  return (result == 0);
+  diagnostic_msgs::msg::DiagnosticArray diagnostics;
+  diagnostics.header.stamp = this->now();
+  diagnostic_msgs::msg::DiagnosticStatus status;
+  status.name = "fairino/hardware";
+  status.hardware_id = _controller_ip;
+  status.level = snapshot.motion_allowed ? diagnostic_msgs::msg::DiagnosticStatus::OK
+                                         : diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+  status.message = snapshot.reason;
+  // if (snapshot.motion_allowed && ctrl_state.programRunState == 200) {
+  //   status.level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+  //   status.message =
+  //     "programRunState=200 is unknown; allowed by compatibility exception, "
+  //     "not confirmation that no LUA program is running";
+  // }
+  const auto add = [&status](const std::string & key, const std::string & value) {
+    diagnostic_msgs::msg::KeyValue item;
+    item.key = key;
+    item.value = value;
+    status.values.push_back(item);
+  };
+  add("connected", std::to_string(snapshot.connected));
+  add("fresh", std::to_string(snapshot.fresh));
+  add("feedback_age_seconds", std::to_string(snapshot.feedback_age));
+  add("fault_latched", std::to_string(snapshot.fault_latched));
+  add("motion_allowed", std::to_string(snapshot.motion_allowed));
+  add("controller_claimed", std::to_string(snapshot.claimed));
+  add("stop_pending", std::to_string(snapshot.stop_pending));
+  add("readiness", snapshot.readiness.empty() ? "Ready" : snapshot.readiness);
+  add("main_error_code", std::to_string(ctrl_state.main_code));
+  add("sub_error_code", std::to_string(ctrl_state.sub_code));
+  add("robot_enabled", std::to_string(ctrl_state.rbtEnableState));
+  add("robot_mode", std::to_string(ctrl_state.robot_mode));
+  add("robot_state", std::to_string(ctrl_state.robot_state));
+  add("program_run_state", std::to_string(ctrl_state.programRunState));
+  add("safety_stop0", std::to_string(ctrl_state.safety_stop0_state));
+  add("safety_stop1", std::to_string(ctrl_state.safety_stop1_state));
+  diagnostics.status.push_back(status);
+  _diagnostics->publish(diagnostics);
 }

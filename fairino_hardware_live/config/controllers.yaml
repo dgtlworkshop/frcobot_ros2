@@ -1,0 +1,28 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 125  # SDK feedback and ServoJ setpoints use an 8 ms period.
+    hardware_components_initial_state:
+      inactive:
+        - FairinoSystem
+    fairino_controller:
+      type: fairino_hardware/FaultAwareJointTrajectoryController
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+fairino_controller:
+  ros__parameters:
+    joints: [j1, j2, j3, j4, j5, j6]
+    command_interfaces: [position]
+    state_interfaces: [position, velocity]
+    hardware_state_prefix: fairino
+    open_loop_control: false
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.01
+      goal_time: 1.0
+      j1: {trajectory: 0.2, goal: 0.01}
+      j2: {trajectory: 0.2, goal: 0.01}
+      j3: {trajectory: 0.2, goal: 0.01}
+      j4: {trajectory: 0.2, goal: 0.01}
+      j5: {trajectory: 0.2, goal: 0.01}
+      j6: {trajectory: 0.2, goal: 0.01}
